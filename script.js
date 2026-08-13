@@ -1,269 +1,153 @@
-import { renderSiteLayout } from "./components/layout.js";
-
-renderSiteLayout();
-
 const root = document.documentElement;
-const langToggle = document.querySelector("[data-lang-toggle]");
-const navToggle = document.querySelector("[data-nav-toggle]");
-const nav = document.querySelector("[data-nav]");
-const header = document.querySelector("[data-header]");
+const header = document.querySelector('[data-header]');
+const nav = document.querySelector('[data-nav]');
+const navToggle = document.querySelector('[data-nav-toggle]');
+const pageMain = document.querySelector('main');
+const pageFooter = document.querySelector('.site-footer');
 
-/* =========================
-   LANGUAGE
-   ========================= */
+const BOOKING_EMAIL = 'booking@caravelaamarela.com';
+const ARTISTS_EMAIL = 'artists@caravelaamarela.com';
 
-function setLanguage(lang) {
-  root.setAttribute("lang", lang);
-  localStorage.setItem("caravela-lang", lang);
+/* ---------- Navigation ---------- */
+function closeNav({ restoreFocus = false } = {}) {
+  nav?.classList.remove('open');
+  navToggle?.classList.remove('open');
+  navToggle?.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('nav-open');
+  pageMain?.removeAttribute('inert');
+  pageFooter?.removeAttribute('inert');
+  if (restoreFocus) navToggle?.focus();
+}
 
-  const flag = document.querySelector("[data-lang-flag]");
-  const label = document.querySelector("[data-lang-label]");
-
-  if (flag && label) {
-    if (lang === "pt") {
-      flag.textContent = "🇬🇧";
-      label.textContent = "EN";
-      langToggle?.setAttribute("aria-label", "Switch to English");
-    } else {
-      flag.textContent = "🇵🇹";
-      label.textContent = "PT";
-      langToggle?.setAttribute("aria-label", "Mudar para português");
-    }
+function openNav() {
+  nav?.classList.add('open');
+  navToggle?.classList.add('open');
+  navToggle?.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('nav-open');
+  if (window.innerWidth <= 760) {
+    pageMain?.setAttribute('inert', '');
+    pageFooter?.setAttribute('inert', '');
   }
 }
 
-setLanguage(localStorage.getItem("caravela-lang") || "pt");
-
-langToggle?.addEventListener("click", () => {
-  const next = root.getAttribute("lang") === "pt" ? "en" : "pt";
-  setLanguage(next);
+navToggle?.addEventListener('click', () => {
+  nav?.classList.contains('open') ? closeNav() : openNav();
 });
 
-/* =========================
-   NAV
-   ========================= */
+nav?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => closeNav()));
 
-navToggle?.addEventListener("click", () => {
-  nav?.classList.toggle("open");
-  navToggle.classList.toggle("open");
-});
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 760) closeNav();
+}, { passive: true });
 
-nav?.querySelectorAll("a").forEach((link) => {
-  link.addEventListener("click", () => {
-    nav?.classList.remove("open");
-    navToggle?.classList.remove("open");
-  });
-});
+window.addEventListener('scroll', () => {
+  header?.classList.toggle('scrolled', window.scrollY > 12);
+}, { passive: true });
 
-window.addEventListener("scroll", () => {
-  header?.classList.toggle("scrolled", window.scrollY > 20);
-});
-
-/* =========================
-   YEAR
-   ========================= */
-
-document.querySelectorAll("[data-year]").forEach((el) => {
+/* ---------- Year ---------- */
+document.querySelectorAll('[data-year]').forEach((el) => {
   el.textContent = new Date().getFullYear();
 });
 
-/* =========================
-   REVEAL ANIMATION
-   ========================= */
+/* ---------- Forms -> structured email ---------- */
+function openMailto(to, subject, lines) {
+  const body = lines.filter(Boolean).join('\n');
+  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 
-const revealObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add("in");
-        revealObserver.unobserve(entry.target);
-      }
-    });
-  },
-  { threshold: 0.12 }
-);
+const bookingForm = document.querySelector('#bookingForm');
+bookingForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!bookingForm.reportValidity()) return;
 
-document.querySelectorAll(".reveal").forEach((el) => {
-  revealObserver.observe(el);
+  const artist = document.querySelector('#bookingArtist')?.value || '-';
+  const eventType = document.querySelector('#eventType')?.value || '-';
+  const eventDate = document.querySelector('#eventDate')?.value || '-';
+  const city = document.querySelector('#city')?.value?.trim() || '-';
+  const message = document.querySelector('#message')?.value?.trim() || '-';
+
+  const isPt = root.lang.toLowerCase().startsWith('pt');
+  openMailto(
+    BOOKING_EMAIL,
+    `${isPt ? 'Pedido de Booking' : 'Booking request'} — ${artist}`,
+    isPt
+      ? ['Olá Caravela Amarela,', '', 'Gostaria de pedir disponibilidade para uma possível data.', '', `Artista: ${artist}`, `Tipo de evento: ${eventType}`, `Data: ${eventDate}`, `Cidade / Local: ${city}`, '', 'Informação adicional:', message, '', 'Obrigado.']
+      : ['Hello Caravela Amarela,', '', 'I would like to request availability for a possible date.', '', `Artist: ${artist}`, `Event type: ${eventType}`, `Date: ${eventDate}`, `City / Venue: ${city}`, '', 'Additional information:', message, '', 'Thank you.']
+  );
 });
 
-/* =========================
-   COPY BUTTONS
-   ========================= */
+const artistContactForm = document.querySelector('#artistContactForm');
+artistContactForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!artistContactForm.reportValidity()) return;
 
-document.querySelectorAll("[data-copy]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    const value = button.getAttribute("data-copy");
+  const artistName = document.querySelector('#artistName')?.value?.trim() || '-';
+  const artistEmail = document.querySelector('#artistEmail')?.value?.trim() || '-';
+  const artistCity = document.querySelector('#artistCity')?.value?.trim() || '-';
+  const artistRequest = document.querySelector('#artistRequest')?.value || '-';
+  const artistLinks = document.querySelector('#artistLinks')?.value?.trim() || '-';
+  const artistMessage = document.querySelector('#artistMessage')?.value?.trim() || '-';
+  const isPt = root.lang.toLowerCase().startsWith('pt');
 
-    try {
-      await navigator.clipboard.writeText(value);
-
-      const original = button.textContent;
-      button.textContent =
-        root.getAttribute("lang") === "pt" ? "Email copiado" : "Email copied";
-
-      setTimeout(() => {
-        button.textContent = original;
-      }, 1600);
-    } catch {
-      window.location.href = `mailto:${value}`;
-    }
-  });
+  openMailto(
+    ARTISTS_EMAIL,
+    `For Artists — ${artistName}`,
+    isPt
+      ? ['Olá Caravela Amarela,', '', 'Gostaria de apresentar o meu projeto.', '', `Nome artístico: ${artistName}`, `Email: ${artistEmail}`, `Cidade / Região: ${artistCity}`, `Pedido: ${artistRequest}`, '', 'Links:', artistLinks, '', 'Mensagem:', artistMessage, '', 'Obrigado.']
+      : ['Hello Caravela Amarela,', '', 'I would like to introduce my project.', '', `Artist name: ${artistName}`, `Email: ${artistEmail}`, `City / Region: ${artistCity}`, `Request: ${artistRequest}`, '', 'Links:', artistLinks, '', 'Message:', artistMessage, '', 'Thank you.']
+  );
 });
 
-/* =========================
-   BOOKING FORM — HOMEPAGE
-   ========================= */
+/* ---------- Video facades ---------- */
+document.querySelectorAll('.video-frame[data-youtube-id]').forEach((frame) => {
+  const button = frame.querySelector('.video-poster');
+  button?.addEventListener('click', () => {
+    const id = frame.dataset.youtubeId;
+    const title = frame.dataset.videoTitle || 'YouTube video';
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`;
+    iframe.title = title;
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    iframe.allowFullscreen = true;
+    frame.replaceChildren(iframe);
+  }, { once: true });
+});
 
-const bookingForm = document.querySelector("#bookingForm");
+/* ---------- Press sliders ---------- */
+document.querySelectorAll('[data-press-slider]').forEach((slider) => {
+  const section = slider.closest('.press-slider-section') || document;
+  const track = slider.querySelector('[data-press-track]');
+  const slides = Array.from(slider.querySelectorAll('.press-slide'));
+  const prev = section.querySelector('[data-press-prev]');
+  const next = section.querySelector('[data-press-next]');
+  const dotsWrap = slider.querySelector('[data-press-dots]');
+  if (!track || !slides.length || !dotsWrap) return;
 
-if (bookingForm) {
-  bookingForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-
-    const eventType = document.querySelector("#eventType")?.value || "-";
-    const eventDate = document.querySelector("#eventDate")?.value || "-";
-    const city = document.querySelector("#city")?.value || "-";
-    const message = document.querySelector("#message")?.value || "-";
-
-    const subject = "Pedido de Booking — Caravela Amarela";
-
-    const body = `
-Olá Caravela Amarela,
-
-Gostaria de pedir disponibilidade para uma possível data.
-
-Tipo de evento: ${eventType}
-Data: ${eventDate}
-Cidade / Local: ${city}
-
-Mensagem:
-${message}
-
-Obrigado.
-`.trim();
-
-    const mailto = `mailto:geral@caravelaamarela.pt?subject=${encodeURIComponent(
-      subject
-    )}&body=${encodeURIComponent(body)}`;
-
-    window.location.href = mailto;
-  });
-}
-
-/* =========================
-   ARTIST CONTACT FORM — FOR ARTISTS
-   ========================= */
-
-const artistContactForm = document.querySelector("#artistContactForm");
-
-if (artistContactForm) {
-  artistContactForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-
-    const artistName = document.querySelector("#artistName")?.value || "-";
-    const artistEmail = document.querySelector("#artistEmail")?.value || "-";
-    const artistCity = document.querySelector("#artistCity")?.value || "-";
-    const artistRequest = document.querySelector("#artistRequest")?.value || "-";
-    const artistLinks = document.querySelector("#artistLinks")?.value || "-";
-    const artistMessage = document.querySelector("#artistMessage")?.value || "-";
-
-    const subject = `For Artists — ${artistName}`;
-
-    const body = `
-Olá Caravela Amarela,
-
-Gostaria de apresentar o meu projeto.
-
-Nome artístico: ${artistName}
-Email: ${artistEmail}
-Cidade / Região: ${artistCity}
-Pedido: ${artistRequest}
-
-Links:
-${artistLinks}
-
-Mensagem:
-${artistMessage}
-
-Obrigado.
-`.trim();
-
-    const mailto = `mailto:geral@caravelaamarela.pt?subject=${encodeURIComponent(
-      subject
-    )}&body=${encodeURIComponent(body)}`;
-
-    window.location.href = mailto;
-  });
-}
-
-/* =========================
-   OPTIONAL LEGACY CONTACT FORM SUPPORT
-   ========================= */
-
-const contactForm = document.querySelector("[data-contact-form]");
-
-if (contactForm) {
-  contactForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const data = new FormData(contactForm);
-    const name = data.get("name") || "";
-    const email = data.get("email") || "";
-    const context = data.get("context") || "";
-    const message = data.get("message") || "";
-
-    const subject = `Pedido de Booking — ${context || name || "Caravela Amarela"}`;
-
-    const body = `
-Nome: ${name}
-Email: ${email}
-Contexto: ${context}
-
-Mensagem:
-${message}
-`.trim();
-
-    window.location.href = `mailto:geral@caravelaamarela.pt?subject=${encodeURIComponent(
-      subject
-    )}&body=${encodeURIComponent(body)}`;
-  });
-}
-
-/* =========================
-   PRESS SLIDER
-   Safer version for multiple sliders
-   ========================= */
-
-document.querySelectorAll("[data-press-slider]").forEach((slider) => {
-  const section = slider.closest(".press-slider-section") || document;
-  const track = slider.querySelector("[data-press-track]");
-  const slides = Array.from(slider.querySelectorAll(".press-slide"));
-  const prev = section.querySelector("[data-press-prev]");
-  const next = section.querySelector("[data-press-next]");
-  const dotsWrap = slider.querySelector("[data-press-dots]");
-
-  if (!track || slides.length === 0 || !dotsWrap) return;
-
-  dotsWrap.innerHTML = "";
-
+  slider.tabIndex = 0;
+  dotsWrap.innerHTML = '';
   let current = 0;
+  let touchStartX = null;
 
-  slides.forEach((_, index) => {
-    const dot = document.createElement("button");
-    dot.type = "button";
-    dot.setAttribute("aria-label", `Press quote ${index + 1}`);
-    dot.addEventListener("click", () => goTo(index));
+  const dots = slides.map((_, index) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.setAttribute('aria-label', `Media ${index + 1}`);
+    dot.addEventListener('click', () => goTo(index));
     dotsWrap.appendChild(dot);
+    return dot;
   });
-
-  const dots = Array.from(dotsWrap.querySelectorAll("button"));
 
   function update() {
-    track.style.transform = `translateX(-${current * 100}%)`;
-
+    track.style.transform = `translate3d(-${current * 100}%, 0, 0)`;
     dots.forEach((dot, index) => {
-      dot.classList.toggle("active", index === current);
+      dot.classList.toggle('active', index === current);
+      dot.setAttribute('aria-current', index === current ? 'true' : 'false');
+    });
+    slides.forEach((slide, index) => {
+      const active = index === current;
+      slide.setAttribute('aria-hidden', active ? 'false' : 'true');
+      slide.toggleAttribute('inert', !active);
     });
   }
 
@@ -272,100 +156,110 @@ document.querySelectorAll("[data-press-slider]").forEach((slider) => {
     update();
   }
 
-  prev?.addEventListener("click", () => goTo(current - 1));
-  next?.addEventListener("click", () => goTo(current + 1));
-
+  prev?.addEventListener('click', () => goTo(current - 1));
+  next?.addEventListener('click', () => goTo(current + 1));
+  slider.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowLeft') { event.preventDefault(); goTo(current - 1); }
+    if (event.key === 'ArrowRight') { event.preventDefault(); goTo(current + 1); }
+  });
+  slider.addEventListener('touchstart', (event) => { touchStartX = event.changedTouches[0]?.clientX ?? null; }, { passive: true });
+  slider.addEventListener('touchend', (event) => {
+    if (touchStartX === null) return;
+    const delta = (event.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
+    if (Math.abs(delta) > 45) goTo(current + (delta < 0 ? 1 : -1));
+    touchStartX = null;
+  }, { passive: true });
   update();
 });
 
-/* =========================
-   PRESS ARTICLE MODAL
-   ========================= */
+/* ---------- Press modal ---------- */
+const pressModal = document.querySelector('[data-press-modal]');
+const pressModalTitle = pressModal?.querySelector('[data-press-modal-title]');
+const pressModalSource = pressModal?.querySelector('[data-press-modal-source]');
+const pressModalDate = pressModal?.querySelector('[data-press-modal-date]');
+const pressModalHighlight = pressModal?.querySelector('[data-press-modal-highlight]');
+const pressModalLink = pressModal?.querySelector('[data-press-modal-link]');
+let modalTrigger = null;
+let modalInertTargets = [];
 
-const pressModal = document.querySelector("[data-press-modal]");
-const pressModalTitle = document.querySelector("[data-press-modal-title]");
-const pressModalSource = document.querySelector("[data-press-modal-source]");
-const pressModalDate = document.querySelector("[data-press-modal-date]");
-const pressModalHighlight = document.querySelector("[data-press-modal-highlight]");
-const pressModalLink = document.querySelector("[data-press-modal-link]");
-
-function closePressModal() {
+function setModalBackgroundInert(active) {
   if (!pressModal) return;
-
-  pressModal.hidden = true;
-  document.body.style.overflow = "";
+  if (active) {
+    modalInertTargets = Array.from(document.body.children).filter((el) => el !== pressModal && el.tagName !== 'SCRIPT');
+    modalInertTargets.forEach((el) => el.setAttribute('inert', ''));
+  } else {
+    modalInertTargets.forEach((el) => el.removeAttribute('inert'));
+    modalInertTargets = [];
+  }
 }
 
-document.querySelectorAll("[data-press-open]").forEach((button) => {
-  button.addEventListener("click", () => {
-    if (!pressModal) return;
+function modalFocusable() {
+  if (!pressModal) return [];
+  return Array.from(pressModal.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+    .filter((el) => !el.hasAttribute('hidden'));
+}
 
-    const lang = document.documentElement.getAttribute("lang") || "pt";
+function closePressModal() {
+  if (!pressModal || pressModal.hidden) return;
+  pressModal.hidden = true;
+  document.body.classList.remove('modal-open');
+  setModalBackgroundInert(false);
+  modalTrigger?.focus?.();
+}
 
-    const highlight =
-      lang === "en"
-        ? button.getAttribute("data-highlight-en")
-        : button.getAttribute("data-highlight-pt");
+function openPressModal(button) {
+  if (!pressModal) return;
+  modalTrigger = button;
+  const lang = root.lang || 'pt';
+  const highlight = button.getAttribute(lang === 'en' ? 'data-highlight-en' : 'data-highlight-pt');
+  if (pressModalTitle) pressModalTitle.textContent = button.getAttribute('data-title') || '';
+  if (pressModalSource) pressModalSource.textContent = button.getAttribute('data-source') || '';
+  if (pressModalDate) pressModalDate.textContent = button.getAttribute('data-date') || '';
+  if (pressModalHighlight) pressModalHighlight.textContent = highlight || '';
+  if (pressModalLink) pressModalLink.href = button.getAttribute('data-url') || '#';
+  pressModal.hidden = false;
+  document.body.classList.add('modal-open');
+  setModalBackgroundInert(true);
+  requestAnimationFrame(() => pressModal.querySelector('.press-modal-close')?.focus());
+}
 
-    if (pressModalTitle) {
-      pressModalTitle.textContent = button.getAttribute("data-title") || "";
-    }
+document.querySelectorAll('[data-press-open]').forEach((button) => button.addEventListener('click', () => openPressModal(button)));
+pressModal?.querySelectorAll('[data-press-close]').forEach((button) => button.addEventListener('click', closePressModal));
 
-    if (pressModalSource) {
-      pressModalSource.textContent = button.getAttribute("data-source") || "";
-    }
-
-    if (pressModalDate) {
-      pressModalDate.textContent = button.getAttribute("data-date") || "";
-    }
-
-    if (pressModalHighlight) {
-      pressModalHighlight.textContent = highlight || "";
-    }
-
-    if (pressModalLink) {
-      pressModalLink.href = button.getAttribute("data-url") || "#";
-    }
-
-    pressModal.hidden = false;
-    document.body.style.overflow = "hidden";
-  });
-});
-
-document.querySelectorAll("[data-press-close]").forEach((button) => {
-  button.addEventListener("click", closePressModal);
-});
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    closePressModal();
-  }
-});
-
-/* For Artists — service chips click/tap descriptions */
-document.querySelectorAll(".service-chip-panel").forEach((panel) => {
-  const buttons = Array.from(panel.querySelectorAll("[data-service]"));
-  const descBox = panel.querySelector("[data-service-desc-box]");
-  const descriptions = Array.from(panel.querySelectorAll("[data-service-desc]"));
-
+/* ---------- For Artists service details ---------- */
+document.querySelectorAll('.service-chip-panel').forEach((panel) => {
+  const buttons = Array.from(panel.querySelectorAll('[data-service]'));
+  const descBox = panel.querySelector('[data-service-desc-box]');
+  const descriptions = Array.from(panel.querySelectorAll('[data-service-desc]'));
   if (!buttons.length || !descBox || !descriptions.length) return;
 
-  buttons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const selectedService = button.getAttribute("data-service");
-
-      buttons.forEach((item) => {
-        item.classList.toggle("is-active", item === button);
-      });
-
-      descriptions.forEach((description) => {
-        description.classList.toggle(
-          "is-active",
-          description.getAttribute("data-service-desc") === selectedService
-        );
-      });
-
-      descBox.classList.add("is-active");
+  function choose(button) {
+    const selected = button.dataset.service;
+    buttons.forEach((item) => {
+      const active = item === button;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-  });
+    descriptions.forEach((description) => description.classList.toggle('is-active', description.dataset.serviceDesc === selected));
+    descBox.classList.add('is-active');
+  }
+
+  buttons.forEach((button) => button.addEventListener('click', () => choose(button)));
+  choose(buttons.find((button) => button.classList.contains('is-active')) || buttons[0]);
+});
+
+/* ---------- Escape handling ---------- */
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Tab' && pressModal && !pressModal.hidden) {
+    const focusable = modalFocusable();
+    if (focusable.length) {
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  }
+  if (event.key !== 'Escape') return;
+  closePressModal();
+  if (nav?.classList.contains('open')) closeNav({ restoreFocus: true });
 });

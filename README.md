@@ -1,60 +1,34 @@
-# Caravela Amarela — Production Website
+# Caravela Amarela — Production v3
 
-Production-ready static website for **Caravela Amarela**. The project is intentionally dependency-free: plain HTML, CSS and JavaScript served directly by Cloudflare Pages.
+Static Cloudflare Pages site. No build step required.
 
-## Architecture
+## Deploy
+- Framework preset: None
+- Build command: blank
+- Build output directory: `/`
 
-- Portuguese: `/`, `/wildchains`, `/devil-of-a-woman`, `/for-artists`
-- English: `/en/`, `/en/wildchains`, `/en/devil-of-a-woman`, `/en/for-artists`
-- Shared production CSS: `/styles.css`
-- Shared production JS: `/script.js`
-- Responsive optimized media: `/assets/media/`
-- Custom security headers: `/_headers`
-- Legacy URL redirects: `/_redirects`
-- SEO: canonical URLs, hreflang, Open Graph/Twitter metadata, JSON-LD, `robots.txt`, `sitemap.xml`
-- PWA/browser identity: manifest, favicon, Apple touch icon
+## UX architecture
+- Homepage: proposition → roster → booking workflow → contact.
+- Artist dossiers: hero + instant proof → fit cards → strongest media proof → track record tabs → selected press → booking.
+- WILDCHAINS leads with official music videos and visual storytelling rather than presenting the current video as a live reel.
+- Devil of a Woman leads with its live session, its strongest immediate proof.
+- Long proof and press content is progressively disclosed to keep mobile pages compact.
 
-## Cloudflare Pages settings
+## Performance
+- Responsive WebP image sources.
+- Hero images eager-loaded; lower images lazy-loaded.
+- YouTube players are click-to-load facades.
+- Fixed intrinsic image dimensions are retained where possible.
 
-Keep the repository connected to the `main` branch with:
+## SEO
+- PT + EN crawlable pages.
+- Canonicals, hreflang, sitemap, robots and JSON-LD preserved.
+- Open Graph / social cards preserved.
+- Clean URLs via `_redirects`.
 
-- **Framework preset:** `None`
-- **Build command:** leave empty
-- **Build output directory:** `/`
+## Forms
+Forms prepare a structured email via `mailto:`:
+- booking@caravelaamarela.com
+- artists@caravelaamarela.com
 
-There is no npm/Vite build and no `node_modules` folder. Every push to `main` deploys automatically.
-
-## Production domain
-
-Metadata is prepared for:
-
-`https://caravelaamarela.com`
-
-Before the public launch, configure these aliases on the domain:
-
-- `booking@caravelaamarela.com`
-- `artists@caravelaamarela.com`
-
-The current forms create structured email requests and open the visitor's email app.
-
-## Launch checklist after connecting the domain
-
-1. Confirm HTTPS and `www`/apex preference.
-2. Redirect the `pages.dev` hostname permanently to `caravelaamarela.com`.
-3. Configure `booking@` and `artists@` email aliases before promoting the forms.
-4. Add the domain property to Google Search Console and submit `/sitemap.xml`.
-5. Validate social previews and structured data on the live domain.
-6. Add analytics only after deciding the privacy/cookie approach.
-7. Add verified social profiles to Organization structured data when the official handles are final.
-8. Review legal/privacy information before collecting data through a future direct-submit form.
-
-## Editing workflow
-
-1. Edit the files in the local GitHub repository.
-2. Open GitHub Desktop.
-3. Review the changed files.
-4. Commit to `main`.
-5. Push origin.
-6. Cloudflare Pages publishes the update automatically.
-
-Large original photos should not be committed back into this repository. Export web-ready responsive images instead.
+A direct form backend can be added after domain/email launch without changing the visual system.

@@ -1,34 +1,42 @@
-# Caravela Amarela — Production v3
+# Caravela Amarela — Impact V5
 
-Static Cloudflare Pages site. No build step required.
+Production static website for Cloudflare Pages. No build step required.
 
-## Deploy
+## Cloudflare Pages
 - Framework preset: None
-- Build command: blank
+- Build command: empty
 - Build output directory: `/`
 
-## UX architecture
-- Homepage: proposition → roster → booking workflow → contact.
-- Artist dossiers: hero + instant proof → fit cards → strongest media proof → track record tabs → selected press → booking.
-- WILDCHAINS leads with official music videos and visual storytelling rather than presenting the current video as a live reel.
-- Devil of a Woman leads with its live session, its strongest immediate proof.
-- Long proof and press content is progressively disclosed to keep mobile pages compact.
+## Design direction
+- minimal, visual-first and promoter-focused
+- short decision path: artist → proof → stage fit → booking
+- WILDCHAINS prioritises cinematic/music-video identity
+- Devil of a Woman prioritises live proof
+- pictograms and compact numeric proof replace long explanatory sections
+- current 2026 momentum integrated without turning the website into a news archive
 
 ## Performance
-- Responsive WebP image sources.
-- Hero images eager-loaded; lower images lazy-loaded.
-- YouTube players are click-to-load facades.
-- Fixed intrinsic image dimensions are retained where possible.
+- responsive WebP assets
+- explicit image dimensions
+- hero preloads only
+- lazy loading below the fold
+- click-to-load YouTube embeds
+- static HTML/CSS/JS only
 
-## SEO
-- PT + EN crawlable pages.
-- Canonicals, hreflang, sitemap, robots and JSON-LD preserved.
-- Open Graph / social cards preserved.
-- Clean URLs via `_redirects`.
+## SEO / technical
+- dedicated PT and EN URLs
+- canonical + hreflang
+- Open Graph / Twitter metadata
+- JSON-LD organisation, services and artist entities
+- current artist press references in structured data
+- sitemap.xml + robots.txt
+- clean redirects
+- Cloudflare security/cache headers
 
-## Forms
-Forms prepare a structured email via `mailto:`:
-- booking@caravelaamarela.com
-- artists@caravelaamarela.com
+## Current proof reflected in the site
+- WILDCHAINS — Madrid / Cadillac Solitario, 31 July 2026
+- WILDCHAINS — The Great Fado II in studio
+- Devil of a Woman — António Barge final at CA Vilar de Mouros, 18 August 2026
+- Devil of a Woman — Portugal Blues Challenge finalists 2024 and 2025
 
-A direct form backend can be added after domain/email launch without changing the visual system.
+Before public launch, connect the final domain and professional email routes, then add Search Console and privacy-conscious analytics.

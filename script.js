@@ -26,3 +26,5 @@ function initFitModule(scope){const tabs=[...scope.querySelectorAll('[data-fit-t
 document.querySelectorAll('[data-fit]').forEach(initFitModule);
 // corrected rail controls (controls sit outside the rail wrap)
 document.querySelectorAll('[data-rail-wrap]').forEach(wrap=>{const rail=wrap.querySelector('[data-rail]');const scope=wrap.closest('section')||wrap.parentElement;const prev=scope?.querySelector('[data-rail-prev]');const next=scope?.querySelector('[data-rail-next]');if(!rail)return;prev?.addEventListener('click',()=>rail.scrollBy({left:-railStep(rail),behavior:'smooth'}));next?.addEventListener('click',()=>rail.scrollBy({left:railStep(rail),behavior:'smooth'}))});
+// accessible stage-fit state
+document.querySelectorAll('[data-fit]').forEach(scope=>{const tabs=[...scope.querySelectorAll('[data-fit-tab]')];tabs.forEach(tab=>{const active=tab.classList.contains('is-active');tab.setAttribute('aria-pressed',active?'true':'false');tab.addEventListener('click',()=>{tabs.forEach(t=>t.setAttribute('aria-pressed',t===tab?'true':'false'));});});});

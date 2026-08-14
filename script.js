@@ -1,30 +1,75 @@
-
 document.documentElement.classList.add('js');
-const nav=document.querySelector('[data-nav]'),toggle=document.querySelector('[data-nav-toggle]'),main=document.querySelector('main'),footer=document.querySelector('.site-footer');
-function closeNav(focus=false){nav?.classList.remove('open');toggle?.classList.remove('open');toggle?.setAttribute('aria-expanded','false');document.body.classList.remove('nav-open');main?.removeAttribute('inert');footer?.removeAttribute('inert');if(focus)toggle?.focus()}
-function openNav(){nav?.classList.add('open');toggle?.classList.add('open');toggle?.setAttribute('aria-expanded','true');document.body.classList.add('nav-open');if(innerWidth<=760){main?.setAttribute('inert','');footer?.setAttribute('inert','')}}
-toggle?.addEventListener('click',()=>nav?.classList.contains('open')?closeNav(true):openNav());nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>closeNav()));addEventListener('resize',()=>{if(innerWidth>760)closeNav()},{passive:true});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeNav(true);closeVideo()}});document.querySelectorAll('[data-year]').forEach(e=>e.textContent=new Date().getFullYear());
-// subtle reveal
-if('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches){document.querySelectorAll('.section-title,.artist-tile,.moment-card,.signal,.fit-item,.service-path,.creative-grid>div').forEach(e=>e.classList.add('reveal'));const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.08,rootMargin:'0px 0px -5%'});document.querySelectorAll('.reveal').forEach(e=>io.observe(e))}
-// video modal
-const modal=document.querySelector('[data-video-modal]'),frame=document.querySelector('[data-video-frame]');let lastVideoTrigger=null;
-function openVideo(btn){if(!modal||!frame)return;lastVideoTrigger=btn;const id=btn.dataset.videoId,title=btn.dataset.videoTitle||'Video';frame.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0" title="${title.replace(/"/g,'&quot;')}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';modal.querySelector('.video-close')?.focus()}
-function closeVideo(){if(!modal)return;modal.classList.remove('open');modal.setAttribute('aria-hidden','true');if(frame)frame.innerHTML='';document.body.style.overflow='';lastVideoTrigger?.focus();lastVideoTrigger=null}
-document.querySelectorAll('[data-video-open]').forEach(b=>b.addEventListener('click',()=>openVideo(b)));document.querySelectorAll('[data-video-close]').forEach(b=>b.addEventListener('click',closeVideo));
-// form deep-link + mailto
-const bookingArtist=document.querySelector('#bookingArtist');if(bookingArtist){const wanted=new URLSearchParams(location.search).get('artist');if(wanted&&[...bookingArtist.options].some(o=>o.value===wanted))bookingArtist.value=wanted}const eventDate=document.querySelector('#eventDate');if(eventDate)eventDate.min=new Date().toISOString().slice(0,10);
-function mail(to,subject,lines){location.href=`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.filter(Boolean).join('\n'))}`}
-const bookingForm=document.querySelector('#bookingForm');bookingForm?.addEventListener('submit',e=>{e.preventDefault();if(!bookingForm.reportValidity())return;const v=id=>document.querySelector(id)?.value?.trim()||'-',pt=document.documentElement.lang.startsWith('pt'),a=v('#bookingArtist'),t=v('#eventType'),d=v('#eventDate'),c=v('#city'),m=v('#message');mail('booking@caravelaamarela.com',`${pt?'Pedido de Booking':'Booking request'} — ${a}`,pt?['Olá Caravela Amarela,','',`Artista: ${a}`,`Tipo: ${t}`,`Data: ${d}`,`Cidade / Local: ${c}`,'',m]:['Hello Caravela Amarela,','',`Artist: ${a}`,`Type: ${t}`,`Date: ${d}`,`City / Venue: ${c}`,'',m])});
-const artistForm=document.querySelector('#artistContactForm');artistForm?.addEventListener('submit',e=>{e.preventDefault();if(!artistForm.reportValidity())return;const v=id=>document.querySelector(id)?.value?.trim()||'-',pt=document.documentElement.lang.startsWith('pt'),n=v('#artistName'),em=v('#artistEmail'),c=v('#artistCity'),r=v('#artistRequest'),l=v('#artistLinks'),m=v('#artistMessage');mail('artists@caravelaamarela.com',`For Artists — ${n}`,pt?['Olá Caravela Amarela,','',`Nome artístico: ${n}`,`Email: ${em}`,`Cidade / Região: ${c}`,`Pedido: ${r}`,'',`Links: ${l}`,'',`Mensagem: ${m}`]:['Hello Caravela Amarela,','',`Artist: ${n}`,`Email: ${em}`,`City / Region: ${c}`,`Request: ${r}`,'',`Links: ${l}`,'',`Message: ${m}`])});
 
-// horizontal news rails
-function railStep(el){return Math.max(el.clientWidth*.86,260)}
-document.querySelectorAll('[data-rail-wrap]').forEach(wrap=>{const rail=wrap.querySelector('[data-rail]');const prev=wrap.querySelector('[data-rail-prev]');const next=wrap.querySelector('[data-rail-next]');if(!rail)return;prev?.addEventListener('click',()=>rail.scrollBy({left:-railStep(rail),behavior:'smooth'}));next?.addEventListener('click',()=>rail.scrollBy({left:railStep(rail),behavior:'smooth'}))});
+// Mobile navigation
+const navToggle=document.querySelector('[data-nav-toggle]');
+const mobileNav=document.querySelector('[data-mobile-nav]');
+function closeNav(){
+  mobileNav?.classList.remove('open');
+  navToggle?.classList.remove('open');
+  navToggle?.setAttribute('aria-expanded','false');
+}
+navToggle?.addEventListener('click',()=>{
+  const open=mobileNav?.classList.toggle('open');
+  navToggle.classList.toggle('open',!!open);
+  navToggle.setAttribute('aria-expanded',open?'true':'false');
+});
+mobileNav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeNav));
+window.addEventListener('resize',()=>{if(innerWidth>760)closeNav()},{passive:true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNav()});
 
-// fit tabs / detail panels
-function initFitModule(scope){const tabs=[...scope.querySelectorAll('[data-fit-tab]')],panels=[...scope.querySelectorAll('[data-fit-panel]')];if(!tabs.length||!panels.length)return;const activate=id=>{tabs.forEach(btn=>btn.classList.toggle('is-active',btn.dataset.fitTab===id));panels.forEach(panel=>panel.classList.toggle('is-active',panel.dataset.fitPanel===id))};tabs.forEach(btn=>btn.addEventListener('click',()=>activate(btn.dataset.fitTab)));const start=tabs.find(btn=>btn.classList.contains('is-active'))?.dataset.fitTab||tabs[0].dataset.fitTab;activate(start)}
-document.querySelectorAll('[data-fit]').forEach(initFitModule);
-// corrected rail controls (controls sit outside the rail wrap)
-document.querySelectorAll('[data-rail-wrap]').forEach(wrap=>{const rail=wrap.querySelector('[data-rail]');const scope=wrap.closest('section')||wrap.parentElement;const prev=scope?.querySelector('[data-rail-prev]');const next=scope?.querySelector('[data-rail-next]');if(!rail)return;prev?.addEventListener('click',()=>rail.scrollBy({left:-railStep(rail),behavior:'smooth'}));next?.addEventListener('click',()=>rail.scrollBy({left:railStep(rail),behavior:'smooth'}))});
-// accessible stage-fit state
-document.querySelectorAll('[data-fit]').forEach(scope=>{const tabs=[...scope.querySelectorAll('[data-fit-tab]')];tabs.forEach(tab=>{const active=tab.classList.contains('is-active');tab.setAttribute('aria-pressed',active?'true':'false');tab.addEventListener('click',()=>{tabs.forEach(t=>t.setAttribute('aria-pressed',t===tab?'true':'false'));});});});
+// Year
+ document.querySelectorAll('[data-year]').forEach(el=>el.textContent=new Date().getFullYear());
+
+// Horizontal rails
+function railStep(rail){
+  const card=rail.querySelector('.press-card');
+  if(!card)return Math.max(rail.clientWidth*.8,280);
+  return card.getBoundingClientRect().width+14;
+}
+document.querySelectorAll('.press-section').forEach(section=>{
+  const rail=section.querySelector('[data-rail]');
+  if(!rail)return;
+  section.querySelector('[data-rail-prev]')?.addEventListener('click',()=>rail.scrollBy({left:-railStep(rail),behavior:'smooth'}));
+  section.querySelector('[data-rail-next]')?.addEventListener('click',()=>rail.scrollBy({left:railStep(rail),behavior:'smooth'}));
+});
+
+// Deep link artist into booking form
+const bookingArtist=document.querySelector('#bookingArtist');
+if(bookingArtist){
+  const wanted=new URLSearchParams(location.search).get('artist');
+  if(wanted&&[...bookingArtist.options].some(o=>o.value===wanted))bookingArtist.value=wanted;
+}
+const eventDate=document.querySelector('#eventDate');
+if(eventDate)eventDate.min=new Date().toISOString().slice(0,10);
+
+function mail(to,subject,lines){
+  location.href=`mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.filter(Boolean).join('\n'))}`;
+}
+
+const bookingForm=document.querySelector('#bookingForm');
+bookingForm?.addEventListener('submit',e=>{
+  e.preventDefault();
+  if(!bookingForm.reportValidity())return;
+  const val=id=>document.querySelector(id)?.value?.trim()||'-';
+  const lang=document.documentElement.lang;
+  const pt=lang.startsWith('pt'), es=lang.startsWith('es');
+  const artist=val('#bookingArtist'),type=val('#eventType'),date=val('#eventDate'),city=val('#city'),message=val('#message');
+  mail('booking@caravelaamarela.com',`${pt?'Pedido de Booking':es?'Solicitud de Booking':'Booking request'} — ${artist}`,
+    pt?['Olá Caravela Amarela,','',`Artista: ${artist}`,`Tipo: ${type}`,`Data: ${date}`,`Cidade / Local: ${city}`,'',message]:
+    es?['Hola Caravela Amarela,','',`Artista: ${artist}`,`Tipo: ${type}`,`Fecha: ${date}`,`Ciudad / Sala: ${city}`,'',message]:
+       ['Hello Caravela Amarela,','',`Artist: ${artist}`,`Type: ${type}`,`Date: ${date}`,`City / Venue: ${city}`,'',message]);
+});
+
+const artistForm=document.querySelector('#artistContactForm');
+artistForm?.addEventListener('submit',e=>{
+  e.preventDefault();
+  if(!artistForm.reportValidity())return;
+  const val=id=>document.querySelector(id)?.value?.trim()||'-';
+  const lang=document.documentElement.lang;
+  const pt=lang.startsWith('pt'), es=lang.startsWith('es');
+  const name=val('#artistName'),email=val('#artistEmail'),city=val('#artistCity'),request=val('#artistRequest'),links=val('#artistLinks'),message=val('#artistMessage');
+  mail('artists@caravelaamarela.com',`For Artists — ${name}`,
+    pt?['Olá Caravela Amarela,','',`Nome artístico: ${name}`,`Email: ${email}`,`Cidade / Região: ${city}`,`Pedido: ${request}`,'',`Links: ${links}`,'',`Mensagem: ${message}`]:
+    es?['Hola Caravela Amarela,','',`Nombre artístico: ${name}`,`Email: ${email}`,`Ciudad / Región: ${city}`,`Solicitud: ${request}`,'',`Links: ${links}`,'',`Mensaje: ${message}`]:
+       ['Hello Caravela Amarela,','',`Artist: ${name}`,`Email: ${email}`,`City / Region: ${city}`,`Request: ${request}`,'',`Links: ${links}`,'',`Message: ${message}`]);
+});

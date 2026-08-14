@@ -181,7 +181,63 @@ artistForm?.addEventListener("submit", (event) => {
   submitContactForm(artistForm, "artist");
 });
 
-// Accessible image viewer for the compact live galleries.
+// Compact, swipeable live-gallery carousels.
+const galleryLabels = isPortuguese
+  ? { rail: "Galeria de fotografias ao vivo", previous: "Fotografias anteriores", next: "Fotografias seguintes" }
+  : isSpanish
+    ? { rail: "Galería de fotografías en directo", previous: "Fotografías anteriores", next: "Fotografías siguientes" }
+    : { rail: "Live photo gallery", previous: "Previous photographs", next: "Next photographs" };
+
+function galleryScrollStep(rail) {
+  const item = rail.querySelector(".gallery-item");
+  if (!item) return Math.max(rail.clientWidth * 0.75, 240);
+  const gap = Number.parseFloat(getComputedStyle(rail).columnGap) || 0;
+  return item.getBoundingClientRect().width + gap;
+}
+
+document.querySelectorAll("[data-gallery-rail]").forEach((rail) => {
+  rail.setAttribute("aria-label", galleryLabels.rail);
+  rail.setAttribute("tabindex", "0");
+
+  const controls = document.createElement("div");
+  controls.className = "gallery-arrows";
+  controls.innerHTML = `
+    <button type="button" aria-label="${galleryLabels.previous}">←</button>
+    <button type="button" aria-label="${galleryLabels.next}">→</button>
+  `;
+
+  const [previous, next] = controls.querySelectorAll("button");
+  rail.closest(".live-gallery-section")?.querySelector(".gallery-head")?.append(controls);
+
+  const updateControls = () => {
+    const maxScroll = Math.max(rail.scrollWidth - rail.clientWidth, 0);
+    previous.disabled = rail.scrollLeft <= 2;
+    next.disabled = rail.scrollLeft >= maxScroll - 2;
+  };
+
+  previous.addEventListener("click", () => {
+    rail.scrollBy({ left: -galleryScrollStep(rail), behavior: "smooth" });
+  });
+  next.addEventListener("click", () => {
+    rail.scrollBy({ left: galleryScrollStep(rail), behavior: "smooth" });
+  });
+  rail.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const direction = event.key === "ArrowLeft" ? -1 : 1;
+    rail.scrollBy({ left: galleryScrollStep(rail) * direction, behavior: "smooth" });
+  });
+
+  let updateFrame = 0;
+  rail.addEventListener("scroll", () => {
+    cancelAnimationFrame(updateFrame);
+    updateFrame = requestAnimationFrame(updateControls);
+  }, { passive: true });
+  window.addEventListener("resize", updateControls, { passive: true });
+  updateControls();
+});
+
+// Accessible image viewer for the live galleries.
 const galleryItems = document.querySelectorAll("[data-gallery-src]");
 if (galleryItems.length) {
   const dialog = document.createElement("dialog");

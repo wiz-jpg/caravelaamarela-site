@@ -9,7 +9,7 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Cópia de cada pedido guardada em Cloudflare D1 e eliminação de registos com mais de 12 meses.
 - Sem CAPTCHA nem filtragem do conteúdo das mensagens; apenas validação estrutural dos campos.
 - Alternativa `mailto:` apresentada se o envio técnico falhar.
-- Galerias live de WILDCHAINS e Devil of a Woman, com ligação ao material promocional no Google Drive.
+- Galerias live em carrossel de WILDCHAINS e Devil of a Woman, com ligação ao material promocional no Google Drive.
 - RAJ Drumsticks apresentada discretamente como parceria de material.
 - Campanha televisiva de McDonald’s Portugal assinalada como “brevemente”.
 - SEO PT/EN/ES: canonical, hreflang, dados estruturados e sitemap atualizado.

@@ -1,5 +1,5 @@
 const BOOKING_EMAIL = "booking@caravelaamarela.com";
-const SENDER_EMAIL = "forms@caravelaamarela.com";
+const SENDER_EMAIL = "notifications@forms.caravelaamarela.com";
 const MAX_REQUEST_BYTES = 64 * 1024;
 const MAX_FIELD_LENGTH = 20_000;
 
@@ -151,38 +151,36 @@ async function ensureDatabase(database) {
 }
 
 async function sendNotification(env, formType, language, fields, submissionId) {
-  if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_EMAIL_API_TOKEN) {
+  if (!env.RESEND_API_KEY) {
     throw new Error("Email service is not configured");
   }
 
   const { text, html } = emailContent(formType, language, fields, submissionId);
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(env.CLOUDFLARE_ACCOUNT_ID)}/email/sending/send`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.CLOUDFLARE_EMAIL_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to: BOOKING_EMAIL,
-        from: { address: SENDER_EMAIL, name: "Caravela Amarela — Formulários" },
-        reply_to: fields.contactEmail,
-        subject: subjectFor(formType, fields),
-        text,
-        html,
-        headers: {
-          "Auto-Submitted": "auto-generated",
-          "Content-Language": language,
-          "X-Submission-ID": submissionId,
-        },
-      }),
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": submissionId,
     },
-  );
+    body: JSON.stringify({
+      from: `Caravela Amarela — Formulários <${SENDER_EMAIL}>`,
+      to: [BOOKING_EMAIL],
+      reply_to: fields.contactEmail,
+      subject: subjectFor(formType, fields),
+      text,
+      html,
+      headers: {
+        "Auto-Submitted": "auto-generated",
+        "Content-Language": language,
+        "X-Submission-ID": submissionId,
+      },
+    }),
+  });
 
   const result = await response.json().catch(() => null);
-  if (!response.ok || !result?.success) {
-    const detail = result?.errors?.[0]?.message || `Email API returned ${response.status}`;
+  if (!response.ok || !result?.id) {
+    const detail = result?.message || `Email API returned ${response.status}`;
     throw new Error(detail);
   }
 }

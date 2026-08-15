@@ -9,7 +9,9 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Cópia de cada pedido guardada em Cloudflare D1 e eliminação de registos com mais de 12 meses.
 - Sem CAPTCHA nem filtragem do conteúdo das mensagens; apenas validação estrutural dos campos.
 - Alternativa `mailto:` apresentada se o envio técnico falhar.
+- Falhas de envio apresentadas num alerta de alto contraste; contacto direto destacado junto ao formulário.
 - Galerias live em carrossel de WILDCHAINS e Devil of a Woman, com ligação ao material promocional no Google Drive.
+- Notícias editoriais só são mostradas quando o cartão identifica explicitamente WILDCHAINS ou Devil of a Woman.
 - RAJ Drumsticks apresentada discretamente como parceria de material.
 - Campanha televisiva de McDonald’s Portugal assinalada como “brevemente”.
 - SEO PT/EN/ES: canonical, hreflang, dados estruturados e sitemap atualizado.
@@ -37,15 +39,12 @@ Estas definições só precisam de ser feitas uma vez no projeto Pages.
 
 ### 2. Envio das notificações por email
 
-1. Abre **Compute → Email Service → Email Sending** e faz **Onboard Domain** para `caravelaamarela.com`.
-2. Confirma que a Cloudflare não cria um segundo registo `_dmarc`: o domínio deve ter apenas um registo DMARC. Mantém o DMARC existente e aceita apenas a atualização necessária, caso a interface a proponha.
-3. Verifica `booking@caravelaamarela.com` como endereço de destino, se a Cloudflare o pedir.
-4. Cria um API Token limitado à permissão **Email Sending: Edit** para esta conta.
-5. Em **Workers & Pages → projeto → Settings → Variables and Secrets**, adiciona:
-   - `CLOUDFLARE_ACCOUNT_ID` — Account ID da conta Cloudflare;
-   - `CLOUDFLARE_EMAIL_API_TOKEN` — o token anterior, marcado como **Secret / Encrypt**.
+1. No Resend, adiciona e verifica o subdomínio `forms.caravelaamarela.com`, com envio ativo e receção desativada.
+2. Mantém todos os registos do Resend dentro desse subdomínio para não interferirem com o Zoho no domínio principal.
+3. Cria uma API key no Resend apenas com permissão de envio.
+4. Em **Workers & Pages → projeto → Settings → Variables and Secrets**, adiciona `RESEND_API_KEY` como **Secret / Encrypt**.
 
-O remetente técnico é `forms@caravelaamarela.com`; não precisa de mailbox própria. O cabeçalho `Reply-To` é o email preenchido no formulário, portanto o botão Responder no Zoho/Gmail responde diretamente à pessoa.
+O remetente técnico é `notifications@forms.caravelaamarela.com`; não precisa de mailbox própria. O cabeçalho `Reply-To` é o email preenchido no formulário, portanto o botão Responder no Zoho/Gmail responde diretamente à pessoa.
 
 ### 3. Tornar a configuração ativa
 

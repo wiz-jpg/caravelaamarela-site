@@ -70,24 +70,24 @@ const formMessages = isPortuguese
   ? {
       sending: "A enviar…",
       success: "Pedido enviado. Respondemos assim que possível.",
-      saved: "O pedido ficou guardado, mas a notificação por email falhou. Envia também diretamente para booking@caravelaamarela.com.",
-      error: "Não foi possível enviar o formulário. Envia o pedido diretamente por email.",
-      fallback: "Abrir email alternativo ↗",
+      saved: "ATENÇÃO — O pedido ficou guardado, mas a notificação por email falhou. Envia também diretamente para booking@caravelaamarela.com.",
+      error: "ATENÇÃO — NÃO FOI POSSÍVEL ENVIAR O FORMULÁRIO. Envia o pedido diretamente por email.",
+      fallback: "Enviar diretamente por email ↗",
     }
   : isSpanish
     ? {
         sending: "Enviando…",
         success: "Solicitud enviada. Responderemos lo antes posible.",
-        saved: "La solicitud quedó guardada, pero falló la notificación por email. Envíala también directamente a booking@caravelaamarela.com.",
-        error: "No ha sido posible enviar el formulario. Envíalo directamente por email.",
-        fallback: "Abrir email alternativo ↗",
+        saved: "ATENCIÓN — La solicitud quedó guardada, pero falló la notificación por email. Envíala también directamente a booking@caravelaamarela.com.",
+        error: "ATENCIÓN — NO HA SIDO POSIBLE ENVIAR EL FORMULARIO. Envíalo directamente por email.",
+        fallback: "Enviar directamente por email ↗",
       }
     : {
         sending: "Sending…",
         success: "Request sent. We will reply as soon as possible.",
-        saved: "The request was saved, but the email notification failed. Please also send it directly to booking@caravelaamarela.com.",
-        error: "The form could not be sent. Please send the request directly by email.",
-        fallback: "Open fallback email ↗",
+        saved: "ATTENTION — The request was saved, but the email notification failed. Please also send it directly to booking@caravelaamarela.com.",
+        error: "ATTENTION — THE FORM COULD NOT BE SENT. Please send the request directly by email.",
+        fallback: "Send directly by email ↗",
       };
 
 function fallbackEmail(formType, fields) {

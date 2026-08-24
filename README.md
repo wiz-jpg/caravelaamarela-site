@@ -15,12 +15,13 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Falhas de envio apresentadas num alerta de alto contraste; contacto direto destacado junto ao formulário.
 - Galerias live em carrossel de WILDCHAINS e Devil of a Woman, com ligação ao material promocional no Google Drive.
 - Notícias editoriais só são mostradas quando o cartão identifica explicitamente WILDCHAINS ou Devil of a Woman.
-- Homepage reorganizada em duas leituras complementares: imprensa recente à esquerda e próximas datas do roster à direita.
-- Cobertura de Vilar de Mouros atualizada com a vitória dos Devil of a Woman no António Barge e a abertura do palco principal no dia seguinte.
+- Homepage com a imprensa em destaque primeiro e uma agenda discreta numa secção própria imediatamente abaixo.
+- Seleção editorial revista para apresentar apenas uma notícia por acontecimento, escolhendo a fonte com melhor conteúdo e excertos relevantes para booking.
+- Cobertura de Vilar de Mouros atualizada com a atuação dos Devil of a Woman no palco principal e a vitória no António Barge.
 - Secções “Stage fit” dos dois artistas ampliadas e reorganizadas em grelha para melhorar a leitura de contextos, destaques e parcerias.
 - Palcos e momentos de destaque dos WILDCHAINS separados de uma coluna própria de parcerias e colaborações.
 - RAJ Drumsticks apresentada como parceria de material e campanha televisiva de McDonald’s Portugal assinalada como “brevemente”.
-- Agenda 2026 atualizada: Vilar de Mouros, Famalicão, Tomate Blues Festival e seis atuações acústicas dos WILDCHAINS na FNAC.
+- Agenda 2026 atualizada: Famalicão, Tomate Blues Festival, Associação Cultural Fora do Rebanho e seis atuações acústicas dos WILDCHAINS na FNAC.
 - SEO PT/EN/ES: canonical, hreflang, dados estruturados e sitemap atualizado.
 
 ## Publicação do site

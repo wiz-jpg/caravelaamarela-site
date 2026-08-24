@@ -4,7 +4,10 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 
 ## Conteúdo desta versão
 
+- Nova assinatura institucional em PT/EN/ES: “Rotas entre talento e oportunidade.”
+- Sistema de cor por artista: WILDCHAINS em azul-cobalto `#4F7FD1`, Devil of a Woman em vermelho e ações globais da Caravela em amarelo.
 - Contacto único: `booking@caravelaamarela.com` e João Abreu · `+351 935 449 151`.
+- Instagram `@caravela.amarela` integrado na área de contacto e nos rodapés.
 - Formulários de booking e de artistas com envio real para `booking@caravelaamarela.com`.
 - Cópia de cada pedido guardada em Cloudflare D1 e eliminação de registos com mais de 12 meses.
 - Sem CAPTCHA nem filtragem do conteúdo das mensagens; apenas validação estrutural dos campos.
@@ -12,8 +15,9 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Falhas de envio apresentadas num alerta de alto contraste; contacto direto destacado junto ao formulário.
 - Galerias live em carrossel de WILDCHAINS e Devil of a Woman, com ligação ao material promocional no Google Drive.
 - Notícias editoriais só são mostradas quando o cartão identifica explicitamente WILDCHAINS ou Devil of a Woman.
-- RAJ Drumsticks apresentada discretamente como parceria de material.
-- Campanha televisiva de McDonald’s Portugal assinalada como “brevemente”.
+- Palcos e momentos de destaque dos WILDCHAINS separados de uma coluna própria de parcerias e colaborações.
+- RAJ Drumsticks apresentada como parceria de material e campanha televisiva de McDonald’s Portugal assinalada como “brevemente”.
+- Agenda 2026 atualizada: Vilar de Mouros, Famalicão, Tomate Blues Festival e seis atuações acústicas dos WILDCHAINS na FNAC.
 - SEO PT/EN/ES: canonical, hreflang, dados estruturados e sitemap atualizado.
 
 ## Publicação do site

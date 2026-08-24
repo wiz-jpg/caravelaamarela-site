@@ -49,3 +49,36 @@ h1,h2,h3,h4{font-family:Archivo,sans-serif;margin:0;font-weight:900;letter-spaci
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 
 @media(min-width:761px){.artists-hero .hero-content{padding-inline:clamp(8px,1vw,18px)}.for-artists-page .section.shell,.artists-page .section.shell{max-width:1280px}}
+
+/* 2026-08 identity and content update */
+:root{--wild:#4f7fd1}
+.home-hero .route-tagline{display:grid;width:max-content;max-width:none!important;font-size:clamp(3.15rem,6.7vw,6.9rem);text-wrap:nowrap}
+.home-hero .route-tagline span{display:block;white-space:nowrap}
+.roster-card.wild .genre,.wild .eyebrow,.wild .artist-genre,.wild-stats .stat span,.wild .portfolio-years h4{color:var(--wild)}
+.wild .fit-item svg{stroke:var(--wild)}
+.wild a:focus-visible,.wild button:focus-visible,.wild summary:focus-visible{outline-color:var(--wild)}
+.wild .rail-arrows button:hover,.wild .gallery-arrows button:hover:not(:disabled){border-color:var(--wild)}
+.wild .playlist-frame,.wild .portfolio{border-color:rgba(79,127,209,.36)}
+.wild .portfolio summary span,.wild .text-link{color:var(--wild)}
+.press-card.wild:hover{border-color:rgba(79,127,209,.62)}
+.press-card.wild .press-meta{color:var(--wild)}
+.press-card.wild blockquote{border-color:var(--wild)}
+.artist-book .eyebrow{color:var(--gold)}
+.feature-columns{display:grid;grid-template-columns:minmax(0,7fr) minmax(270px,3fr);gap:14px;margin-top:14px}
+.feature-columns .highlight-block{margin-top:0;height:100%}
+.feature-columns .stage-highlights{border-top:2px solid var(--wild)}
+.feature-columns .partnership-block{border-top:2px solid var(--wild);background:linear-gradient(145deg,rgba(79,127,209,.13),rgba(11,11,10,.94) 64%)}
+.partnership-list{display:grid;gap:10px}
+.partnership-item{display:grid;gap:6px;padding:14px;border:1px solid rgba(79,127,209,.34);background:rgba(5,5,5,.34)}
+.partnership-item strong{font-family:Archivo,sans-serif;font-size:.82rem;letter-spacing:.015em}
+.partnership-item span{color:#aaa69c;font-size:.76rem;line-height:1.4}
+.footer-contact{display:grid;justify-items:end;gap:7px}
+.footer-contact .footer-social{font-family:Archivo,sans-serif;font-size:.58rem;font-weight:800;letter-spacing:.05em;color:#8f8b83}
+.footer-contact a:hover{color:var(--text)}
+
+@media(max-width:760px){
+  .home-hero .route-tagline{font-size:clamp(2.35rem,10vw,3.15rem);max-width:none!important}
+  .feature-columns{grid-template-columns:1fr}
+  .footer-contact{grid-column:1/-1;grid-row:3;justify-items:start}
+  .footer-contact .footer-email{grid-column:auto;grid-row:auto}
+}

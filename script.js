@@ -28,14 +28,17 @@ document.querySelectorAll("[data-year]").forEach((element) => {
   element.textContent = new Date().getFullYear();
 });
 
-// Horizontal press rails
+// Horizontal press and agenda rails
 function railStep(rail) {
-  const card = rail.querySelector(".press-card");
+  const card = rail.querySelector(".press-card, .agenda-event");
   if (!card) return Math.max(rail.clientWidth * 0.8, 280);
-  return card.getBoundingClientRect().width + 14;
+  const railStyle = getComputedStyle(rail);
+  const cardStyle = getComputedStyle(card);
+  const spacing = (Number.parseFloat(railStyle.columnGap) || 0) + (Number.parseFloat(cardStyle.marginRight) || 0);
+  return card.getBoundingClientRect().width + spacing;
 }
 
-document.querySelectorAll(".press-section").forEach((section) => {
+document.querySelectorAll(".press-section, .agenda-section").forEach((section) => {
   const rail = section.querySelector("[data-rail]");
   if (!rail) return;
   section.querySelector("[data-rail-prev]")?.addEventListener("click", () => {
@@ -43,6 +46,12 @@ document.querySelectorAll(".press-section").forEach((section) => {
   });
   section.querySelector("[data-rail-next]")?.addEventListener("click", () => {
     rail.scrollBy({ left: railStep(rail), behavior: "smooth" });
+  });
+  rail.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const direction = event.key === "ArrowLeft" ? -1 : 1;
+    rail.scrollBy({ left: railStep(rail) * direction, behavior: "smooth" });
   });
 });
 

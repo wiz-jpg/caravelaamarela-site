@@ -1,0 +1,121 @@
+{
+  "updated": "2026-09-15",
+  "events": [
+    {
+      "date": "2026-09-18",
+      "artist": "both",
+      "label": {
+        "pt": "Noite de roster",
+        "en": "Roster night",
+        "es": "Noche de roster"
+      },
+      "title": "WILDCHAINS + Devil of a Woman + Inesh Bueno",
+      "venue": "Casa do Artista Amador",
+      "city": "Famalicão"
+    },
+    {
+      "date": "2026-10-03",
+      "artist": "devil",
+      "label": "Devil of a Woman",
+      "title": "Tomate Blues Festival",
+      "venue": "Parque de Las Marismas",
+      "city": {
+        "pt": "Los Palacios y Villafranca · Sevilha",
+        "en": "Los Palacios y Villafranca · Seville",
+        "es": "Los Palacios y Villafranca · Sevilla"
+      }
+    },
+    {
+      "date": "2026-10-17",
+      "artist": "devil",
+      "label": "Devil of a Woman",
+      "title": "Associação Cultural Fora do Rebanho",
+      "venue": "Fora do Rebanho",
+      "city": "Viseu"
+    },
+    {
+      "date": "2026-11-06",
+      "artist": "wild",
+      "label": {
+        "pt": "WILDCHAINS · acústico",
+        "en": "WILDCHAINS · acoustic",
+        "es": "WILDCHAINS · acústico"
+      },
+      "title": "FNAC Coimbra",
+      "venue": "Fórum Coimbra",
+      "city": "Coimbra"
+    },
+    {
+      "date": "2026-11-07",
+      "artist": "wild",
+      "label": {
+        "pt": "WILDCHAINS · acústico",
+        "en": "WILDCHAINS · acoustic",
+        "es": "WILDCHAINS · acústico"
+      },
+      "title": "FNAC Chiado",
+      "venue": "FNAC Chiado",
+      "city": {
+        "pt": "Lisboa",
+        "en": "Lisbon",
+        "es": "Lisboa"
+      }
+    },
+    {
+      "date": "2026-11-08",
+      "artist": "wild",
+      "label": {
+        "pt": "WILDCHAINS · acústico",
+        "en": "WILDCHAINS · acoustic",
+        "es": "WILDCHAINS · acústico"
+      },
+      "title": "FNAC Cascais",
+      "venue": "CascaiShopping",
+      "city": "Cascais"
+    },
+    {
+      "date": "2026-11-14",
+      "artist": "devil",
+      "label": "Devil of a Woman",
+      "title": "28.ª Rota Motard de S. Martinho",
+      "venue": "Moto Clube Vale do Sousa",
+      "city": "Penafiel"
+    },
+    {
+      "date": "2026-11-21",
+      "artist": "wild",
+      "label": {
+        "pt": "WILDCHAINS · acústico",
+        "en": "WILDCHAINS · acoustic",
+        "es": "WILDCHAINS · acústico"
+      },
+      "title": "FNAC Braga",
+      "venue": "Braga Parque",
+      "city": "Braga"
+    },
+    {
+      "date": "2026-11-28",
+      "artist": "wild",
+      "label": {
+        "pt": "WILDCHAINS · acústico",
+        "en": "WILDCHAINS · acoustic",
+        "es": "WILDCHAINS · acústico"
+      },
+      "title": "FNAC Aveiro",
+      "venue": "Forum Aveiro",
+      "city": "Aveiro"
+    },
+    {
+      "date": "2026-11-29",
+      "artist": "wild",
+      "label": {
+        "pt": "WILDCHAINS · acústico",
+        "en": "WILDCHAINS · acoustic",
+        "es": "WILDCHAINS · acústico"
+      },
+      "title": "FNAC Viseu",
+      "venue": "Palácio do Gelo",
+      "city": "Viseu"
+    }
+  ]
+}

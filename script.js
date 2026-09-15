@@ -204,6 +204,19 @@ function galleryScrollStep(rail) {
   return item.getBoundingClientRect().width + gap;
 }
 
+function scrollGallery(rail, direction) {
+  const railLeft = rail.getBoundingClientRect().left;
+  const positions = [...rail.querySelectorAll(".gallery-item")].map((item) => (
+    item.getBoundingClientRect().left - railLeft + rail.scrollLeft
+  ));
+  const current = rail.scrollLeft;
+  const target = direction > 0
+    ? positions.find((position) => position > current + 4)
+    : [...positions].reverse().find((position) => position < current - 4);
+  if (typeof target === "number") rail.scrollTo({ left: target, behavior: "smooth" });
+  else rail.scrollBy({ left: galleryScrollStep(rail) * direction, behavior: "smooth" });
+}
+
 document.querySelectorAll("[data-gallery-rail]").forEach((rail) => {
   rail.setAttribute("aria-label", galleryLabels.rail);
   rail.setAttribute("tabindex", "0");
@@ -225,16 +238,16 @@ document.querySelectorAll("[data-gallery-rail]").forEach((rail) => {
   };
 
   previous.addEventListener("click", () => {
-    rail.scrollBy({ left: -galleryScrollStep(rail), behavior: "smooth" });
+    scrollGallery(rail, -1);
   });
   next.addEventListener("click", () => {
-    rail.scrollBy({ left: galleryScrollStep(rail), behavior: "smooth" });
+    scrollGallery(rail, 1);
   });
   rail.addEventListener("keydown", (event) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     event.preventDefault();
     const direction = event.key === "ArrowLeft" ? -1 : 1;
-    rail.scrollBy({ left: galleryScrollStep(rail) * direction, behavior: "smooth" });
+    scrollGallery(rail, direction);
   });
 
   let updateFrame = 0;
@@ -271,3 +284,399 @@ if (galleryItems.length) {
     });
   });
 }
+
+// Site-wide agenda: one compact rotating date above the footer, with the full
+// chronological calendar available in an accessible dialog.
+const localeKey = isPortuguese ? "pt" : isSpanish ? "es" : "en";
+const localeCode = isPortuguese ? "pt-PT" : isSpanish ? "es-ES" : "en-GB";
+const agendaLabels = isPortuguese
+  ? {
+      kicker: "Agenda",
+      open: "Ver agenda completa",
+      title: "Próximas datas",
+      close: "Fechar agenda",
+      pause: "Pausar rotação da agenda",
+      play: "Retomar rotação da agenda",
+      empty: "Não existem datas anunciadas neste momento.",
+    }
+  : isSpanish
+    ? {
+        kicker: "Agenda",
+        open: "Ver agenda completa",
+        title: "Próximas fechas",
+        close: "Cerrar agenda",
+        pause: "Pausar rotación de la agenda",
+        play: "Reanudar rotación de la agenda",
+        empty: "No hay fechas anunciadas en este momento.",
+      }
+    : {
+        kicker: "Live",
+        open: "View full calendar",
+        title: "Upcoming dates",
+        close: "Close calendar",
+        pause: "Pause calendar rotation",
+        play: "Resume calendar rotation",
+        empty: "There are no announced dates at the moment.",
+      };
+
+function localizedValue(value) {
+  if (value && typeof value === "object") return value[localeKey] || value.pt || Object.values(value)[0] || "";
+  return value || "";
+}
+
+function dateAtNoon(dateString) {
+  return new Date(`${dateString}T12:00:00`);
+}
+
+function venueLine(event) {
+  return [localizedValue(event.venue), localizedValue(event.city)].filter(Boolean).join(" · ");
+}
+
+function agendaAccent(event) {
+  return event.artist === "wild" ? "var(--wild)" : event.artist === "devil" ? "var(--red)" : "var(--gold)";
+}
+
+function injectEventSchema(events) {
+  if (!events.length) return;
+  const schema = events.map((event) => {
+    const performers = event.artist === "wild"
+      ? [{ "@type": "MusicGroup", name: "WILDCHAINS" }]
+      : event.artist === "devil"
+        ? [{ "@type": "MusicGroup", name: "Devil of a Woman" }]
+        : [
+            { "@type": "MusicGroup", name: "WILDCHAINS" },
+            { "@type": "MusicGroup", name: "Devil of a Woman" },
+          ];
+    return {
+      "@context": "https://schema.org",
+      "@type": "MusicEvent",
+      name: localizedValue(event.title),
+      startDate: event.date,
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      eventStatus: "https://schema.org/EventScheduled",
+      location: {
+        "@type": "MusicVenue",
+        name: localizedValue(event.venue),
+        address: localizedValue(event.city),
+      },
+      performer: performers,
+      organizer: { "@id": "https://caravelaamarela.com/#organization" },
+    };
+  });
+  const script = document.createElement("script");
+  script.type = "application/ld+json";
+  script.textContent = JSON.stringify(schema);
+  document.head.append(script);
+}
+
+function buildAgendaDialog(events) {
+  const dialog = document.createElement("dialog");
+  dialog.className = "agenda-dialog";
+  dialog.setAttribute("aria-labelledby", "agenda-modal-title");
+
+  const head = document.createElement("header");
+  head.className = "agenda-modal-head";
+  const headingWrap = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  eyebrow.textContent = agendaLabels.kicker;
+  const heading = document.createElement("h2");
+  heading.id = "agenda-modal-title";
+  heading.textContent = agendaLabels.title;
+  headingWrap.append(eyebrow, heading);
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "agenda-modal-close";
+  close.setAttribute("aria-label", agendaLabels.close);
+  close.textContent = "×";
+  head.append(headingWrap, close);
+
+  const body = document.createElement("div");
+  body.className = "agenda-modal-body";
+  const grouped = new Map();
+  events.forEach((event) => {
+    const key = event.date.slice(0, 7);
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(event);
+  });
+
+  if (!events.length) {
+    const empty = document.createElement("p");
+    empty.className = "agenda-empty";
+    empty.textContent = agendaLabels.empty;
+    body.append(empty);
+  }
+
+  grouped.forEach((monthEvents) => {
+    const month = document.createElement("section");
+    month.className = "agenda-month";
+    const monthTitle = document.createElement("h3");
+    monthTitle.textContent = new Intl.DateTimeFormat(localeCode, { month: "long", year: "numeric" }).format(dateAtNoon(monthEvents[0].date));
+    const list = document.createElement("div");
+    list.className = "agenda-list";
+
+    monthEvents.forEach((event) => {
+      const item = document.createElement("article");
+      item.className = event.artist;
+      item.style.setProperty("--agenda-accent", agendaAccent(event));
+      const time = document.createElement("time");
+      time.dateTime = event.date;
+      time.textContent = new Intl.DateTimeFormat(localeCode, { day: "2-digit" }).format(dateAtNoon(event.date));
+      const copy = document.createElement("div");
+      const label = document.createElement("small");
+      label.textContent = localizedValue(event.label);
+      const title = document.createElement("h4");
+      title.textContent = localizedValue(event.title);
+      const place = document.createElement("p");
+      place.textContent = venueLine(event);
+      copy.append(label, title, place);
+      item.append(time, copy);
+      list.append(item);
+    });
+
+    month.append(monthTitle, list);
+    body.append(month);
+  });
+
+  dialog.append(head, body);
+  close.addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+  document.body.append(dialog);
+  return dialog;
+}
+
+async function initializeAgenda() {
+  const footer = document.querySelector(".site-footer");
+  if (!footer) return;
+
+  try {
+    const response = await fetch("/assets/data/agenda.json", { cache: "no-cache" });
+    if (!response.ok) throw new Error("agenda_unavailable");
+    const data = await response.json();
+    const now = new Date();
+    const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+    const events = (Array.isArray(data.events) ? data.events : [])
+      .filter((event) => event?.date && event.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    injectEventSchema(events);
+    const dialog = buildAgendaDialog(events);
+    const section = document.createElement("section");
+    section.className = "footer-agenda";
+    section.setAttribute("aria-label", agendaLabels.title);
+    const live = document.createElement("div");
+    live.className = "agenda-live shell";
+    const kicker = document.createElement("div");
+    kicker.className = "agenda-kicker";
+    kicker.textContent = agendaLabels.kicker;
+    const current = document.createElement("div");
+    current.className = "agenda-current";
+    current.setAttribute("aria-live", "off");
+    const controls = document.createElement("div");
+    controls.className = "agenda-controls";
+    const pause = document.createElement("button");
+    pause.type = "button";
+    pause.className = "agenda-pause";
+    pause.setAttribute("aria-label", agendaLabels.pause);
+    pause.textContent = "Ⅱ";
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "agenda-open";
+    open.textContent = agendaLabels.open;
+    controls.append(pause, open);
+    live.append(kicker, current, controls);
+    section.append(live);
+    footer.before(section);
+
+    let index = 0;
+    let timer = 0;
+    let manuallyPaused = false;
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const render = () => {
+      current.replaceChildren();
+      if (!events.length) {
+        const message = document.createElement("p");
+        message.className = "agenda-empty";
+        message.textContent = agendaLabels.empty;
+        current.append(message);
+        pause.hidden = true;
+        return;
+      }
+      const event = events[index];
+      section.style.setProperty("--agenda-accent", agendaAccent(event));
+      const date = dateAtNoon(event.date);
+      const time = document.createElement("time");
+      time.className = "agenda-date";
+      time.dateTime = event.date;
+      const day = document.createElement("strong");
+      day.textContent = new Intl.DateTimeFormat(localeCode, { day: "2-digit" }).format(date);
+      const month = document.createElement("span");
+      month.textContent = new Intl.DateTimeFormat(localeCode, { month: "short" }).format(date).replace(".", "");
+      time.append(day, month);
+      const copy = document.createElement("div");
+      copy.className = "agenda-event-copy";
+      const nameWrap = document.createElement("div");
+      const label = document.createElement("small");
+      label.textContent = localizedValue(event.label);
+      const title = document.createElement("strong");
+      title.textContent = localizedValue(event.title);
+      nameWrap.append(label, title);
+      const place = document.createElement("p");
+      place.textContent = venueLine(event);
+      copy.append(nameWrap, place);
+      current.append(time, copy);
+      current.classList.remove("agenda-fade");
+      requestAnimationFrame(() => current.classList.add("agenda-fade"));
+    };
+
+    const stop = () => {
+      clearInterval(timer);
+      timer = 0;
+    };
+    const start = () => {
+      stop();
+      if (reducedMotion || manuallyPaused || events.length < 2) return;
+      timer = window.setInterval(() => {
+        index = (index + 1) % events.length;
+        render();
+      }, 6000);
+    };
+
+    pause.addEventListener("click", () => {
+      manuallyPaused = !manuallyPaused;
+      pause.textContent = manuallyPaused ? "▶" : "Ⅱ";
+      pause.setAttribute("aria-label", manuallyPaused ? agendaLabels.play : agendaLabels.pause);
+      manuallyPaused ? stop() : start();
+    });
+    section.addEventListener("mouseenter", stop);
+    section.addEventListener("mouseleave", start);
+    section.addEventListener("focusin", stop);
+    section.addEventListener("focusout", (event) => {
+      if (!section.contains(event.relatedTarget)) start();
+    });
+    document.addEventListener("visibilitychange", () => document.hidden ? stop() : start());
+    open.addEventListener("click", () => {
+      stop();
+      dialog.showModal();
+    });
+    dialog.addEventListener("close", start);
+    render();
+    start();
+  } catch (error) {
+    console.error("Agenda could not be loaded", error);
+  }
+}
+
+// Published news can be added after editorial approval without rebuilding the
+// static pages. DOM nodes are built with textContent to keep remote data inert.
+function currentArtistFilter() {
+  const main = document.querySelector("main.artist");
+  if (main?.classList.contains("wild")) return "wild";
+  if (main?.classList.contains("devil")) return "devil";
+  return "all";
+}
+
+function newsCard(item) {
+  const link = document.createElement("a");
+  link.className = `press-card ${item.artist === "devil" ? "devil" : "wild"}`;
+  link.href = item.url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+
+  const imageWrap = document.createElement("div");
+  imageWrap.className = "press-image";
+  const image = document.createElement("img");
+  image.alt = item.image_alt || item.title || "";
+  image.decoding = "async";
+  image.loading = "lazy";
+  image.src = item.image_url || (item.artist === "devil" ? "/assets/media/devil-roster.webp" : "/assets/media/wildchains-roster.webp");
+  imageWrap.append(image);
+
+  const body = document.createElement("div");
+  body.className = "press-body";
+  const meta = document.createElement("div");
+  meta.className = "press-meta";
+  const source = document.createElement("span");
+  source.textContent = item.source || "Press";
+  const published = document.createElement("span");
+  const publishedDate = item.published_at ? new Date(item.published_at) : null;
+  published.textContent = publishedDate && !Number.isNaN(publishedDate.valueOf())
+    ? new Intl.DateTimeFormat(localeCode, { day: "2-digit", month: "2-digit", year: "numeric" }).format(publishedDate)
+    : "";
+  meta.append(source, published);
+  const title = document.createElement("h3");
+  title.textContent = item.title || "";
+  body.append(meta, title);
+  if (item.excerpt) {
+    const quote = document.createElement("blockquote");
+    quote.textContent = item.excerpt;
+    body.append(quote);
+  }
+  const read = document.createElement("span");
+  read.className = "press-open";
+  read.textContent = isPortuguese ? "Abrir artigo ↗" : isSpanish ? "Leer artículo ↗" : "Read article ↗";
+  body.append(read);
+  link.append(imageWrap, body);
+  return link;
+}
+
+async function loadApprovedNews() {
+  const rail = document.querySelector(".press-section .press-rail, .home-current .press-rail");
+  if (!rail) return;
+  const artist = currentArtistFilter();
+  try {
+    const response = await fetch(`/api/news?artist=${encodeURIComponent(artist)}&locale=${localeKey}`, { headers: { Accept: "application/json" } });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!Array.isArray(data.items) || !data.items.length) return;
+    const known = new Set([...rail.querySelectorAll("a[href]")].map((item) => item.href));
+    const fragment = document.createDocumentFragment();
+    data.items.forEach((item) => {
+      if (!item?.url) return;
+      const absolute = new URL(item.url, location.href).href;
+      if (known.has(absolute)) return;
+      known.add(absolute);
+      fragment.append(newsCard(item));
+    });
+    rail.prepend(fragment);
+  } catch (error) {
+    console.debug("No dynamic news feed available", error);
+  }
+}
+
+function initializeMobileBookingAction() {
+  const footer = document.querySelector(".site-footer");
+  if (!footer) return;
+  const action = document.createElement("a");
+  action.className = "mobile-booking-cta";
+  const isArtistsPage = Boolean(document.querySelector("#artistContactForm"));
+  const artist = currentArtistFilter();
+  if (isArtistsPage) {
+    action.href = "#artist-form";
+    action.textContent = isPortuguese ? "Enviar projeto" : isSpanish ? "Enviar proyecto" : "Send project";
+  } else if (artist === "wild" || artist === "devil") {
+    const prefix = isPortuguese ? "/" : isSpanish ? "/es/" : "/en/";
+    const artistName = artist === "wild" ? "WILDCHAINS" : "Devil of a Woman";
+    action.href = `${prefix}?artist=${encodeURIComponent(artistName)}#contact`;
+    action.textContent = isPortuguese ? "Pedir booking" : isSpanish ? "Solicitar booking" : "Request booking";
+  } else {
+    action.href = "#contact";
+    action.textContent = isPortuguese ? "Pedir booking" : isSpanish ? "Solicitar booking" : "Request booking";
+  }
+  document.body.append(action);
+
+  const update = () => {
+    const footerVisible = footer.getBoundingClientRect().top < innerHeight;
+    action.classList.toggle("visible", innerWidth <= 760 && scrollY > 260 && !footerVisible);
+  };
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update, { passive: true });
+  update();
+}
+
+initializeAgenda();
+loadApprovedNews();
+initializeMobileBookingAction();

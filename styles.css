@@ -762,3 +762,280 @@ h1,h2,h3,h4{font-family:Archivo,sans-serif;margin:0;font-weight:900;letter-spaci
   .artists-hero{min-height:clamp(500px,64svh,590px)}
   .artists-hero h1{font-size:clamp(3rem,13vw,4.2rem)}
 }
+
+/* v13 — clearer artist persuasion and decision materials */
+.home-service-line{
+  text-shadow:0 2px 16px rgba(0,0,0,.98),0 1px 3px #000;
+}
+
+/* Readability floor for the smallest interface copy. */
+.eyebrow{font-size:.75rem}
+.btn,.text-link,.hero-text-link{font-size:.74rem}
+.desktop-nav>a,.mobile-nav>a{font-size:.72rem}
+.lang-switch a{font-size:.7rem}
+.back-link,.artist-genre,.genre,.roster-copy b{font-size:.72rem}
+.roster-highlight{font-size:.72rem}
+.artist-proof-strip span{font-size:.7rem}
+.press-meta,.press-open{font-size:.7rem}
+.portfolio summary,.proof-details>summary,.press-archive>summary{font-size:.74rem}
+.booking-form label,.artist-form label{font-size:.74rem}
+.form-privacy,.booking-form .form-privacy{font-size:.76rem}
+
+/* One concise live-booking argument: promise, proof and breathing room. */
+.booking-case{
+  padding-block:clamp(58px,6vw,84px);
+}
+.booking-case>header{
+  display:grid;
+  grid-template-columns:minmax(0,1.05fr) minmax(290px,.65fr);
+  gap:20px clamp(38px,6vw,88px);
+  align-items:end;
+  margin-bottom:clamp(42px,5vw,64px);
+}
+.booking-case>header .eyebrow{
+  grid-column:1/-1;
+  margin:0;
+}
+.booking-case>header h2{
+  max-width:11ch;
+  font-size:clamp(2.9rem,4.8vw,5.2rem);
+}
+.booking-case-intro{
+  max-width:42ch;
+  justify-self:end;
+  padding-bottom:5px;
+  color:#d0ccc3;
+  font-size:clamp(1.05rem,1.35vw,1.24rem);
+  line-height:1.48;
+}
+.booking-argument-list{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:clamp(28px,4.5vw,68px);
+  margin:0;
+  padding:0;
+  border:0;
+  list-style:none;
+}
+.booking-argument-list>li{
+  position:relative;
+  display:block;
+  min-height:0;
+  padding:24px 0 0;
+  border:0;
+}
+.booking-argument-list>li::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  width:34px;
+  height:3px;
+  background:var(--artist-accent);
+}
+.booking-argument-list h3{
+  color:var(--text);
+  font-size:clamp(1.05rem,1.35vw,1.3rem);
+  line-height:1;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+}
+.booking-argument-list p{
+  max-width:37ch;
+  margin-top:14px;
+  color:#aaa69c;
+  font-size:clamp(.98rem,1.08vw,1.08rem);
+  line-height:1.55;
+}
+
+/* Stage history is evidence, not another image card. */
+.wild .streamlined-proof,.devil .streamlined-proof{
+  padding-top:clamp(26px,3.5vw,48px);
+}
+.streamlined-proof .stage-experience{
+  display:block;
+  border:1px solid var(--line);
+  border-top:3px solid var(--artist-accent);
+  background:linear-gradient(125deg,color-mix(in srgb,var(--artist-accent) 7%,#090909),#090909 48%);
+}
+.streamlined-proof .stage-experience-copy{
+  display:block;
+  padding:clamp(32px,4vw,56px);
+}
+.streamlined-proof .stage-experience-copy h2{
+  max-width:15ch;
+  font-size:clamp(2.55rem,4vw,4.35rem);
+}
+.streamlined-proof .stage-experience-copy>p:not(.eyebrow){
+  max-width:700px;
+  margin:16px 0 27px;
+}
+.streamlined-proof .stage-experience .stage-proof-list{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0 clamp(24px,4vw,58px);
+  margin-top:0;
+}
+.streamlined-proof .stage-experience .stage-proof-list li{
+  font-size:.96rem;
+}
+.streamlined-proof .stage-experience>.portfolio{
+  margin:0;
+}
+
+/* Formats follow the live track record and do not need decorative numbering. */
+.format-decision{
+  padding-top:0;
+}
+.format-decision-grid article>div>span{
+  display:none;
+}
+
+/* Open, icon-led materials: three obvious decisions instead of small cards. */
+.compact-materials{
+  display:block;
+  padding-block:clamp(62px,7vw,96px);
+  border-top:1px solid var(--line);
+}
+.compact-materials>header{
+  margin-bottom:clamp(40px,5vw,64px);
+}
+.compact-materials h2{
+  max-width:none;
+  font-size:clamp(2.6rem,4vw,4.2rem);
+}
+.compact-materials>div{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:clamp(36px,6vw,90px);
+  border:0;
+}
+.compact-materials>div>a{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  min-height:190px;
+  padding:0 34px 0 0;
+  border:0;
+  background:transparent;
+  transition:transform .2s,color .2s;
+}
+.compact-materials>div>a:hover{
+  border:0;
+  background:transparent;
+  transform:translateY(-4px);
+}
+.material-icon{
+  width:72px;
+  height:72px;
+  margin-bottom:24px;
+  padding:0;
+  border:0;
+  color:var(--artist-accent);
+  stroke-width:1.35;
+}
+.material-copy{
+  gap:10px;
+}
+.compact-materials .material-copy strong{
+  font-size:clamp(1.15rem,1.5vw,1.42rem);
+  line-height:1;
+}
+.compact-materials .material-copy small{
+  max-width:28ch;
+  color:#aaa69c;
+  font-size:.94rem;
+  line-height:1.45;
+}
+.compact-materials>div>a>b{
+  position:absolute;
+  top:3px;
+  right:0;
+  color:var(--artist-accent);
+  font-size:1.15rem;
+  opacity:.72;
+}
+
+@media(max-width:900px){
+  .booking-case>header{
+    grid-template-columns:1fr;
+    gap:16px;
+  }
+  .booking-case>header .eyebrow{grid-column:auto}
+  .booking-case-intro{
+    justify-self:start;
+    padding:0;
+  }
+  .streamlined-proof .stage-experience .stage-proof-list{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .compact-materials>div{
+    gap:36px;
+  }
+}
+
+@media(max-width:760px){
+  .eyebrow{font-size:.74rem}
+  .roster-highlight,.artist-proof-strip span{font-size:.75rem}
+  .booking-case{
+    padding-block:54px;
+  }
+  .booking-case>header{
+    margin-bottom:38px;
+  }
+  .booking-case>header h2{
+    font-size:clamp(2.65rem,11.5vw,3.55rem);
+  }
+  .booking-case-intro{
+    font-size:1.05rem;
+  }
+  .booking-argument-list{
+    grid-template-columns:1fr;
+    gap:32px;
+  }
+  .booking-argument-list>li{
+    display:block;
+    padding-top:19px;
+  }
+  .booking-argument-list h3{
+    font-size:1.08rem;
+  }
+  .booking-argument-list p{
+    margin-top:10px;
+    font-size:1rem;
+  }
+  .wild .streamlined-proof,.devil .streamlined-proof{
+    padding-top:18px;
+  }
+  .streamlined-proof .stage-experience-copy{
+    padding:29px 20px 34px;
+  }
+  .streamlined-proof .stage-experience-copy h2{
+    font-size:2.55rem;
+  }
+  .streamlined-proof .stage-experience .stage-proof-list{
+    grid-template-columns:1fr;
+  }
+  .streamlined-proof .stage-experience .stage-proof-list li{
+    font-size:.92rem;
+  }
+  .compact-materials{
+    padding-block:56px;
+  }
+  .compact-materials h2{
+    font-size:2.7rem;
+  }
+  .compact-materials>div{
+    grid-template-columns:1fr;
+    gap:38px;
+  }
+  .compact-materials>div>a{
+    min-height:0;
+    padding-right:32px;
+  }
+  .material-icon{
+    width:64px;
+    height:64px;
+    margin-bottom:19px;
+  }
+}

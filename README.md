@@ -6,23 +6,23 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 
 - Nova assinatura institucional em PT/EN/ES: “Rotas entre talento e oportunidade.”
 - Sistema de cor por artista: WILDCHAINS em azul-cobalto `#4F7FD1`, Devil of a Woman em vermelho e ações globais da Caravela em amarelo.
-- Contactos separados por função: João Abreu no booking e representação artística (`+351 935 449 151`) e Sérgio Diogo em press e comunicação (`+351 934 751 993`).
+- Contactos separados por função: João Abreu no booking (`+351 935 449 151`) e Sérgio Diogo em press, comunicação e booking (`+351 934 751 993`).
 - O email partilhado mantém-se em `booking@caravelaamarela.com`.
 - Instagram `@caravela.amarela` integrado na área de contacto e nos rodapés.
-- Formulários de booking e de artistas com envio real para `booking@caravelaamarela.com`.
+- Booking num formulário modal comum a todo o site, com quatro campos, e formulário Para Artistas simplificado e ampliado. Ambos mantêm o envio real para `booking@caravelaamarela.com`.
 - Cópia de cada pedido guardada em Cloudflare D1 e eliminação de registos com mais de 12 meses.
 - Sem CAPTCHA nem filtragem do conteúdo das mensagens; apenas validação estrutural dos campos.
 - Alternativa `mailto:` apresentada se o envio técnico falhar.
 - Falhas de envio apresentadas num alerta de alto contraste; contacto direto destacado junto ao formulário.
-- Galerias live em carrossel de WILDCHAINS e Devil of a Woman, com ligação ao material promocional no Google Drive.
+- Galerias live compactas de WILDCHAINS e Devil of a Woman, com quatro imagens e ligação ao material promocional completo no Google Drive.
 - Notícias editoriais só são mostradas quando o cartão identifica explicitamente WILDCHAINS ou Devil of a Woman.
-- Homepage com uma seleção curta de imprensa; agenda global reduzida a uma faixa automática imediatamente antes do rodapé.
+- Homepage com imprensa em movimento lento e contínuo; agenda exclusiva da homepage numa faixa automática com várias datas imediatamente antes do rodapé.
 - Botão “Ver agenda completa” abre um diálogo acessível com todas as datas por ordem cronológica. A fonte única das datas é `assets/data/agenda.json`.
 - Seleção editorial revista para apresentar apenas uma notícia por acontecimento, escolhendo a fonte com melhor conteúdo e excertos relevantes para booking.
 - Imagens dos cartões editoriais substituídas pelas imagens destacadas das publicações originais sempre que a fonte as disponibiliza.
 - Cobertura de Vilar de Mouros atualizada com a atuação dos Devil of a Woman no palco principal e a vitória no António Barge.
 - Introduções das páginas de artista reduzidas ao logótipo, género/origem, uma frase curta e ações diretas.
-- Secções “Booking fit” refeitas como argumentos comerciais: prova editorial, contextos, experiência, prémios, materiais e chamada para booking.
+- Perfis reduzidos ao essencial para decisão: proposta artística, três argumentos comerciais, formatos quando aplicável, experiência e materiais; histórico, prémios, parcerias e imprensa secundária ficam em expansores.
 - Formatos elétrico e acústico dos WILDCHAINS apresentados como dois produtos de palco inequívocos.
 - Portefólios completos mantidos dentro da experiência, com os três palcos mais relevantes de cada ano destacados e aberturas associadas à data respetiva.
 - RAJ Drumsticks apresentada como parceria de material e campanha televisiva de McDonald’s Portugal assinalada em 2026.
@@ -30,7 +30,7 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Página Para Artistas reforçada com casos visuais de lançamento, press e identidade/conteúdo.
 - Agenda 2026 atualizada: Famalicão, Tomate Blues Festival, Associação Cultural Fora do Rebanho, 28.ª Rota Motard de S. Martinho e seis atuações acústicas dos WILDCHAINS na FNAC.
 - Monitor de notícias com revisão humana: encontra candidatos, envia uma notificação, permite corrigir título/excerto/imagem e só publica depois de aprovação.
-- CTA móvel de booking e dados estruturados `MusicEvent` gerados a partir da agenda.
+- Todos os CTAs de booking abrem o mesmo formulário modal, com o artista pré-selecionado nos respetivos perfis; CTA móvel e dados estruturados `MusicEvent` mantidos.
 - SEO PT/EN/ES: canonical, hreflang, dados estruturados e sitemap atualizado.
 - Novos cartões sociais 1200×630, localizados por idioma e com nomes versionados para renovar a imagem apresentada no WhatsApp, Facebook, LinkedIn e X.
 

@@ -35,23 +35,20 @@ const STATIC_SECURITY_HEADERS = {
 
 const FORM_DEFINITIONS = {
   booking: {
-    required: ["contactName", "contactEmail", "artist", "eventType", "city"],
+    required: ["contactName", "contactEmail", "artist", "eventDetails"],
     labels: {
       contactName: "Nome do contacto",
       contactEmail: "Email",
       artist: "Artista",
-      eventType: "Tipo de evento",
-      eventDate: "Data",
-      city: "Cidade / Local",
+      eventDetails: "Evento, local e data",
       message: "Mensagem",
     },
   },
   artist: {
-    required: ["artistName", "contactEmail", "city", "request", "links"],
+    required: ["artistName", "contactEmail", "request", "links"],
     labels: {
       artistName: "Nome artístico",
       contactEmail: "Email",
-      city: "Cidade / Região",
       request: "Pedido",
       links: "Links",
       message: "Mensagem",
@@ -117,7 +114,7 @@ function isValidEmail(value) {
 
 function subjectFor(formType, fields) {
   if (formType === "booking") {
-    return `[Booking] ${subjectValue(fields.artist)} — ${subjectValue(fields.city)}`;
+    return `[Booking] ${subjectValue(fields.artist)} — ${subjectValue(fields.eventDetails)}`;
   }
   return `[For Artists] ${subjectValue(fields.artistName)} — ${subjectValue(fields.request)}`;
 }

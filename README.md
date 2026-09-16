@@ -14,19 +14,20 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Sem CAPTCHA nem filtragem do conteúdo das mensagens; apenas validação estrutural dos campos.
 - Alternativa `mailto:` apresentada se o envio técnico falhar.
 - Falhas de envio apresentadas num alerta de alto contraste; contacto direto destacado junto ao formulário.
-- Galerias live compactas de WILDCHAINS e Devil of a Woman, com quatro imagens e ligação ao material promocional completo no Google Drive.
+- Fotografias live integradas nos argumentos, formatos, experiência e provas editoriais de cada artista; o material promocional completo continua acessível no respetivo media pack.
 - Notícias editoriais só são mostradas quando o cartão identifica explicitamente WILDCHAINS ou Devil of a Woman.
-- Homepage com imprensa em movimento lento e contínuo; agenda exclusiva da homepage numa faixa automática com várias datas imediatamente antes do rodapé.
+- Homepage com nova hierarquia de marca, imprensa em movimento lento e contínuo e agenda exclusiva numa faixa automática sem rótulo lateral, imediatamente antes do rodapé.
 - Botão “Ver agenda completa” abre um diálogo acessível com todas as datas por ordem cronológica. A fonte única das datas é `assets/data/agenda.json`.
 - Seleção editorial revista para apresentar apenas uma notícia por acontecimento, escolhendo a fonte com melhor conteúdo e excertos relevantes para booking.
 - Imagens dos cartões editoriais substituídas pelas imagens destacadas das publicações originais sempre que a fonte as disponibiliza.
 - Cobertura de Vilar de Mouros atualizada com a atuação dos Devil of a Woman no palco principal e a vitória no António Barge.
 - Introduções das páginas de artista reduzidas ao logótipo, género/origem, uma frase curta e ações diretas.
-- Perfis reduzidos ao essencial para decisão: proposta artística, três argumentos comerciais, formatos quando aplicável, experiência e materiais; histórico, prémios, parcerias e imprensa secundária ficam em expansores.
+- Perfis reduzidos ao essencial para decisão: proposta artística, três argumentos comerciais, formatos quando aplicável, experiência e materiais; apenas as três melhores peças de imprensa ficam expostas e as restantes passam para o expansor.
+- Materiais de booking apresentados como botões claros, com ícones e descrições para vídeo, media pack e rider técnico.
 - Formatos elétrico e acústico dos WILDCHAINS apresentados como dois produtos de palco inequívocos.
 - Portefólios completos mantidos dentro da experiência, com os três palcos mais relevantes de cada ano destacados e aberturas associadas à data respetiva.
-- RAJ Drumsticks apresentada como parceria de material e campanha televisiva de McDonald’s Portugal assinalada em 2026.
-- Devil of a Woman apresentados com a sequência Prémio António Barge → palco principal de Vilar de Mouros e uma imagem de Vilar integrada na galeria.
+- RAJ Drumsticks apresentada como parceria de material, campanha televisiva de McDonald’s Portugal assinalada em 2026 e Acisum identificada como parceria no desenvolvimento da aplicação musical.
+- Devil of a Woman apresentados com a sequência Prémio António Barge → palco principal de Vilar de Mouros e a imagem de Vilar integrada na prova de palco e no testemunho editorial.
 - Página Para Artistas reforçada com casos visuais de lançamento, press e identidade/conteúdo.
 - Agenda 2026 atualizada: Famalicão, Tomate Blues Festival, Associação Cultural Fora do Rebanho, 28.ª Rota Motard de S. Martinho e seis atuações acústicas dos WILDCHAINS na FNAC.
 - Monitor de notícias com revisão humana: encontra candidatos, envia uma notificação, permite corrigir título/excerto/imagem e só publica depois de aprovação.

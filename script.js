@@ -538,9 +538,6 @@ async function initializeAgenda() {
     section.setAttribute("aria-label", agendaLabels.title);
     const shell = document.createElement("div");
     shell.className = "shell agenda-ticker";
-    const label = document.createElement("div");
-    label.className = "agenda-ticker-label";
-    label.textContent = agendaLabels.kicker;
     const windowElement = document.createElement("div");
     windowElement.className = "agenda-ticker-window";
     const track = document.createElement("div");
@@ -562,7 +559,7 @@ async function initializeAgenda() {
     open.className = "agenda-open";
     open.textContent = agendaLabels.open;
     open.addEventListener("click", () => dialog.showModal());
-    shell.append(label, windowElement, open);
+    shell.append(windowElement, open);
     section.append(shell);
     footer.before(section);
   } catch (error) {

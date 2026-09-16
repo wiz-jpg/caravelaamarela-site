@@ -22,7 +22,9 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Imagens dos cartões editoriais substituídas pelas imagens destacadas das publicações originais sempre que a fonte as disponibiliza.
 - Cobertura de Vilar de Mouros atualizada com a atuação dos Devil of a Woman no palco principal e a vitória no António Barge.
 - Introduções das páginas de artista reduzidas ao logótipo, género/origem, uma frase curta e ações diretas.
-- Perfis reduzidos ao essencial para decisão: proposta artística, três argumentos comerciais, formatos quando aplicável, experiência e materiais; apenas as três melhores peças de imprensa ficam expostas e as restantes passam para o expansor.
+- Perfis revistos numa hierarquia orientada à decisão: proposta artística, quatro provas rápidas, três argumentos comerciais, formatos quando aplicável, experiência e materiais.
+- WILDCHAINS apresenta The Great Fado através de uma capa editorial ligada à playlist, sem simular um vídeo ao vivo que ainda não existe.
+- Apenas as três melhores peças de imprensa ficam expostas e imóveis nos perfis; novas publicações aprovadas entram no arquivo sem aumentar o ruído da página.
 - Materiais de booking apresentados como botões claros, com ícones e descrições para vídeo, media pack e rider técnico.
 - Formatos elétrico e acústico dos WILDCHAINS apresentados como dois produtos de palco inequívocos.
 - Portefólios completos mantidos dentro da experiência, com os três palcos mais relevantes de cada ano destacados e aberturas associadas à data respetiva.
@@ -32,6 +34,7 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Agenda 2026 atualizada: Famalicão, Tomate Blues Festival, Associação Cultural Fora do Rebanho, 28.ª Rota Motard de S. Martinho e seis atuações acústicas dos WILDCHAINS na FNAC.
 - Monitor de notícias com revisão humana: encontra candidatos, envia uma notificação, permite corrigir título/excerto/imagem e só publica depois de aprovação.
 - Todos os CTAs de booking abrem o mesmo formulário modal, com o artista pré-selecionado nos respetivos perfis; CTA móvel e dados estruturados `MusicEvent` mantidos.
+- Formulário de booking revisto para caber integralmente em ecrãs desktop comuns, com pedido de disponibilidade mais direto e sem alterar o endpoint, o arquivo D1 ou as notificações por email.
 - SEO PT/EN/ES: canonical, hreflang, dados estruturados e sitemap atualizado.
 - Novos cartões sociais 1200×630, localizados por idioma e com nomes versionados para renovar a imagem apresentada no WhatsApp, Facebook, LinkedIn e X.
 

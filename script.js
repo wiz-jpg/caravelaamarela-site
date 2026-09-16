@@ -146,8 +146,8 @@ async function submitContactForm(form, formType) {
 const bookingCopy = isPortuguese
   ? {
       eyebrow: "Booking",
-      title: "VAMOS FALAR DE DATAS.",
-      intro: "Quatro campos. Respondemos com disponibilidade, formato indicado e condições.",
+      title: "PEDIR DISPONIBILIDADE.",
+      intro: "Artista, local e data prevista. Respondemos com disponibilidade, formato e condições.",
       artist: "Artista",
       choose: "Selecionar",
       name: "Nome",
@@ -158,7 +158,7 @@ const bookingCopy = isPortuguese
       optional: "opcional",
       messagePlaceholder: "Contexto, horários ou alguma condição importante…",
       privacy: "Os dados serão usados apenas para responder ao pedido e guardados até 12 meses.",
-      send: "Enviar pedido de booking",
+      send: "Pedir disponibilidade",
       close: "Fechar formulário de booking",
       main: "Contacto principal",
       joao: "Booking · João Abreu",
@@ -167,8 +167,8 @@ const bookingCopy = isPortuguese
   : isSpanish
     ? {
         eyebrow: "Booking",
-        title: "HABLEMOS DE FECHAS.",
-        intro: "Cuatro campos. Respondemos con disponibilidad, formato recomendado y condiciones.",
+        title: "CONSULTAR DISPONIBILIDAD.",
+        intro: "Artista, lugar y fecha prevista. Respondemos con disponibilidad, formato y condiciones.",
         artist: "Artista",
         choose: "Seleccionar",
         name: "Nombre",
@@ -179,7 +179,7 @@ const bookingCopy = isPortuguese
         optional: "opcional",
         messagePlaceholder: "Contexto, horarios o alguna condición importante…",
         privacy: "Los datos solo se utilizarán para responder y se conservarán durante un máximo de 12 meses.",
-        send: "Enviar solicitud de booking",
+        send: "Consultar disponibilidad",
         close: "Cerrar formulario de booking",
         main: "Contacto principal",
         joao: "Booking · João Abreu",
@@ -187,8 +187,8 @@ const bookingCopy = isPortuguese
       }
     : {
         eyebrow: "Booking",
-        title: "LET'S TALK DATES.",
-        intro: "Four fields. We reply with availability, the right format and terms.",
+        title: "CHECK AVAILABILITY.",
+        intro: "Artist, venue and expected date. We reply with availability, format and terms.",
         artist: "Artist",
         choose: "Select",
         name: "Name",
@@ -199,7 +199,7 @@ const bookingCopy = isPortuguese
         optional: "optional",
         messagePlaceholder: "Context, schedule or any important condition…",
         privacy: "Your data will only be used to answer this request and kept for up to 12 months.",
-        send: "Send booking request",
+        send: "Check availability",
         close: "Close booking form",
         main: "Main contact",
         joao: "Booking · João Abreu",
@@ -360,7 +360,10 @@ async function loadApprovedNews() {
     if (!response.ok) return;
     const data = await response.json();
     if (!Array.isArray(data.items) || !data.items.length) return;
-    const known = new Set([...rail.querySelectorAll("a[href]")].map((item) => item.href));
+    const artistPress = rail.closest(".artist-press");
+    const archive = artistPress?.querySelector(".press-archive-grid");
+    const knownScope = artistPress || rail;
+    const known = new Set([...knownScope.querySelectorAll("a[href]")].map((item) => item.href));
     const fragment = document.createDocumentFragment();
     data.items.forEach((item) => {
       if (!item?.url) return;
@@ -369,7 +372,8 @@ async function loadApprovedNews() {
       known.add(absolute);
       fragment.append(newsCard(item));
     });
-    rail.prepend(fragment);
+    if (artistPress && archive) archive.prepend(fragment);
+    else rail.prepend(fragment);
   } catch (error) {
     console.debug("No dynamic news feed available", error);
   }
@@ -377,7 +381,7 @@ async function loadApprovedNews() {
 
 function initializeAutoRails() {
   if (reducedMotion) return;
-  document.querySelectorAll("[data-auto-rail]").forEach((rail) => {
+  document.querySelectorAll(".home-current [data-auto-rail]").forEach((rail) => {
     const items = [...rail.children];
     if (items.length < 2) return;
     const group = document.createElement("div");

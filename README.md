@@ -9,7 +9,7 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Contactos separados por função: João Abreu no booking (`+351 935 449 151`) e Sérgio Diogo em press, comunicação e booking (`+351 934 751 993`).
 - O email partilhado mantém-se em `booking@caravelaamarela.com`.
 - Instagram `@caravela.amarela` integrado na área de contacto e nos rodapés.
-- Booking num formulário modal comum a todo o site, com quatro campos, e formulário Para Artistas simplificado e ampliado. Ambos mantêm o envio real para `booking@caravelaamarela.com`.
+- Booking num formulário modal comum a todo o site, com quatro dados obrigatórios e mensagem opcional, e formulário Para Artistas simplificado e ampliado. Ambos mantêm o envio real para `booking@caravelaamarela.com`.
 - Cópia de cada pedido guardada em Cloudflare D1 e eliminação de registos com mais de 12 meses.
 - Sem CAPTCHA nem filtragem do conteúdo das mensagens; apenas validação estrutural dos campos.
 - Alternativa `mailto:` apresentada se o envio técnico falhar.
@@ -36,7 +36,7 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Agenda 2026 atualizada: Famalicão, Tomate Blues Festival, Associação Cultural Fora do Rebanho, 28.ª Rota Motard de S. Martinho e seis atuações acústicas dos WILDCHAINS na FNAC.
 - Monitor de notícias com revisão humana: encontra candidatos, envia uma notificação, permite corrigir título/excerto/imagem e só publica depois de aprovação.
 - Todos os CTAs de booking abrem o mesmo formulário modal, com o artista pré-selecionado nos respetivos perfis; CTA móvel e dados estruturados `MusicEvent` mantidos.
-- Formulário de booking revisto para caber integralmente em ecrãs desktop comuns, com pedido de disponibilidade mais direto e sem alterar o endpoint, o arquivo D1 ou as notificações por email.
+- Formulário de booking revisto para caber integralmente em ecrãs desktop comuns, com uma chamada de contacto imediata e sem alterar o endpoint, o arquivo D1 ou as notificações por email.
 - SEO PT/EN/ES: canonical, hreflang, dados estruturados e sitemap atualizado.
 - Novos cartões sociais 1200×630, localizados por idioma e com nomes versionados para renovar a imagem apresentada no WhatsApp, Facebook, LinkedIn e X.
 

@@ -146,8 +146,8 @@ async function submitContactForm(form, formType) {
 const bookingCopy = isPortuguese
   ? {
       eyebrow: "Booking",
-      title: "PEDIR DISPONIBILIDADE.",
-      intro: "Artista, local e data prevista. Respondemos com disponibilidade, formato e condições.",
+      title: "CONTACTAR AGORA.",
+      intro: "Diz-nos quem queres contratar, onde e quando. Respondemos com disponibilidade e condições.",
       artist: "Artista",
       choose: "Selecionar",
       name: "Nome",
@@ -158,17 +158,16 @@ const bookingCopy = isPortuguese
       optional: "opcional",
       messagePlaceholder: "Contexto, horários ou alguma condição importante…",
       privacy: "Os dados serão usados apenas para responder ao pedido e guardados até 12 meses.",
-      send: "Pedir disponibilidade",
+      send: "Enviar pedido",
       close: "Fechar formulário de booking",
-      main: "Contacto principal",
       joao: "Booking · João Abreu",
       sergio: "Press, comunicação e booking · Sérgio Diogo",
     }
   : isSpanish
     ? {
         eyebrow: "Booking",
-        title: "CONSULTAR DISPONIBILIDAD.",
-        intro: "Artista, lugar y fecha prevista. Respondemos con disponibilidad, formato y condiciones.",
+        title: "CONTACTAR AHORA.",
+        intro: "Dinos a quién quieres contratar, dónde y cuándo. Respondemos con disponibilidad y condiciones.",
         artist: "Artista",
         choose: "Seleccionar",
         name: "Nombre",
@@ -179,16 +178,15 @@ const bookingCopy = isPortuguese
         optional: "opcional",
         messagePlaceholder: "Contexto, horarios o alguna condición importante…",
         privacy: "Los datos solo se utilizarán para responder y se conservarán durante un máximo de 12 meses.",
-        send: "Consultar disponibilidad",
+        send: "Enviar solicitud",
         close: "Cerrar formulario de booking",
-        main: "Contacto principal",
         joao: "Booking · João Abreu",
         sergio: "Prensa, comunicación y booking · Sérgio Diogo",
       }
     : {
         eyebrow: "Booking",
-        title: "CHECK AVAILABILITY.",
-        intro: "Artist, venue and expected date. We reply with availability, format and terms.",
+        title: "CONTACT NOW.",
+        intro: "Tell us who you want to book, where and when. We reply with availability and terms.",
         artist: "Artist",
         choose: "Select",
         name: "Name",
@@ -199,9 +197,8 @@ const bookingCopy = isPortuguese
         optional: "optional",
         messagePlaceholder: "Context, schedule or any important condition…",
         privacy: "Your data will only be used to answer this request and kept for up to 12 months.",
-        send: "Check availability",
+        send: "Send request",
         close: "Close booking form",
-        main: "Main contact",
         joao: "Booking · João Abreu",
         sergio: "Press, communications & booking · Sérgio Diogo",
       };
@@ -219,9 +216,10 @@ function buildBookingDialog() {
       <div class="booking-dialog-copy">
         <p>${bookingCopy.intro}</p>
         <div class="booking-direct">
-          <a href="mailto:booking@caravelaamarela.com">booking@caravelaamarela.com <small>— ${bookingCopy.main}</small></a>
+          <a href="mailto:booking@caravelaamarela.com">booking@caravelaamarela.com</a>
           <a href="tel:+351935449151"><span>${bookingCopy.joao}</span><strong>+351 935 449 151</strong></a>
           <a href="tel:+351934751993"><span>${bookingCopy.sergio}</span><strong>+351 934 751 993</strong></a>
+          <a class="booking-instagram" href="https://www.instagram.com/caravela.amarela/" rel="noopener noreferrer" target="_blank"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4.25"></circle><circle class="icon-fill" cx="17.4" cy="6.7" r="1"></circle></svg><span>@caravela.amarela</span></a>
         </div>
       </div>
       <form class="booking-form" id="bookingForm">
@@ -287,27 +285,6 @@ artistForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   submitContactForm(artistForm, "artist");
 });
-
-// Accessible image viewer for the compact live galleries.
-const galleryItems = document.querySelectorAll("[data-gallery-src]");
-if (galleryItems.length) {
-  const dialog = document.createElement("dialog");
-  dialog.className = "gallery-dialog";
-  dialog.innerHTML = `<button type="button" class="gallery-close" aria-label="${isPortuguese ? "Fechar imagem" : isSpanish ? "Cerrar imagen" : "Close image"}">×</button><img alt="">`;
-  document.body.append(dialog);
-  const dialogImage = dialog.querySelector("img");
-  dialog.querySelector(".gallery-close").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) dialog.close();
-  });
-  galleryItems.forEach((item) => {
-    item.addEventListener("click", () => {
-      dialogImage.src = item.dataset.gallerySrc;
-      dialogImage.alt = item.dataset.galleryAlt || "";
-      dialog.showModal();
-    });
-  });
-}
 
 // Approved news can be published from the review workflow without rebuilding.
 function newsCard(item) {

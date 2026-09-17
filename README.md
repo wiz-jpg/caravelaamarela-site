@@ -23,15 +23,16 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Cobertura de Vilar de Mouros atualizada com a atuação dos Devil of a Woman no palco principal e a vitória no António Barge.
 - Introduções das páginas de artista reduzidas ao logótipo, género/origem, uma frase curta e ações diretas.
 - Perfis revistos numa hierarquia orientada à decisão: identidade, proposta sonora, três argumentos ao vivo, experiência comprovada, formatos quando aplicável, materiais e booking.
-- Argumentos ao vivo integrados em blocos editoriais com fotografia, três provas curtas e apenas os três palcos essenciais à primeira leitura; o detalhe continua disponível nos expansíveis.
+- Argumentos ao vivo integrados em blocos editoriais com fotografia, três provas curtas e apenas os palcos essenciais à primeira leitura; o detalhe continua disponível nos expansíveis.
 - WILDCHAINS apresenta The Great Fado através de uma capa editorial ligada à playlist, sem simular um vídeo ao vivo que ainda não existe.
 - Apenas as três melhores peças de imprensa ficam expostas e imóveis nos perfis; novas publicações aprovadas entram no arquivo sem aumentar o ruído da página.
 - Materiais de booking apresentados como ações abertas e leves, com ícones grandes e descrições curtas para vídeo, media pack e rider técnico.
 - Formatos elétrico e acústico dos WILDCHAINS apresentados como dois produtos de palco inequívocos.
 - Rodapé reorganizado numa estrutura convencional e legível, com marca, email, responsáveis, telefones, Instagram e navegação em hierarquia clara.
-- Portefólios completos mantidos dentro da experiência, com os três palcos mais relevantes de cada ano destacados e aberturas associadas à data respetiva.
+- Portefólios completos mantidos dentro da experiência, com os três palcos mais relevantes de cada ano destacados sem marcadores decorativos e todas as aberturas conhecidas associadas à data respetiva.
 - RAJ Drumsticks apresentada como parceria de material, campanha televisiva de McDonald’s Portugal assinalada em 2026 e Acisum identificada como parceria no desenvolvimento da aplicação musical.
-- Devil of a Woman apresentados com a sequência Prémio António Barge → palco principal de Vilar de Mouros; a citação da Glam fica exclusivamente na prova editorial.
+- Devil of a Woman apresentados com 25+ concertos desde 2024, palco principal de Vilar de Mouros e expansão no circuito de blues; o Prémio António Barge mantém-se no percurso e a citação da Glam fica exclusivamente na prova editorial.
+- Prova externa ampliada com novas peças verificadas e imagens editoriais originais, mantendo apenas o top 3 exposto e o restante arquivo a um clique.
 - Página Para Artistas reforçada com casos visuais de lançamento, press e identidade/conteúdo.
 - Agenda 2026 atualizada: Famalicão, Tomate Blues Festival, Associação Cultural Fora do Rebanho, 28.ª Rota Motard de S. Martinho e seis atuações acústicas dos WILDCHAINS na FNAC.
 - Monitor de notícias com revisão humana: encontra candidatos, envia uma notificação, permite corrigir título/excerto/imagem e só publica depois de aprovação.

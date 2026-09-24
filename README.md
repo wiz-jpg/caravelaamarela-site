@@ -16,17 +16,19 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Falhas de envio apresentadas num alerta de alto contraste; contacto direto destacado junto ao formulário.
 - Fotografias integradas de forma contextual no hero, proposta artística, formatos e provas editoriais; o percurso ao vivo fica num bloco textual mais direto e o material promocional completo continua acessível no respetivo media pack.
 - Notícias editoriais só são mostradas quando o cartão identifica explicitamente WILDCHAINS ou Devil of a Woman.
-- Homepage com nova hierarquia de marca, imprensa em movimento lento e contínuo e agenda exclusiva numa faixa automática sem rótulo lateral, imediatamente antes do rodapé.
+- Homepage com nova hierarquia de marca, imprensa em movimento lento e contínuo e agenda exclusiva numa faixa automática sem rótulo lateral, imediatamente antes do rodapé; no mobile, a faixa também aceita scroll horizontal por toque.
+- Assinatura “Rotas entre talento e oportunidade” apresentada em maiúsculas, amarelo Caravela e com tipografia de leitura mais limpa.
 - Botão “Ver agenda completa” abre um diálogo acessível com todas as datas por ordem cronológica. A fonte única das datas é `assets/data/agenda.json`.
 - Seleção editorial revista para apresentar apenas uma notícia por acontecimento, escolhendo a fonte com melhor conteúdo e excertos relevantes para booking.
 - Imagens dos cartões editoriais substituídas pelas imagens destacadas das publicações originais sempre que a fonte as disponibiliza.
 - Cobertura de Vilar de Mouros atualizada com a atuação dos Devil of a Woman no palco principal e a vitória no António Barge.
 - Introduções das páginas de artista reduzidas ao logótipo, género/origem, uma frase curta e ações diretas.
 - Perfis revistos numa hierarquia orientada à decisão: identidade, proposta sonora, três argumentos ao vivo, experiência comprovada, formatos quando aplicável, materiais e booking.
-- Argumentos ao vivo integrados em blocos editoriais com fotografia, três provas curtas e apenas os palcos essenciais à primeira leitura; o detalhe continua disponível nos expansíveis.
+- Argumentos ao vivo integrados em blocos editoriais com fotografia, três provas curtas e apenas os palcos essenciais à primeira leitura; nos WILDCHAINS, os destaques incluem salas, festival e festas populares sem repetir nomes de artistas das aberturas. O detalhe continua disponível nos expansíveis.
 - WILDCHAINS apresenta The Great Fado através de uma capa editorial ligada à playlist, sem simular um vídeo ao vivo que ainda não existe.
 - Apenas as três melhores peças de imprensa ficam expostas e imóveis nos perfis; novas publicações aprovadas entram no arquivo sem aumentar o ruído da página.
-- Materiais de booking apresentados como ações abertas e leves, com ícones grandes e descrições curtas para vídeo, media pack e rider técnico.
+- A campanha televisiva dos 35 anos da McDonald’s Portugal integra a prova externa e o bloco de parcerias dos WILDCHAINS, com ligação à cobertura de Imagens de Marca.
+- Materiais de booking apresentados como ações fotográficas, com imagens contextuais, ícones grandes e descrições curtas para vídeo, media pack e rider técnico.
 - Formatos elétrico e acústico dos WILDCHAINS apresentados como dois produtos de palco inequívocos.
 - Rodapé reorganizado numa estrutura convencional e legível, com marca, email, responsáveis, telefones, Instagram e navegação em hierarquia clara.
 - Portefólios completos mantidos dentro da experiência, com os três palcos mais relevantes de cada ano destacados sem marcadores decorativos e todas as aberturas conhecidas associadas à data respetiva.

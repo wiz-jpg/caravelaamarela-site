@@ -29,7 +29,6 @@ Site estático para Cloudflare Pages, em português, inglês e espanhol.
 - Apenas as três melhores peças de imprensa ficam expostas e imóveis nos perfis; novas publicações aprovadas entram no arquivo sem aumentar o ruído da página.
 - A campanha televisiva dos 35 anos da McDonald’s Portugal integra a prova externa e o bloco de parcerias dos WILDCHAINS, com ligação à cobertura de Imagens de Marca.
 - Materiais de booking apresentados como ações fotográficas, com imagens contextuais, ícones grandes e descrições curtas para vídeo, media pack e rider técnico.
-- Formatos elétrico e acústico dos WILDCHAINS apresentados como dois produtos de palco inequívocos.
 - Rodapé reorganizado numa estrutura convencional e legível, com marca, email, responsáveis, telefones, Instagram e navegação em hierarquia clara.
 - Portefólios completos mantidos dentro da experiência, com os três palcos mais relevantes de cada ano destacados sem marcadores decorativos e todas as aberturas conhecidas associadas à data respetiva.
 - RAJ Drumsticks apresentada como parceria de material, campanha televisiva de McDonald’s Portugal assinalada em 2026 e Acisum identificada como parceria no desenvolvimento da aplicação musical.

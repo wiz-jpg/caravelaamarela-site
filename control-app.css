@@ -143,3 +143,5 @@ body{background:var(--cc-bg);color:var(--cc-text);font-family:Inter,system-ui,-a
  .cc-member-controls{width:100%}
  .cc-auth-box{padding:24px}
 }
+
+#control-app [hidden]{display:none!important}

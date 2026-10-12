@@ -691,11 +691,191 @@ async function handlePost({ request, env }) {
   return json({ ok: true, saved: true, notified, submissionId }, 201);
 }
 
+// Zoho Mail is opt-in and isolated from the public contact/news handlers.
+const ZOHO_SCOPES = 'ZohoMail.accounts.READ,ZohoMail.folders.READ,ZohoMail.messages.READ';
+const ZOHO_COOKIE = '__Host-caravela-zoho';
+const zohoEncoder = new TextEncoder();
+function zohoFail(code, status = 400) { throw Object.assign(new Error(code), { zohoCode: code, status }); }
+function zohoReply(data, status = 200, headers = {}) {
+  return Response.json(data, { status, headers: { 'Cache-Control': 'no-store', 'Pragma': 'no-cache',
+    'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff', ...headers } });
+}
+function zohoRandom() { return bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32))); }
+async function zohoHash(value) {
+  return bytesToBase64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', zohoEncoder.encode(value))));
+}
+async function zohoEqual(a, b) {
+  const [x, y] = await Promise.all([zohoHash(a), zohoHash(b)]);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return diff === 0;
+}
+function zohoConfig(env, url) {
+  // Explicit region selection: never follow callback-supplied accounts-server/api_domain.
+  const suffix = { eu: 'eu', us: 'com' }[env.ZOHO_REGION];
+  let redirect;
+  try { redirect = new URL(env.ZOHO_REDIRECT_URI); } catch { zohoFail('configuration_required', 503); }
+  if (!suffix || !env.ZOHO_DB || !env.ZOHO_CLIENT_ID || !env.ZOHO_CLIENT_SECRET ||
+      !/^[A-Za-z0-9+/]{43}=$/.test(env.ZOHO_TOKEN_KEY || '') ||
+      (env.ZOHO_ADMIN_TOKEN || '').length < 43 || redirect.protocol !== 'https:' ||
+      redirect.pathname !== '/api/zoho/callback' || redirect.search || redirect.hash ||
+      redirect.username || redirect.password) zohoFail('configuration_required', 503);
+  if (url.origin !== redirect.origin) zohoFail('invalid_origin', 403);
+  return { accounts: `https://accounts.zoho.${suffix}`, mail: `https://mail.zoho.${suffix}`, redirect: redirect.href };
+}
+async function zohoCrypt(env, value, decrypt = false) {
+  const key = await crypto.subtle.importKey('raw', Uint8Array.from(atob(env.ZOHO_TOKEN_KEY), c => c.charCodeAt(0)), 'AES-GCM', false, [decrypt ? 'decrypt' : 'encrypt']);
+  const aad = zohoEncoder.encode(`caravela:zoho:v1:${BOOKING_EMAIL}:${env.ZOHO_REGION}:${env.ZOHO_CLIENT_ID}`);
+  if (decrypt) {
+    const [version, iv, ciphertext] = value.split('.');
+    if (version !== 'v1') zohoFail('storage_error', 503);
+    const decode = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(iv), additionalData: aad }, key, decode(ciphertext))));
+  }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, zohoEncoder.encode(JSON.stringify(value))));
+  const encode = b => btoa(String.fromCharCode(...b));
+  return `v1.${encode(iv)}.${encode(ciphertext)}`;
+}
+async function zohoFetch(url, options) {
+  let response, data;
+  try {
+    response = await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
+    data = await response.json();
+  } catch { zohoFail('zoho_unavailable', 502); }
+  if (!response.ok || data.error || (data.status?.code && data.status.code !== 200)) {
+    zohoFail(data.error === 'invalid_code' || data.error === 'invalid_token' || response.status === 401 ? 'reauthorization_required' : 'zoho_unavailable', 502);
+  }
+  return data;
+}
+async function zohoToken(env, config, grant) {
+  const data = await zohoFetch(`${config.accounts}/oauth/v2/token`, { method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: env.ZOHO_CLIENT_ID, client_secret: env.ZOHO_CLIENT_SECRET, ...grant }) });
+  if (typeof data.access_token !== 'string' || !data.access_token || !Number.isFinite(Number(data.expires_in)) || Number(data.expires_in) <= 0) zohoFail('invalid_token_response', 502);
+  if (data.scope) {
+    const granted = data.scope.split(/[ ,]+/).filter(Boolean);
+    if (granted.some(s => !ZOHO_SCOPES.split(',').includes(s)) || ZOHO_SCOPES.split(',').some(s => !granted.includes(s))) zohoFail('invalid_scopes', 502);
+  }
+  return { access: data.access_token, refresh: data.refresh_token, expires: Date.now() + Math.min(Number(data.expires_in), 3600) * 1000 };
+}
+async function zohoGet(config, token, path) {
+  return zohoFetch(`${config.mail}/api/accounts${path}`, { method: 'GET', headers: { Authorization: `Zoho-oauthtoken ${token}`, Accept: 'application/json' } });
+}
+function zohoAccount(data) {
+  const accounts = Array.isArray(data.data) ? data.data : [];
+  const matches = accounts.filter(a => a.type === 'ZOHO_ACCOUNT' &&
+    String(a.primaryEmailAddress || a.mailboxAddress || '').toLowerCase() === BOOKING_EMAIL &&
+    typeof a.accountId === 'string' && /^\d+$/.test(a.accountId));
+  if (matches.length !== 1) zohoFail('mailbox_mismatch', 403);
+  return matches[0].accountId;
+}
+async function zohoReadTokens(env, config) {
+  const row = await env.ZOHO_DB.prepare('SELECT * FROM zoho_connection WHERE mailbox = ?').bind(BOOKING_EMAIL).first();
+  if (!row) zohoFail('not_connected', 409);
+  let tokens = await zohoCrypt(env, row.sealed, true);
+  if (tokens.expires > Date.now() + 60000) return tokens;
+  const lock = zohoRandom();
+  const acquired = await env.ZOHO_DB.prepare('UPDATE zoho_connection SET lock_id = ?, lock_until = ? WHERE mailbox = ? AND lock_until < ? RETURNING mailbox')
+    .bind(lock, Date.now() + 60000, BOOKING_EMAIL, Date.now()).first();
+  if (!acquired) zohoFail('refresh_in_progress', 503);
+  try {
+    // Read again under the lock in case another request refreshed since our first read.
+    const current = await env.ZOHO_DB.prepare('SELECT * FROM zoho_connection WHERE mailbox = ?').bind(BOOKING_EMAIL).first();
+    tokens = await zohoCrypt(env, current.sealed, true);
+    if (tokens.expires <= Date.now() + 60000) {
+      const renewed = await zohoToken(env, config, { grant_type: 'refresh_token', refresh_token: tokens.refresh });
+      tokens = { ...tokens, ...renewed, refresh: renewed.refresh || tokens.refresh };
+      if (zohoAccount(await zohoGet(config, tokens.access, '')) !== tokens.accountId) zohoFail('mailbox_mismatch', 403);
+      const saved = await env.ZOHO_DB.prepare('UPDATE zoho_connection SET sealed = ? WHERE mailbox = ? AND lock_id = ? RETURNING mailbox')
+        .bind(await zohoCrypt(env, tokens), BOOKING_EMAIL, lock).first();
+      if (!saved) zohoFail('connection_changed', 409);
+    }
+    return tokens;
+  } finally {
+    await env.ZOHO_DB.prepare('UPDATE zoho_connection SET lock_id = NULL, lock_until = 0 WHERE mailbox = ? AND lock_id = ?').bind(BOOKING_EMAIL, lock).run();
+  }
+}
+async function handleZoho(request, env, url) {
+  if (env.ZOHO_ENABLED !== 'true') return zohoReply({ ok: false, error: 'not_found' }, 404);
+  const clearCookie = `${ZOHO_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`;
+  try {
+    const config = zohoConfig(env, url);
+    const route = url.pathname.slice('/api/zoho/'.length);
+    const methods = { authorize: 'POST', callback: 'GET', status: 'GET', folders: 'GET', messages: 'GET', content: 'GET' };
+    if (!methods[route]) zohoFail('not_found', 404);
+    if (request.method !== methods[route]) return zohoReply({ ok: false, error: 'method_not_allowed' }, 405, { Allow: methods[route] });
+    if (route !== 'callback') {
+      if (!(await zohoEqual(request.headers.get('Authorization') || '', `Bearer ${env.ZOHO_ADMIN_TOKEN}`))) zohoFail('unauthorized', 401);
+      if ((request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') zohoFail('invalid_origin', 403);
+    }
+    if (route === 'authorize') {
+      const state = zohoRandom(), browser = zohoRandom();
+      await env.ZOHO_DB.prepare('DELETE FROM zoho_oauth_state WHERE expires_at < ?').bind(Date.now()).run();
+      await env.ZOHO_DB.prepare('INSERT INTO zoho_oauth_state (state_hash, browser_hash, expires_at) VALUES (?, ?, ?)')
+        .bind(await zohoHash(state), await zohoHash(browser), Date.now() + 600000).run();
+      const target = new URL(`${config.accounts}/oauth/v2/auth`);
+      target.search = new URLSearchParams({ client_id: env.ZOHO_CLIENT_ID, response_type: 'code', redirect_uri: config.redirect,
+        scope: ZOHO_SCOPES, access_type: 'offline', prompt: 'consent', state }).toString();
+      return zohoReply({ authorizationUrl: target.href }, 200, { 'Set-Cookie': `${ZOHO_COOKIE}=${browser}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=600` });
+    }
+    if (route === 'callback') {
+      const state = url.searchParams.get('state') || '';
+      const browser = (request.headers.get('Cookie') || '').split(';').map(s => s.trim()).find(s => s.startsWith(`${ZOHO_COOKIE}=`))?.slice(ZOHO_COOKIE.length + 1) || '';
+      if (!/^[\w-]{43}$/.test(state) || !/^[\w-]{43}$/.test(browser)) zohoFail('invalid_state', 400);
+      // Atomic consume prevents replay across isolates and simultaneous callbacks.
+      const consumed = await env.ZOHO_DB.prepare('DELETE FROM zoho_oauth_state WHERE state_hash = ? AND browser_hash = ? AND expires_at > ? RETURNING state_hash')
+        .bind(await zohoHash(state), await zohoHash(browser), Date.now()).first();
+      if (!consumed) zohoFail('invalid_state', 400);
+      if (url.searchParams.has('error')) zohoFail('authorization_denied', 400);
+      const code = url.searchParams.get('code');
+      if (!code || code.length > 4096) zohoFail('invalid_code', 400);
+      const tokens = await zohoToken(env, config, { grant_type: 'authorization_code', code, redirect_uri: config.redirect });
+      if (typeof tokens.refresh !== 'string' || !tokens.refresh) zohoFail('refresh_token_missing', 409);
+      tokens.accountId = zohoAccount(await zohoGet(config, tokens.access, ''));
+      await env.ZOHO_DB.prepare('INSERT INTO zoho_connection (mailbox, sealed) VALUES (?, ?) ON CONFLICT(mailbox) DO UPDATE SET sealed = excluded.sealed, lock_id = NULL, lock_until = 0')
+        .bind(BOOKING_EMAIL, await zohoCrypt(env, tokens)).run();
+      // Remove the authorization code from the visible address bar immediately.
+      return new Response(null, { status: 303, headers: { Location: '/api/zoho/connected', 'Set-Cookie': clearCookie, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+    }
+    if (route === 'status') {
+      const row = await env.ZOHO_DB.prepare('SELECT mailbox FROM zoho_connection WHERE mailbox = ?').bind(BOOKING_EMAIL).first();
+      return zohoReply({ ok: true, connected: !!row, mailbox: BOOKING_EMAIL });
+    }
+    const params = new URLSearchParams();
+    const id = key => { const value = url.searchParams.get(key); if (!/^\d{1,30}$/.test(value || '')) zohoFail('invalid_parameters'); return value; };
+    let path;
+    if (route === 'folders') path = '/folders';
+    if (route === 'messages') {
+      for (const [key, fallback, max] of [['start', '1', 1000000], ['limit', '50', 100]]) {
+        const value = url.searchParams.get(key) ?? fallback;
+        if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > max) zohoFail('invalid_parameters');
+        params.set(key, value);
+      }
+      if (url.searchParams.has('folderId')) params.set('folderId', id('folderId'));
+      path = `/messages/view?${params}`;
+    }
+    if (route === 'content') path = `/folders/${id('folderId')}/messages/${id('messageId')}/content`;
+    const tokens = await zohoReadTokens(env, config);
+    const result = await zohoGet(config, tokens.access, `/${tokens.accountId}${path}`);
+    return zohoReply({ ok: true, data: result.data });
+  } catch (error) {
+    // Do not log OAuth codes, tokens, upstream bodies, email data or request URLs.
+    return zohoReply({ ok: false, error: error.zohoCode || 'storage_error' }, error.status || 503,
+      url.pathname === '/api/zoho/callback' ? { 'Set-Cookie': clearCookie } : {});
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // Reserved for a future secured Zoho Mail OAuth callback. No public access yet.
+    if (url.pathname.startsWith("/api/zoho/")) {
+      if (url.pathname === "/api/zoho/connected" && env.ZOHO_ENABLED === "true" && request.method === "GET") {
+        return htmlResponse("<p>Autorização concluída. Fecha esta janela e consulta o estado através da API administrativa.</p>");
+      }
+      return handleZoho(request, env, url);
+    }
     if (url.pathname === "/api/contact") {
       if (request.method !== "POST") {
         return json({ ok: false, error: "method_not_allowed" }, 405);

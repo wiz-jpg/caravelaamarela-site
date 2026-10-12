@@ -14,6 +14,7 @@
     '<button type="button" id="vault-save" disabled>Guardar versão importada</button>'+
     '<button type="button" class="secondary" id="vault-load">Abrir base guardada</button>'+
     '<button type="button" class="secondary" id="vault-backup">Descarregar cópia de segurança</button>'+
+    '<button type="button" class="secondary" id="vault-r2-backup">Descarregar backup R2</button>'+
     '<button type="button" class="secondary" id="vault-zoho">Atualizar histórico Zoho</button>'+
     '<button type="button" class="secondary" id="vault-sheets">Atualizar Google Sheets</button>'+
     '</div><div class="status" id="vault-result" role="status" aria-live="polite">Base permanente ainda não verificada. Para todas as operações, usa o token administrativo acima.</div>'+
@@ -51,7 +52,7 @@
   }
   function busyMode(value){
     busy=value;
-    for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-zoho","vault-sheets"])$(id).disabled=value;
+    for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-r2-backup","vault-zoho","vault-sheets"])$(id).disabled=value;
     if(!value)$("vault-save").disabled=!currentFile;
   }
   async function action(work){
@@ -70,7 +71,7 @@
       " · Ativa: "+(data.active_snapshot?"sim":"não")+
       " · Zoho indexado no D1: "+(data.mail||[]).reduce((v,x)=>v+x.count,0)+
       " mensagens · Sheets: "+(data.sources||[]).length+
-      " fontes capturadas · Backups externos: por configurar.";
+      " fontes capturadas · Backup R2: "+(data.offsite_backup_configured?((data.verified_offsite_copies||0)+" cópia(s) verificadas"):"não configurado")+".";
     say("Cofre pronto. "+(data.active_snapshot?
       "Existe uma base persistente que podes abrir.":"Ainda não existe uma base ativa."));
     return data;
@@ -141,6 +142,20 @@
   $("vault-save").addEventListener("click",()=>action(save));
   $("vault-load").addEventListener("click",()=>action(()=>restore(false)));
   $("vault-backup").addEventListener("click",()=>action(()=>restore(true)));
+  $("vault-r2-backup").addEventListener("click",()=>action(async()=>{
+    const details=await (await api("status")).json();
+    if(!details.active_snapshot)throw Error("Ainda não existe uma versão ativa.");
+    const result=await api("snapshot/"+details.active_snapshot+"/backup-download");
+    const bytes=await result.arrayBuffer();
+    if(await hash(bytes)!==result.headers.get("X-Control-SHA256"))
+      throw Error("O backup R2 não passou a verificação SHA-256.");
+    const objectUrl=URL.createObjectURL(new Blob([bytes],{type:"application/json"}));
+    const link=document.createElement("a");link.href=objectUrl;
+    link.download="caravela_crm_backup_r2_privado.json";
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),5000);
+    say("Concluído: cópia R2 independente recuperada e verificada.");
+  }));
   async function sync(provider) {
     say("A sincronizar "+provider+" em modo de leitura. Nenhuma mensagem será modificada…");
     const payload=await (await api(provider+"/sync",{method:"POST"})).json();

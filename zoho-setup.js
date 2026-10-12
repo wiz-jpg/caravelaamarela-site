@@ -4,6 +4,7 @@
   const input = document.querySelector("#admin-token");
   const button = document.querySelector("#connect-button");
   const diagnose = document.querySelector("#diagnose-button");
+  const statusButton = document.querySelector("#status-button");
   const message = document.querySelector("#message");
 
   function report(text, error = false) {
@@ -52,13 +53,66 @@
     }
   }
 
-  diagnose.addEventListener("click", async () => {
-    if (diagnose.disabled || button.disabled) return;
+  statusButton.addEventListener("click", async () => {
+    if (button.disabled || diagnose.disabled || statusButton.disabled) return;
     const token = input.value.trim();
     input.value = "";
     if (!token) return report("Introduz o token administrativo para verificar a ligação.", true);
     button.disabled = true;
     diagnose.disabled = true;
+    statusButton.disabled = true;
+    report("A confirmar a ligação e o acesso de leitura…");
+    const options = {
+      method: "GET",
+      headers: { Authorization: "Bearer " + token },
+      credentials: "same-origin",
+      cache: "no-store",
+      redirect: "error"
+    };
+    try {
+      const response = await fetch("/api/zoho/status", options);
+      const status = await response.json();
+      if (!response.ok) {
+        if (status.error === "unauthorized") throw new Error("Token administrativo incorreto.");
+        throw new Error("Não foi possível consultar o estado da ligação (" + response.status + ").");
+      }
+      if (!status.connected) {
+        report("A conta ainda não está ligada. Só nesse caso é necessário usar «Ligar Zoho Mail».", true);
+        return;
+      }
+      const folderResponse = await fetch("/api/zoho/folders", options);
+      const folderData = await folderResponse.json();
+      if (!folderResponse.ok) {
+        const detail = typeof folderData.error === "string" ? folderData.error : "unknown";
+        report("Conta autorizada, mas a leitura das pastas ainda falhou (" + detail + ").", true);
+        return;
+      }
+      const folders = Array.isArray(folderData.data) ? folderData.data
+        : Array.isArray(folderData.folders) ? folderData.folders : null;
+      if (!folders) {
+        report("Conta autorizada, mas a resposta das pastas veio num formato inesperado.", true);
+        return;
+      }
+      report("Zoho Mail ligado! Leitura confirmada: " + folders.length +
+        (folders.length === 1 ? " pasta acessível." : " pastas acessíveis.") +
+        " Nenhum email foi enviado ou alterado.");
+    } catch (error) {
+      report(error.message || "Não foi possível confirmar a leitura.", true);
+    } finally {
+      button.disabled = false;
+      diagnose.disabled = false;
+      statusButton.disabled = false;
+    }
+  });
+
+  diagnose.addEventListener("click", async () => {
+    if (diagnose.disabled || button.disabled || statusButton.disabled) return;
+    const token = input.value.trim();
+    input.value = "";
+    if (!token) return report("Introduz o token administrativo para verificar a ligação.", true);
+    button.disabled = true;
+    diagnose.disabled = true;
+    statusButton.disabled = true;
     report("A verificar ligação ao Zoho. Não será pedido acesso aos teus emails…");
     try {
       const response = await fetch("/api/zoho/diagnose", {
@@ -113,12 +167,13 @@
     } finally {
       button.disabled = false;
       diagnose.disabled = false;
+      statusButton.disabled = false;
     }
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (button.disabled) return;
+    if (button.disabled || diagnose.disabled || statusButton.disabled) return;
     const token = input.value.trim();
     input.value = "";
     if (!token) return report("Introduz o token administrativo.", true);

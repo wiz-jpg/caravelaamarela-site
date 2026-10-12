@@ -74,27 +74,29 @@ test('callback consumes state atomically, encrypts tokens, redirects without cod
   const stored = JSON.stringify(db.prepare('SELECT * FROM zoho_connection').all());
   assert.ok(!stored.includes('access-secret')); assert.ok(!stored.includes('refresh-secret'));
   const replay = await request(`/api/zoho/callback?state=${flow.state}&code=fake`, { admin: false, headers: { Cookie: flow.cookie } });
-  assert.equal(replay.status, 400);
+  assert.equal(replay.status, 303);
+  assert.match(replay.headers.get('location'), /result=invalid_state/);
   assert.equal(calls.length, 2);
   const status = await request('/api/zoho/status'); assert.equal((await status.json()).connected, true);
 });
 test('callback requires matching browser cookie and unexpired state', async () => {
   const flow = await start();
-  assert.equal((await request(`/api/zoho/callback?state=${flow.state}&code=fake`, { admin: false })).status, 400);
+  assert.match((await request(`/api/zoho/callback?state=${flow.state}&code=fake`, { admin: false })).headers.get('location'), /result=invalid_state/);
   db.exec('UPDATE zoho_oauth_state SET expires_at = 0');
-  assert.equal((await request(`/api/zoho/callback?state=${flow.state}&code=fake`, { admin: false, headers: { Cookie: flow.cookie } })).status, 400);
+  assert.match((await request(`/api/zoho/callback?state=${flow.state}&code=fake`, { admin: false, headers: { Cookie: flow.cookie } })).headers.get('location'), /result=invalid_state/);
   assert.equal(calls.length, 0);
 });
 test('wrong mailbox and missing refresh token never persist a connection', async () => {
-  account = 'other@example.test'; assert.equal((await connect()).response.status, 403);
+  account = 'other@example.test'; assert.match((await connect()).response.headers.get('location'), /result=mailbox_mismatch/);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM zoho_connection').get().n, 0);
-  delete tokenReply.refresh_token; assert.equal((await connect()).response.status, 409);
+  delete tokenReply.refresh_token; assert.match((await connect()).response.headers.get('location'), /result=refresh_token_missing/);
 });
 test('broader scopes are refused and provider errors never leak', async () => {
-  tokenReply.scope = 'ZohoMail.messages.ALL'; assert.equal((await connect()).response.status, 502);
+  tokenReply.scope = 'ZohoMail.messages.ALL'; assert.match((await connect()).response.headers.get('location'), /result=invalid_scopes/);
   tokenReply = { error: 'invalid_code', error_description: 'secret upstream diagnostic' };
-  const { response } = await connect(); assert.equal(response.status, 502);
-  assert.ok(!(await response.text()).includes('secret'));
+  const { response } = await connect(); assert.equal(response.status, 303);
+  assert.match(response.headers.get('location'), /result=reauthorization_required/);
+  assert.ok(!response.headers.get('location').includes('secret'));
 });
 test('read routes pin account and region, validate IDs/pagination, never write Zoho mail', async () => {
   await connect(); calls.length = 0;
@@ -129,4 +131,37 @@ test('public static and contact method behavior remains intact', async () => {
   const publicResponse = await request('/'); assert.equal(await publicResponse.text(), 'public asset');
   assert.equal((await request('/api/contact')).status, 405);
   assert.equal((await request('/index.html')).status, 301);
+});
+
+test('OAuth client rejection is distinguished from a Mail account request error without exposing codes', async () => {
+  tokenReply = { error: 'invalid_client', error_description: 'provider confidential diagnostic' };
+  const first = await connect();
+  assert.equal(first.response.status, 303);
+  assert.match(first.response.headers.get('location'), /result=oauth_client_rejected/);
+  assert.ok(!first.response.headers.get('location').includes('confidential'));
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM zoho_connection').get().n, 0);
+  tokenReply = { access_token: 'access-secret', refresh_token: 'refresh-secret', expires_in: 3600 };
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/api/accounts')) return Response.json({ status: { code: 403, description: 'private diagnostic' } }, { status: 403 });
+    return original(url, options);
+  };
+  const second = await connect();
+  assert.equal(second.response.status, 303);
+  assert.match(second.response.headers.get('location'), /result=accounts_provider_rejected/);
+  assert.ok(!second.response.headers.get('location').includes('private'));
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM zoho_connection').get().n, 0);
+});
+
+test('Zoho account responses with numeric or string success code are accepted', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/api/accounts')) return Response.json({status: {code: '200'}, data: [{
+      type: 'ZOHO_ACCOUNT', primaryEmailAddress: 'booking@caravelaamarela.com', accountId: '1234567890123456789'
+    }]});
+    return original(url, options);
+  };
+  const result = await connect();
+  assert.equal(result.response.status, 303);
+  assert.equal(result.response.headers.get('location'), '/api/zoho/connected');
 });

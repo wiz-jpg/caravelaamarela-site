@@ -101,6 +101,11 @@
       const boot = await api("bootstrap-status");
       mode(boot.needs_bootstrap ? "cc-bootstrap-form" : "cc-login-form");
     } catch (error) {
+      if (error.message === "not_found" && window.CaravelaControlApp?.legacyMode) {
+        overlay.hidden = true;
+        window.CaravelaControlApp.legacyMode();
+        return;
+      }
       $("cc-auth-title").textContent = "Configuração pendente";
       $("cc-auth-description").textContent = "A plataforma ainda não está pronta para autenticar utilizadores.";
       authMessage(error.message, true);

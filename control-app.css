@@ -145,3 +145,27 @@ body{background:var(--cc-bg);color:var(--cc-text);font-family:Inter,system-ui,-a
 }
 
 #control-app [hidden]{display:none!important}
+
+/* Operational brief — source-labelled, no inferred authority to contact. */
+#control-app .cc-dashboard-attention{background:#131b25;border:1px solid var(--cc-line);
+ border-radius:var(--cc-radius);padding:22px;margin:22px 0}
+#control-app .cc-attention-top{display:flex;justify-content:space-between;align-items:flex-start;
+ gap:16px;flex-wrap:wrap}
+#control-app .cc-attention-top button{font-size:12px;padding:10px 13px;border-radius:9px}
+#control-app .cc-attention-top .cc-lead{margin-bottom:14px}
+#control-app .cc-operational-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:10px;margin:8px 0 21px}
+#control-app .cc-operational-stats>div{border:1px solid #354050;background:#1b2531;
+ border-radius:11px;padding:15px}
+#control-app .cc-operational-stats small{display:block;color:#aebac7;font-size:11px}
+#control-app .cc-operational-stats strong{display:block;font-size:25px;font-weight:800;
+ letter-spacing:-.035em;margin-top:7px}
+#control-app .cc-attention-list{display:grid;gap:7px}
+#control-app .cc-attention-item{display:flex;align-items:center;justify-content:space-between;
+ gap:15px;padding:13px 14px;border:1px solid #2b3846;border-radius:9px;background:#101720}
+#control-app .cc-attention-item strong{font-size:13px;display:block}
+#control-app .cc-attention-item small{font-size:11px;color:#a6b5c4;display:block;margin-top:3px}
+#control-app .cc-stage{font-size:10px;font-weight:800;white-space:nowrap;color:var(--cc-yellow);
+ border:1px solid #66563c;border-radius:20px;padding:5px 9px}
+@media(max-width:700px){#control-app .cc-operational-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #control-app .cc-attention-item{align-items:flex-start;flex-direction:column}}

@@ -237,14 +237,16 @@
       status("mail-status",error.message||"Não foi possível concluir a análise.",true);
     }finally{scanButton.disabled=false;}
   });
-  $("export-review").addEventListener("click",()=>{
+  for(const buttonId of ["export-review","export-triage"]){
+  $(buttonId).addEventListener("click",()=>{
     if(!manifest||!reconciled)return;
-    const payload=logic.exportReview(manifest,reconciled);
+    const payload=buttonId==="export-triage"?logic.exportTriage(manifest,reconciled):logic.exportReview(manifest,reconciled);
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download="caravela_crm_auditoria.json";
+    const a=document.createElement("a");a.href=url;a.download=buttonId==="export-triage"?"caravela_crm_pendentes_privado.json":"caravela_crm_auditoria.json";
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
+  }
   render();
 })();

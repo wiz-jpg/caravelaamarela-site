@@ -165,3 +165,44 @@ test('Zoho account responses with numeric or string success code are accepted', 
   assert.equal(result.response.status, 303);
   assert.equal(result.response.headers.get('location'), '/api/zoho/connected');
 });
+
+test('preview-only diagnostic confirms OAuth endpoint availability without a real code', async () => {
+  const preview = 'https://feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev';
+  env.ZOHO_REDIRECT_URI = preview + '/api/zoho/callback';
+  const requestPreview = () => worker.fetch(new Request(preview + '/api/zoho/diagnose', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.ZOHO_ADMIN_TOKEN }
+  }), env, {});
+  const realMock = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/oauth/v2/token')) return Response.json({ error: 'invalid_code' }, { status: 400 });
+    return realMock(url, options);
+  };
+  const response = await requestPreview();
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, result: 'oauth_endpoint_responding' });
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM zoho_connection').get().n, 0);
+});
+
+test('diagnostic classifies a provider HTTP 403 HTML response without leaking its body', async () => {
+  const preview = 'https://feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev';
+  env.ZOHO_REDIRECT_URI = preview + '/api/zoho/callback';
+  globalThis.fetch = async () => new Response('<html>never-expose-provider-body</html>', {
+    status: 403, headers: { 'Content-Type': 'text/html' }
+  });
+  const response = await worker.fetch(new Request(preview + '/api/zoho/diagnose', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.ZOHO_ADMIN_TOKEN }
+  }), env, {});
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.result, 'oauth_non_json_403');
+  assert.equal(body.ok, false);
+  assert.ok(!JSON.stringify(body).includes('never-expose-provider-body'));
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM zoho_connection').get().n, 0);
+});
+
+test('diagnostic is not available on production and is administrative', async () => {
+  const response = await request('/api/zoho/diagnose', { method: 'POST' });
+  assert.equal(response.status, 404);
+  const denied = await request('/api/zoho/diagnose', { method: 'POST', admin: false });
+  assert.equal(denied.status, 401);
+});

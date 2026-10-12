@@ -5,6 +5,7 @@
   const button = document.querySelector("#connect-button");
   const diagnose = document.querySelector("#diagnose-button");
   const statusButton = document.querySelector("#status-button");
+  const messagesButton = document.querySelector("#messages-button");
   const message = document.querySelector("#message");
 
   function report(text, error = false) {
@@ -53,14 +54,81 @@
     }
   }
 
+  // Read-only smoke test: retrieve at most five message-list records from each
+  // standard folder. No message content is displayed or persisted.
+  messagesButton.addEventListener("click", async () => {
+    if ([button, diagnose, statusButton, messagesButton].some(control => control.disabled)) return;
+    const adminToken = input.value.trim();
+    input.value = "";
+    if (!adminToken) return report("Introduz o token administrativo para testar a leitura.", true);
+    for (const control of [button, diagnose, statusButton, messagesButton]) control.disabled = true;
+    report("A consultar as pastas de recebidos e enviados, apenas em modo de leitura…");
+    const requestOptions = {
+      method: "GET",
+      headers: { Authorization: "Bearer " + adminToken },
+      credentials: "same-origin",
+      cache: "no-store",
+      redirect: "error"
+    };
+    async function authenticatedGet(path) {
+      const response = await fetch(path, requestOptions);
+      const body = await response.json();
+      if (!response.ok) {
+        const code = typeof body.error === "string" ? body.error : "unavailable";
+        if (code === "unauthorized") throw new Error("Token administrativo incorreto.");
+        if (code === "not_connected") throw new Error("A conta Zoho ainda não está ligada.");
+        if (code === "reauthorization_required") throw new Error("A autorização expirou ou foi revogada.");
+        throw new Error("A API recusou o pedido de leitura (" + response.status + ", " + code + ").");
+      }
+      return body;
+    }
+    try {
+      const status = await authenticatedGet("/api/zoho/status");
+      if (!status.connected) throw new Error("A conta Zoho ainda não está ligada.");
+      const folderResponse = await authenticatedGet("/api/zoho/folders");
+      const folders = Array.isArray(folderResponse.data) ? folderResponse.data : folderResponse.folders;
+      if (!Array.isArray(folders)) throw new Error("O Zoho devolveu um formato de pastas inesperado.");
+      const nameOf = folder => String(folder.folderType || folder.folderName || folder.name || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      const checks = [
+        { label: "Recebidos", matches: ["inbox", "caixa de entrada", "recebidos"] },
+        { label: "Enviados", matches: ["sent", "sent items", "enviados", "enviadas"] }
+      ];
+      const confirmed = [];
+      for (const { label, matches } of checks) {
+        const folder = folders.find(item => matches.includes(nameOf(item)) ||
+          matches.includes(String(item.folderName || "").toLowerCase()));
+        if (!folder) continue;
+        const id = String(folder.folderId || folder.id || "");
+        if (!/^\d{1,30}$/.test(id)) throw new Error("Identificador inválido da pasta " + label + ".");
+        const result = await authenticatedGet("/api/zoho/messages?folderId=" +
+          encodeURIComponent(id) + "&start=1&limit=5");
+        const items = Array.isArray(result.data) ? result.data : result.messages;
+        if (!Array.isArray(items)) throw new Error("O Zoho devolveu um formato de mensagens inesperado.");
+        confirmed.push(label + ": " + items.length + " de até 5 mensagens consultadas");
+      }
+      if (!confirmed.length) {
+        report("Conta ligada, mas não foram identificadas as pastas padrão de recebidos e enviados.", true);
+        return;
+      }
+      report("Leitura de mensagens confirmada. " + confirmed.join(" | ") +
+        ". Nenhum conteúdo foi apresentado, enviado ou alterado.");
+    } catch (error) {
+      report(error.message || "Não foi possível verificar a leitura das mensagens.", true);
+    } finally {
+      for (const control of [button, diagnose, statusButton, messagesButton]) control.disabled = false;
+    }
+  });
+
   statusButton.addEventListener("click", async () => {
-    if (button.disabled || diagnose.disabled || statusButton.disabled) return;
+    if (button.disabled || diagnose.disabled || statusButton.disabled || messagesButton.disabled) return;
     const token = input.value.trim();
     input.value = "";
     if (!token) return report("Introduz o token administrativo para verificar a ligação.", true);
     button.disabled = true;
     diagnose.disabled = true;
     statusButton.disabled = true;
+    messagesButton.disabled = true;
     report("A confirmar a ligação e o acesso de leitura…");
     const options = {
       method: "GET",
@@ -102,17 +170,19 @@
       button.disabled = false;
       diagnose.disabled = false;
       statusButton.disabled = false;
+      messagesButton.disabled = false;
     }
   });
 
   diagnose.addEventListener("click", async () => {
-    if (diagnose.disabled || button.disabled || statusButton.disabled) return;
+    if (diagnose.disabled || button.disabled || statusButton.disabled || messagesButton.disabled) return;
     const token = input.value.trim();
     input.value = "";
     if (!token) return report("Introduz o token administrativo para verificar a ligação.", true);
     button.disabled = true;
     diagnose.disabled = true;
     statusButton.disabled = true;
+    messagesButton.disabled = true;
     report("A verificar ligação ao Zoho. Não será pedido acesso aos teus emails…");
     try {
       const response = await fetch("/api/zoho/diagnose", {
@@ -168,12 +238,13 @@
       button.disabled = false;
       diagnose.disabled = false;
       statusButton.disabled = false;
+      messagesButton.disabled = false;
     }
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (button.disabled || diagnose.disabled || statusButton.disabled) return;
+    if (button.disabled || diagnose.disabled || statusButton.disabled || messagesButton.disabled) return;
     const token = input.value.trim();
     input.value = "";
     if (!token) return report("Introduz o token administrativo.", true);

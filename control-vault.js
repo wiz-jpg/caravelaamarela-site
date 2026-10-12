@@ -1,5 +1,6 @@
 import { syncZohoMail } from "./control-sync-zoho.js";
 import { syncGoogleSheets } from "./control-sync-sheets.js";
+import { handleControlAuth, sessionUser, roleAllows } from "./control-auth.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -121,14 +122,22 @@ export async function handleControl(request,env,url,zohoReader) {
      typeof env.ZOHO_ADMIN_TOKEN!=="string"||env.ZOHO_ADMIN_TOKEN.length<43)
     return reject("not_found",404);
   const route=url.pathname.slice("/api/control/".length);
+  if(route.startsWith("auth/")) return handleControlAuth(request,env,url,route);
   const supplied=request.headers.get("Authorization")||"";
   const admin=await constantEqual(supplied,"Bearer "+env.ZOHO_ADMIN_TOKEN);
+  const user=await sessionUser(request,env);
   const cron=(
     (route==="zoho/sync"||route==="sheets/sync")&&
     typeof env.CONTROL_CRON_TOKEN==="string"&&env.CONTROL_CRON_TOKEN.length>=43&&
     await constantEqual(supplied,"Bearer "+env.CONTROL_CRON_TOKEN)
   );
-  if(!admin&&!cron)return reject("unauthorized",401);
+  if(!admin&&!cron&&!roleAllows(user,"viewer"))return reject("unauthorized",401);
+  const hasAdmin=admin||roleAllows(user,"admin");
+  const hasManager=hasAdmin||roleAllows(user,"manager");
+  const readRoutes=new Set(["status","source/latest","snapshot/active"]);
+  const syncRoutes=new Set(["zoho/sync","sheets/sync"]);
+  if(!hasAdmin&&!cron&&!readRoutes.has(route)&&!(hasManager&&syncRoutes.has(route)))
+    return reject("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
   const db=env.ZOHO_DB;
@@ -144,7 +153,7 @@ export async function handleControl(request,env,url,zohoReader) {
     if(route==="zoho/sync"){
       // Cron bearer never reaches Zoho: create a request with the existing
       // admin credential exclusively inside this server-side function.
-      const delegated=cron?new Request(request,{headers:{
+      const delegated=(cron||!admin)?new Request(request,{headers:{
         Authorization:"Bearer "+env.ZOHO_ADMIN_TOKEN,Origin:url.origin
       }}):request;
       const result=await syncZohoMail(delegated,env,url,zohoReader);

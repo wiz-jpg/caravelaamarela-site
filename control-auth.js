@@ -67,6 +67,7 @@ async function hashedPassword(password) {
 async function issueSession(db, userId) {
   const token = base64(random(32));
   const now = Date.now();
+  await db.prepare("DELETE FROM control_sessions WHERE expires_ms<=?").bind(now).run();
   await db.prepare("INSERT INTO control_sessions(token_sha256,user_id,created_ms,expires_ms) VALUES(?,?,?,?)")
     .bind(await digest(token), userId, now, now + TTL).run();
   return token;
@@ -132,11 +133,13 @@ async function login(request, env) {
   if (await recentAttempts(db, userBucket) >= 6 || await recentAttempts(db, ipBucket) >= 30)
     return fail("temporarily_locked", 429);
   const user = await db.prepare("SELECT * FROM control_users WHERE username=?").bind(name).first();
-  let valid = false;
-  if (user && user.enabled === 1 && Number.isSafeInteger(user.rounds) &&
-      user.rounds >= 200000 && user.rounds <= 1000000 && passwordValid(data.password)) {
-    valid = constantHex(await pbkdf2(data.password, fromBase64(user.password_salt), user.rounds), user.password_hash);
-  }
+  const supported = !!user && user.enabled === 1 && Number.isSafeInteger(user.rounds) &&
+    user.rounds >= 200000 && user.rounds <= 1000000 && passwordValid(data.password);
+  // Avoid a fast "unknown user" path which could reveal valid usernames by timing.
+  const computed = await pbkdf2(data.password,
+    supported ? fromBase64(user.password_salt) : new Uint8Array(16),
+    supported ? user.rounds : ITERATIONS);
+  const valid = supported && constantHex(computed, user.password_hash);
   if (!valid) {
     await Promise.all([failedAttempt(db, userBucket), failedAttempt(db, ipBucket)]);
     return fail("invalid_credentials", 401);

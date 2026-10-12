@@ -39,9 +39,12 @@
     return transientToken;
   }
   async function api(path,options={}){
+    const authenticated=!!window.CaravelaControlSession?.authenticated;
+    const headers=authenticated
+      ? {...options.headers,"X-Caravela-Request":"1"}
+      : {...options.headers,Authorization:"Bearer "+token()};
     const response=await fetch("/api/control/"+path,{
-      ...options,cache:"no-store",credentials:"same-origin",redirect:"error",
-      headers:{...options.headers,Authorization:"Bearer "+token()}
+      ...options,cache:"no-store",credentials:"same-origin",redirect:"error",headers
     });
     if(response.status===401){transientToken="";throw Error("Token administrativo inválido. Introduz novamente.");}
     if(response.status===503)throw Error("A migração do cofre ainda não foi aplicada ao D1 Preview.");

@@ -1,3 +1,4 @@
+import { handleControl } from "./control-vault.js";
 const BOOKING_EMAIL = "booking@caravelaamarela.com";
 const SENDER_EMAIL = "notifications@forms.caravelaamarela.com";
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -978,6 +979,8 @@ async function handleZoho(request, env, url) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/control/")) return handleControl(request, env, url);
 
     if (url.pathname.startsWith("/api/zoho/")) {
       if (url.pathname === "/api/zoho/connected" && env.ZOHO_ENABLED === "true" && request.method === "GET") {

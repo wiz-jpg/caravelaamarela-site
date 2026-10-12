@@ -213,5 +213,25 @@
     } catch { $("cc-dashboard-brief").textContent = "Não foi possível confirmar o cofre. Verifica a ligação no painel Dados e backups."; }
   });
   window.addEventListener("caravela-control-signed-out", () => { app.hidden = true; currentUser = null; });
-  window.CaravelaControlApp = { openView };
+  function legacyMode() {
+    // Until CONTROL_AUTH_ENABLED is switched on, preserve the former token-based Preview workflow.
+    currentUser = { role: "admin", username: "preview", display_name: "Modo de transição" };
+    app.hidden = false;
+    $("cc-user-name").textContent = "Modo de transição";
+    $("cc-user-handle").textContent = "Acesso temporário com token";
+    $("cc-user-avatar").textContent = "C";
+    $("cc-sidebar-role").textContent = "Configuração pendente";
+    $("cc-logout").hidden = true;
+    $("cc-open-password")?.setAttribute("hidden", "");
+    const tokenInput = $("admin-token");
+    if (tokenInput) tokenInput.hidden = false;
+    const tokenLabel = document.querySelector('label[for="admin-token"]');
+    if (tokenLabel) tokenLabel.hidden = false;
+    for (const button of side.querySelectorAll("[data-min-role]"))
+      button.hidden = button.dataset.view === "team";
+    const meta = top.querySelector(".cc-top-meta span:last-child");
+    if (meta) meta.textContent = "Modo de transição · Preview";
+    openView("sources");
+  }
+  window.CaravelaControlApp = { openView, legacyMode };
 })();

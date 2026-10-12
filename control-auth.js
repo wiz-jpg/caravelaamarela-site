@@ -167,7 +167,7 @@ async function bootstrap(request, env) {
   const marker = await db.prepare(
     "INSERT OR IGNORE INTO control_auth_settings(key,value) VALUES('owner_created',?)"
   ).bind(id).run();
-  if (marker.meta?.changes !== 1) return fail("already_initialized", 409);
+  if ((marker.meta?.changes ?? marker.changes) !== 1) return fail("already_initialized", 409);
   try {
     await db.batch([
       db.prepare("INSERT INTO control_users(id,username,display_name,role,enabled,must_change_password,password_salt,password_hash,rounds,created_ms) VALUES(?,?,?,'admin',1,0,?,?,?,?)")

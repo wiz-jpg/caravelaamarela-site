@@ -136,7 +136,45 @@
       ambiguous_message_ids:result.classified.filter(m=>m.status==="ambiguous").map(m=>({id:m.message_id,direction:m.direction,count:m.candidate_count}))
     };
   }
-  const api={extractEmails,validateImport,indexContacts,messageDate,matchMail,reconcile,followUpCandidate,exportReview};
+  function exportTriage(data,result) {
+    // Explicit, locally-triggered export. Addresses may be personal: private review only.
+    // Never export subject, message previews, message bodies, credentials or OAuth tokens.
+    const byAddress=new Map();
+    const blocked=new Set([BOOKING]);
+    for(const match of result.classified){
+      if(match.status==="unique")continue;
+      const recipients=match.direction==="incoming"?(match.from?[match.from]:[]):match.to;
+      for(const email of recipients){
+        if(!email||blocked.has(email))continue;
+        let item=byAddress.get(email);
+        if(!item){
+          item={address:email,classification:match.status,received:0,sent:0,
+            first_seen:null,last_seen:null,affected_messages:0};
+          byAddress.set(email,item);
+        }
+        item.affected_messages++;
+        if(match.direction==="incoming")item.received++;
+        else item.sent++;
+        if(match.status==="ambiguous")item.classification="ambiguous";
+        if(Number.isFinite(match.timestamp)){
+          item.first_seen=item.first_seen===null?match.timestamp:Math.min(item.first_seen,match.timestamp);
+          item.last_seen=item.last_seen===null?match.timestamp:Math.max(item.last_seen,match.timestamp);
+        }
+      }
+    }
+    const pending=[...byAddress.values()].sort((a,b)=>
+      b.affected_messages-a.affected_messages||a.address.localeCompare(b.address));
+    return {
+      schema:"caravela.crm.triage.v1",
+      source_manifest:data.manifest_sha256,
+      generated_at:new Date().toISOString(),
+      totals:{...result.totals},
+      disclaimer:"Estes endereços NÃO são contactos novos confirmados, nem prova de proposta, resposta ou consentimento. Revisão humana obrigatória.",
+      address_count:pending.length,
+      addresses:pending
+    };
+  }
+  const api={extractEmails,validateImport,indexContacts,messageDate,matchMail,reconcile,followUpCandidate,exportReview,exportTriage};
   root.CaravelaCRMLogic=Object.freeze(api);
   if(typeof module!=="undefined"&&module.exports)module.exports=api;
 })(typeof window!=="undefined"?window:globalThis);

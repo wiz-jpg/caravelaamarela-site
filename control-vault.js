@@ -135,6 +135,17 @@ export async function handleControl(request,env,url,zohoReader) {
         gmail_connected:false,sheets_credentials_present:!!(env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON&&env.CONTROL_ACTIONS_SHEET_ID&&env.CONTROL_ARTISTS_SHEET_ID),
         scheduled_sync_configured:false,offsite_backup_configured:false});
     }
+    if(route==="source/latest"&&request.method==="GET"){
+      const key=url.searchParams.get("key");
+      if(!["control_actions","artist_pipeline"].includes(key))return reject("invalid_source");
+      const source=await db.prepare(
+        "SELECT source_key,revision_sha256,provider,title,raw_json,row_count,captured_ms FROM control_source_revisions WHERE source_key=? ORDER BY captured_ms DESC LIMIT 1"
+      ).bind(key).first();
+      if(!source)return reject("source_not_synced",404);
+      return respond({ok:true,source_key:source.source_key,
+        captured_ms:source.captured_ms,revision_sha256:source.revision_sha256,
+        row_count:source.row_count,data:JSON.parse(source.raw_json)});
+    }
     if(route==="snapshot/active"&&request.method==="GET"){
       const record=await db.prepare("SELECT value FROM control_state WHERE key='active_snapshot'").first();
       if(!record)return reject("no_active_snapshot",404);

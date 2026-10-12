@@ -738,13 +738,24 @@ async function zohoCrypt(env, value, decrypt = false) {
   return `v1.${encode(iv)}.${encode(ciphertext)}`;
 }
 async function zohoFetch(url, options) {
+  // Identify only the failing stage; never expose provider responses, tokens or URLs.
+  const stage = new URL(url).pathname === '/oauth/v2/token' ? 'oauth' : 'accounts';
   let response, data;
   try {
     response = await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
     data = await response.json();
-  } catch { zohoFail('zoho_unavailable', 502); }
-  if (!response.ok || data.error || (data.status?.code && data.status.code !== 200)) {
-    zohoFail(data.error === 'invalid_code' || data.error === 'invalid_token' || response.status === 401 ? 'reauthorization_required' : 'zoho_unavailable', 502);
+  } catch {
+    zohoFail(stage === 'oauth' ? 'oauth_transport_error' : 'accounts_transport_error', 502);
+  }
+  if (!response.ok || data?.error ||
+      (data?.status?.code != null && Number(data.status.code) !== 200)) {
+    if (stage === 'oauth') {
+      if (data?.error === 'invalid_client') zohoFail('oauth_client_rejected', 502);
+      if (data?.error === 'invalid_redirect_uri' || data?.error === 'redirect_uri_mismatch') zohoFail('oauth_redirect_rejected', 502);
+      if (data?.error === 'invalid_code' || data?.error === 'invalid_token') zohoFail('reauthorization_required', 502);
+      zohoFail('oauth_provider_rejected', 502);
+    }
+    zohoFail('accounts_provider_rejected', 502);
   }
   return data;
 }
@@ -860,9 +871,24 @@ async function handleZoho(request, env, url) {
     const result = await zohoGet(config, tokens.access, `/${tokens.accountId}${path}`);
     return zohoReply({ ok: true, data: result.data });
   } catch (error) {
-    // Do not log OAuth codes, tokens, upstream bodies, email data or request URLs.
-    return zohoReply({ ok: false, error: error.zohoCode || 'storage_error' }, error.status || 503,
-      url.pathname === '/api/zoho/callback' ? { 'Set-Cookie': clearCookie } : {});
+    // Never expose OAuth codes, tokens or provider bodies in a response or URL.
+    const errorCode = error.zohoCode || 'storage_error';
+    if (url.pathname === '/api/zoho/callback') {
+      const allowed = new Set([
+        'oauth_transport_error', 'accounts_transport_error',
+        'oauth_client_rejected', 'oauth_redirect_rejected',
+        'oauth_provider_rejected', 'accounts_provider_rejected',
+        'reauthorization_required', 'invalid_scopes',
+        'refresh_token_missing', 'mailbox_mismatch', 'invalid_state',
+        'invalid_code', 'authorization_denied', 'storage_error',
+      ]);
+      const target = '/zoho-setup.html?result=' + encodeURIComponent(allowed.has(errorCode) ? errorCode : 'storage_error');
+      return new Response(null, { status: 303, headers: {
+        'Location': target, 'Set-Cookie': clearCookie,
+        'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
+      } });
+    }
+    return zohoReply({ ok: false, error: errorCode }, error.status || 503);
   }
 }
 

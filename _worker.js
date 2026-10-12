@@ -737,21 +737,38 @@ async function zohoCrypt(env, value, decrypt = false) {
   const encode = b => btoa(String.fromCharCode(...b));
   return `v1.${encode(iv)}.${encode(ciphertext)}`;
 }
+function zohoSafeTransportError(error) {
+  if (error?.name === 'AbortError' || error?.name === 'TimeoutError') return 'timeout';
+  // Classify fixed causes only. Never send upstream exception text to the browser or logs.
+  const message = String(error?.message || '').toLowerCase();
+  if (message.includes('redirect')) return 'redirect_blocked';
+  if (/dns|resolve|lookup|name not resolved/.test(message)) return 'dns_failure';
+  if (/certificate|tls|ssl/.test(message)) return 'tls_failure';
+  if (/host.*cannot access|prohibit|blocked|1021|1024/.test(message)) return 'host_blocked';
+  if (/abortsignal|not a function|unsupported/.test(message)) return 'runtime_incompatible';
+  return 'network_failure';
+}
+
 async function zohoFetch(url, options) {
-  // Diagnostics reveal only the stage and a safe HTTP status, never secrets or upstream bodies.
+  // No automatic redirects: OAuth secrets and Mail Authorization headers must never be forwarded.
   const stage = new URL(url).pathname === '/oauth/v2/token' ? 'oauth' : 'accounts';
   let response;
   try {
-    response = await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
+    response = await fetch(url, { ...options, redirect: 'manual', signal: AbortSignal.timeout(15000) });
   } catch (error) {
-    zohoFail(stage + (error?.name === 'TimeoutError' || error?.name === 'AbortError'
-      ? '_timeout' : '_network_failure'), 502);
+    zohoFail(stage + '_' + zohoSafeTransportError(error), 502);
+  }
+  // Manual redirect is examined safely and never followed.
+  if (response.status >= 300 && response.status < 400) {
+    zohoFail(stage + '_redirect_http_' + (response.status === 301 || response.status === 302 ||
+      response.status === 303 || response.status === 307 || response.status === 308
+      ? response.status : 'other'), 502);
   }
   let data;
   try {
     data = await response.json();
   } catch {
-    const knownStatus = [200, 301, 302, 400, 401, 403, 404, 405, 429, 500, 502, 503, 504];
+    const knownStatus = [200, 400, 401, 403, 404, 405, 429, 500, 502, 503, 504];
     zohoFail(stage + '_non_json_' + (knownStatus.includes(response.status)
       ? response.status : 'other'), 502);
   }
@@ -771,6 +788,28 @@ async function zohoFetch(url, options) {
   }
   return data;
 }
+
+async function zohoPublicConnectivityProbe(accounts) {
+  // The probe never uses OAuth credentials or grant codes, and reports only HTTP codes.
+  // Two fixed URLs under the configured Zoho Accounts domain are tested.
+  const paths = ['/oauth/v2/token', '/'];
+  const output = [];
+  for (const path of paths) {
+    try {
+      const response = await fetch(accounts + path, {
+        method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(7500),
+        headers: { Accept: 'application/json' },
+      });
+      output.push({ path: path === '/' ? 'accounts_home' : 'token_endpoint',
+        outcome: 'http', status: response.status });
+    } catch (error) {
+      output.push({ path: path === '/' ? 'accounts_home' : 'token_endpoint',
+        outcome: zohoSafeTransportError(error) });
+    }
+  }
+  return output;
+}
+
 async function zohoToken(env, config, grant) {
   const data = await zohoFetch(`${config.accounts}/oauth/v2/token`, { method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -833,7 +872,7 @@ async function handleZoho(request, env, url) {
       if ((request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') zohoFail('invalid_origin', 403);
     }
     if (route === 'diagnose') {
-      // Only for this isolated preview. Never generates a real authorization or accesses emails.
+      // Admin-only Preview diagnosis. No mail read, no real OAuth grant.
       if (!url.hostname.endsWith('.caravelaamarela-site.pages.dev')) zohoFail('not_found', 404);
       try {
         await zohoToken(env, config, {
@@ -841,13 +880,16 @@ async function handleZoho(request, env, url) {
           code: 'caravela_probe_intentionally_invalid_not_a_real_oauth_code',
           redirect_uri: config.redirect
         });
-        return zohoReply({ ok: true, result: 'unexpected_token_response' });
+        return zohoReply({ ok: false, result: 'unexpected_token_response' });
       } catch (probeError) {
-        // An invalid authorization code is the expected healthy diagnostic response.
+        const code = probeError.zohoCode || 'storage_error';
+        const healthy = code === 'reauthorization_required';
+        // Additional anonymous network probes only if the token request failed at transport/HTTP.
+        const needsProbe = /^(oauth_(network_failure|timeout|redirect_blocked|dns_failure|tls_failure|host_blocked|runtime_incompatible|redirect_http_|non_json_))/.test(code);
         return zohoReply({
-          ok: probeError.zohoCode === 'reauthorization_required',
-          result: probeError.zohoCode === 'reauthorization_required' ? 'oauth_endpoint_responding' :
-            (probeError.zohoCode || 'storage_error')
+          ok: healthy,
+          result: healthy ? 'oauth_endpoint_responding' : code,
+          ...(needsProbe ? { connectivity: await zohoPublicConnectivityProbe(config.accounts) } : {})
         });
       }
     }
@@ -908,6 +950,10 @@ async function handleZoho(request, env, url) {
       const allowed = new Set([
         'oauth_transport_error', 'accounts_transport_error',
         'oauth_network_failure', 'oauth_timeout', 'oauth_unexpected_response',
+        'oauth_redirect_blocked', 'oauth_dns_failure', 'oauth_tls_failure',
+        'oauth_host_blocked', 'oauth_runtime_incompatible',
+        'oauth_redirect_http_301', 'oauth_redirect_http_302', 'oauth_redirect_http_303',
+        'oauth_redirect_http_307', 'oauth_redirect_http_308', 'oauth_redirect_http_other',
         'oauth_non_json_200', 'oauth_non_json_301', 'oauth_non_json_302',
         'oauth_non_json_400', 'oauth_non_json_401', 'oauth_non_json_403',
         'oauth_non_json_404', 'oauth_non_json_405', 'oauth_non_json_429',

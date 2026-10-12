@@ -738,21 +738,33 @@ async function zohoCrypt(env, value, decrypt = false) {
   return `v1.${encode(iv)}.${encode(ciphertext)}`;
 }
 async function zohoFetch(url, options) {
-  // Identify only the failing stage; never expose provider responses, tokens or URLs.
+  // Diagnostics reveal only the stage and a safe HTTP status, never secrets or upstream bodies.
   const stage = new URL(url).pathname === '/oauth/v2/token' ? 'oauth' : 'accounts';
-  let response, data;
+  let response;
   try {
     response = await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
+  } catch (error) {
+    zohoFail(stage + (error?.name === 'TimeoutError' || error?.name === 'AbortError'
+      ? '_timeout' : '_network_failure'), 502);
+  }
+  let data;
+  try {
     data = await response.json();
   } catch {
-    zohoFail(stage === 'oauth' ? 'oauth_transport_error' : 'accounts_transport_error', 502);
+    const knownStatus = [200, 301, 302, 400, 401, 403, 404, 405, 429, 500, 502, 503, 504];
+    zohoFail(stage + '_non_json_' + (knownStatus.includes(response.status)
+      ? response.status : 'other'), 502);
   }
-  if (!response.ok || data?.error ||
-      (data?.status?.code != null && Number(data.status.code) !== 200)) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    zohoFail(stage + '_unexpected_response', 502);
+  }
+  if (!response.ok || data.error ||
+      (data.status?.code != null && Number(data.status.code) !== 200)) {
     if (stage === 'oauth') {
-      if (data?.error === 'invalid_client') zohoFail('oauth_client_rejected', 502);
-      if (data?.error === 'invalid_redirect_uri' || data?.error === 'redirect_uri_mismatch') zohoFail('oauth_redirect_rejected', 502);
-      if (data?.error === 'invalid_code' || data?.error === 'invalid_token') zohoFail('reauthorization_required', 502);
+      if (data.error === 'invalid_client') zohoFail('oauth_client_rejected', 502);
+      if (data.error === 'invalid_client_secret') zohoFail('oauth_secret_rejected', 502);
+      if (data.error === 'invalid_redirect_uri' || data.error === 'redirect_uri_mismatch') zohoFail('oauth_redirect_rejected', 502);
+      if (data.error === 'invalid_code' || data.error === 'invalid_token') zohoFail('reauthorization_required', 502);
       zohoFail('oauth_provider_rejected', 502);
     }
     zohoFail('accounts_provider_rejected', 502);
@@ -813,12 +825,31 @@ async function handleZoho(request, env, url) {
   try {
     const config = zohoConfig(env, url);
     const route = url.pathname.slice('/api/zoho/'.length);
-    const methods = { authorize: 'POST', callback: 'GET', status: 'GET', folders: 'GET', messages: 'GET', content: 'GET' };
+    const methods = { authorize: 'POST', callback: 'GET', status: 'GET', folders: 'GET', messages: 'GET', content: 'GET', diagnose: 'POST' };
     if (!methods[route]) zohoFail('not_found', 404);
     if (request.method !== methods[route]) return zohoReply({ ok: false, error: 'method_not_allowed' }, 405, { Allow: methods[route] });
     if (route !== 'callback') {
       if (!(await zohoEqual(request.headers.get('Authorization') || '', `Bearer ${env.ZOHO_ADMIN_TOKEN}`))) zohoFail('unauthorized', 401);
       if ((request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') zohoFail('invalid_origin', 403);
+    }
+    if (route === 'diagnose') {
+      // Only for this isolated preview. Never generates a real authorization or accesses emails.
+      if (!url.hostname.endsWith('.caravelaamarela-site.pages.dev')) zohoFail('not_found', 404);
+      try {
+        await zohoToken(env, config, {
+          grant_type: 'authorization_code',
+          code: 'caravela_probe_intentionally_invalid_not_a_real_oauth_code',
+          redirect_uri: config.redirect
+        });
+        return zohoReply({ ok: true, result: 'unexpected_token_response' });
+      } catch (probeError) {
+        // An invalid authorization code is the expected healthy diagnostic response.
+        return zohoReply({
+          ok: probeError.zohoCode === 'reauthorization_required',
+          result: probeError.zohoCode === 'reauthorization_required' ? 'oauth_endpoint_responding' :
+            (probeError.zohoCode || 'storage_error')
+        });
+      }
     }
     if (route === 'authorize') {
       const state = zohoRandom(), browser = zohoRandom();
@@ -876,6 +907,12 @@ async function handleZoho(request, env, url) {
     if (url.pathname === '/api/zoho/callback') {
       const allowed = new Set([
         'oauth_transport_error', 'accounts_transport_error',
+        'oauth_network_failure', 'oauth_timeout', 'oauth_unexpected_response',
+        'oauth_non_json_200', 'oauth_non_json_301', 'oauth_non_json_302',
+        'oauth_non_json_400', 'oauth_non_json_401', 'oauth_non_json_403',
+        'oauth_non_json_404', 'oauth_non_json_405', 'oauth_non_json_429',
+        'oauth_non_json_500', 'oauth_non_json_502', 'oauth_non_json_503',
+        'oauth_non_json_504', 'oauth_non_json_other', 'oauth_secret_rejected',
         'oauth_client_rejected', 'oauth_redirect_rejected',
         'oauth_provider_rejected', 'accounts_provider_rejected',
         'reauthorization_required', 'invalid_scopes',

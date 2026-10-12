@@ -141,8 +141,7 @@
     $("export-review").disabled=!reconciled;
     $("export-triage").disabled=!reconciled;
   }
-  source.addEventListener("change",async()=>{
-    const file=source.files?.[0];
+  async function loadImportFile(file,fromVault=false){
     if(!file)return;
     manifest=null;reconciled=null;visible=50;scanButton.disabled=true;
     status("file-status","A validar os contactos…");
@@ -158,18 +157,21 @@
       const fingerprint=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,"0")).join("");
       if(fingerprint!==contents.manifest_sha256)throw new Error("O ficheiro foi alterado ou ficou incompleto (SHA-256 não coincide).");
       manifest=candidate;
+      window.CaravelaControlCurrentImportFile=file;
       window.dispatchEvent(new CustomEvent("caravela-crm-imported",{detail:{manifest}}));
       // Preview is local only: no fetch/upload of the import JSON.
       scanButton.disabled=false;
       status("file-status","Concluído: "+fmt.format(manifest.entities.length)+
         " registos, "+fmt.format(manifest.summary.shared_emails||0)+
-        " emails partilhados. Nenhum dado foi enviado ao servidor.");
+        " emails partilhados. "+(fromVault?"Versão recuperada do cofre D1.":"Nenhum dado foi enviado ao servidor."));
       status("mail-status","Contactos prontos. Introduz o token administrativo e carrega em «Analisar histórico Zoho».");
     } catch(error) {
       status("file-status",error.message||"O ficheiro não foi aceite.",true);
     }
     render();
-  });
+  }
+  source.addEventListener("change",()=>loadImportFile(source.files?.[0],false));
+  window.CaravelaControlLoadFile=loadImportFile;
   for(const control of [search,kind,filter])control.addEventListener(control===search?"input":"change",()=>{visible=50;render();});
   $("load-more").addEventListener("click",()=>{visible+=50;render();});
   function zohoFolderKind(folder) {

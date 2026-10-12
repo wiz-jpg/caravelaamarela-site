@@ -5,7 +5,7 @@
   const $ = id => document.getElementById(id);
   const main = document.querySelector("body > main");
   const bars = main?.querySelector(".bars");
-  const legacyResults = main?.querySelector("section.results");
+  const legacyResults = document.getElementById("stats")?.closest("section.results");
   if (!main || !bars || !legacyResults) return;
 
   const app = document.createElement("div");
@@ -89,7 +89,7 @@
   brief.className = "cc-notice";
   brief.textContent = "Os dados guardados são carregados após a autenticação. As correspondências por email continuam sujeitas a validação.";
   dashboard.appendChild(brief);
-  const note = main.querySelector(".note");
+  const note = Array.from(main.children).find(el => el.classList.contains("note"));
   if (note) dashboard.appendChild(note);
 
   viewMap.get("contacts").appendChild(legacyResults);

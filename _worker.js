@@ -980,7 +980,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    if (url.pathname.startsWith("/api/control/")) return handleControl(request, env, url);
+    if (url.pathname.startsWith("/api/control/")) return handleControl(request, env, url, handleZoho);
 
     if (url.pathname.startsWith("/api/zoho/")) {
       if (url.pathname === "/api/zoho/connected" && env.ZOHO_ENABLED === "true" && request.method === "GET") {

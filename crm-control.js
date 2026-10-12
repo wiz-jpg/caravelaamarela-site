@@ -139,6 +139,7 @@
     tbody.appendChild(fragment);
     $("load-more").disabled=visible>=list.length;
     $("export-review").disabled=!reconciled;
+    $("export-triage").disabled=!reconciled;
   }
   source.addEventListener("change",async()=>{
     const file=source.files?.[0];

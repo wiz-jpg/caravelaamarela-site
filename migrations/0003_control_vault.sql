@@ -30,6 +30,16 @@ CREATE TABLE IF NOT EXISTS control_snapshot_parts (
   PRIMARY KEY(snapshot_id,part_index)
 );
 
+-- Optional independent R2 backup receipts; no object keys are shared publicly.
+CREATE TABLE IF NOT EXISTS control_backup_copies (
+  snapshot_id TEXT NOT NULL REFERENCES control_snapshots(id) ON DELETE RESTRICT,
+  provider TEXT NOT NULL CHECK(provider='r2'),
+  object_key TEXT NOT NULL,
+  raw_sha256 TEXT NOT NULL CHECK(length(raw_sha256)=64),
+  verified_ms INTEGER NOT NULL,
+  PRIMARY KEY(snapshot_id,provider)
+);
+
 CREATE TABLE IF NOT EXISTS control_state (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,

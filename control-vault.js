@@ -1,3 +1,4 @@
+import { syncZohoMail } from "./control-sync-zoho.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -85,10 +86,10 @@ async function loadSnapshot(db,id){
   if(await hashBytes(bytes)!==record.raw_sha256)throw new Error("snapshot_integrity_failure");
   return {record,bytes};
 }
-export async function handleControl(request,env,url) {
+export async function handleControl(request,env,url,zohoReader) {
   // A public production hostname must NEVER expose the private CRM routes.
   if(url.protocol!=="https:"||url.hostname!==CONTROL_HOST||
-     env.ZOHO_ENABLED!=="true"||!env.ZOHO_DB||
+     env.ZOHO_ENABLED!=="true"||env.CONTROL_VAULT_ENABLED!=="true"||!env.ZOHO_DB||
      typeof env.ZOHO_ADMIN_TOKEN!=="string"||env.ZOHO_ADMIN_TOKEN.length<43)
     return reject("not_found",404);
   if(await constantEqual(request.headers.get("Authorization")||"",
@@ -98,6 +99,10 @@ export async function handleControl(request,env,url) {
   const route=url.pathname.slice("/api/control/".length);
   const db=env.ZOHO_DB;
   try{
+    if(route==="zoho/sync"){
+      const result=await syncZohoMail(request,env,url,zohoReader);
+      return respond(result,result.status||200);
+    }
     if(route==="status"&&request.method==="GET"){
       const table=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='control_snapshots'").first();
       if(!table)return respond({ok:true,schema_ready:false,backup_status:"not_configured"});

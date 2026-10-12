@@ -1,4 +1,5 @@
 import { handleControl } from "./control-vault.js";
+import { sessionUser, roleAllows } from "./control-auth.js";
 const BOOKING_EMAIL = "booking@caravelaamarela.com";
 const SENDER_EMAIL = "notifications@forms.caravelaamarela.com";
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -869,7 +870,11 @@ async function handleZoho(request, env, url) {
     if (!methods[route]) zohoFail('not_found', 404);
     if (request.method !== methods[route]) return zohoReply({ ok: false, error: 'method_not_allowed' }, 405, { Allow: methods[route] });
     if (route !== 'callback') {
-      if (!(await zohoEqual(request.headers.get('Authorization') || '', `Bearer ${env.ZOHO_ADMIN_TOKEN}`))) zohoFail('unauthorized', 401);
+      const legacyAdmin = typeof env.ZOHO_ADMIN_TOKEN === 'string' && env.ZOHO_ADMIN_TOKEN.length >= 43 &&
+        await zohoEqual(request.headers.get('Authorization') || '', `Bearer ${env.ZOHO_ADMIN_TOKEN}`);
+      const account = !legacyAdmin && ['status','folders','messages'].includes(route)
+        ? await sessionUser(request, env) : null;
+      if (!legacyAdmin && !roleAllows(account, 'viewer')) zohoFail('unauthorized', 401);
       if ((request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') zohoFail('invalid_origin', 403);
     }
     if (route === 'diagnose') {

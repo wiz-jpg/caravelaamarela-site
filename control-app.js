@@ -89,6 +89,21 @@
   brief.className = "cc-notice";
   brief.textContent = "Os dados guardados são carregados após a autenticação. As correspondências por email continuam sujeitas a validação.";
   dashboard.appendChild(brief);
+  const attention = document.createElement("section");
+  attention.className = "cc-dashboard-attention";
+  attention.innerHTML =
+    '<div class="cc-attention-top"><div><h2>Resumo operacional</h2>' +
+    '<p class="cc-lead">Estados declarados nas fontes. Rever as associações e o histórico antes de contactar.</p></div>' +
+    '<button type="button" class="cc-neutral" id="cc-attention-open">Abrir todas as ações</button></div>' +
+    '<div class="cc-operational-stats">' +
+    '<div><small>Em negociação / conversa</small><strong id="cc-count-negotiations">—</strong></div>' +
+    '<div><small>Por contactar (fonte)</small><strong id="cc-count-uncontacted">—</strong></div>' +
+    '<div><small>Restrições por artista</small><strong id="cc-count-blocked">—</strong></div>' +
+    '<div><small>Associações por confirmar</small><strong id="cc-count-unverified">—</strong></div></div>' +
+    '<div class="cc-attention-list" id="cc-attention-list">' +
+    '<p class="muted">As próximas ações aparecem quando abrires a base guardada.</p></div>';
+  dashboard.appendChild(attention);
+  $("cc-attention-open").addEventListener("click", () => openView("booking"));
   const note = Array.from(main.children).find(el => el.classList.contains("note"));
   if (note) dashboard.appendChild(note);
 
@@ -179,14 +194,45 @@
   function updateDashboard(manifest) {
     if (!manifest) return;
     const all = manifest.actions || [];
-    const blocked = all.filter(x => x.contact_policy === "blocked" || x.status === "Não avançar").length;
-    const unverified = all.filter(x => x.link_status !== "verified_name_email").length;
+    const blocked = action => action.contact_policy === "blocked" || action.status === "Não avançar";
+    const negotiating = action => ["Em negociação", "Em conversa"].includes(action.status);
+    const uncontacted = action => action.status === "Por contactar";
+    const blockedCount = all.filter(blocked).length;
+    const unverifiedCount = all.filter(x => x.link_status !== "verified_name_email").length;
     $("cc-dashboard-brief").textContent =
       manifest.entities.length.toLocaleString("pt-PT") + " contactos · " +
       all.length.toLocaleString("pt-PT") + " ações operacionais · " +
-      (manifest.artists || []).length + " fichas de projetos · " +
-      blocked + " ações com restrições · " + unverified +
-      " associações por confirmar. A informação é histórica e não constitui autorização para contactar.";
+      (manifest.artists || []).length + " fichas de projetos. " +
+      "Os estados são os das fontes originais, não conclusões automáticas da análise Zoho.";
+    $("cc-count-negotiations").textContent = all.filter(negotiating).length;
+    $("cc-count-uncontacted").textContent = all.filter(uncontacted).length;
+    $("cc-count-blocked").textContent = blockedCount;
+    $("cc-count-unverified").textContent = unverifiedCount;
+    const list = $("cc-attention-list");
+    list.replaceChildren();
+    const choices = all.filter(action => !blocked(action) && (negotiating(action) || uncontacted(action)))
+      .sort((a, b) => Number(negotiating(b)) - Number(negotiating(a))).slice(0, 8);
+    if (!choices.length) {
+      const empty = document.createElement("p"); empty.className = "muted";
+      empty.textContent = "Não há ações com estado «Em negociação», «Em conversa» ou «Por contactar» nesta versão.";
+      list.appendChild(empty);
+    }
+    for (const action of choices) {
+      const item = document.createElement("div");
+      item.className = "cc-attention-item";
+      const left = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = action.name || "Entidade não identificada";
+      const info = document.createElement("small");
+      info.textContent = (action.artist || "Artista não indicado") +
+        (action.link_status !== "verified_name_email" ? " · associação por confirmar" : "");
+      left.append(title, info);
+      const badge = document.createElement("span");
+      badge.className = "cc-stage";
+      badge.textContent = action.status || "Sem estado";
+      item.append(left, badge);
+      list.appendChild(item);
+    }
     $("cc-artists-empty").hidden = true;
     $("cc-booking-empty").hidden = true;
   }

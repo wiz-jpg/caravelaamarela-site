@@ -87,6 +87,33 @@ async function loadSnapshot(db,id){
   if(await hashBytes(bytes)!==record.raw_sha256)throw new Error("snapshot_integrity_failure");
   return {record,bytes};
 }
+async function backupToR2(env,db,record,bytes){
+  if(env.CONTROL_R2_BACKUP_ENABLED!=="true"||!env.CONTROL_BACKUP_BUCKET)
+    return {configured:false,verified:false};
+  const existing=await db.prepare("SELECT raw_sha256 FROM control_backup_copies WHERE snapshot_id=? AND provider='r2'")
+    .bind(record.id).first();
+  if(existing&&existing.raw_sha256===record.raw_sha256)
+    return {configured:true,verified:true,already_exists:true};
+  const key="snapshots/v1/"+record.raw_sha256+".json";
+  const head=await env.CONTROL_BACKUP_BUCKET.head(key);
+  if(head?.customMetadata?.sha256&&head.customMetadata.sha256!==record.raw_sha256)
+    throw new Error("r2_backup_checksum_conflict");
+  if(!head){
+    await env.CONTROL_BACKUP_BUCKET.put(key,bytes,{
+      httpMetadata:{contentType:"application/json"},
+      customMetadata:{sha256:record.raw_sha256}
+    });
+  }
+  // Read-after-write verification: the independent copy must match the exact bytes.
+  const object=await env.CONTROL_BACKUP_BUCKET.get(key);
+  if(!object)throw new Error("r2_backup_missing");
+  const copy=new Uint8Array(await object.arrayBuffer());
+  if(await hashBytes(copy)!==record.raw_sha256)
+    throw new Error("r2_backup_verification_failed");
+  await db.prepare("INSERT OR IGNORE INTO control_backup_copies(snapshot_id,provider,object_key,raw_sha256,verified_ms) VALUES(?,'r2',?,?,?)")
+    .bind(record.id,key,record.raw_sha256,Date.now()).run();
+  return {configured:true,verified:true};
+}
 export async function handleControl(request,env,url,zohoReader) {
   // A public production hostname must NEVER expose the private CRM routes.
   if(url.protocol!=="https:"||url.hostname!==CONTROL_HOST||
@@ -133,7 +160,9 @@ export async function handleControl(request,env,url,zohoReader) {
       return respond({ok:true,schema_ready:true,active_snapshot:selected?.value||null,
         snapshots:snapshots.results||[],mail:mail.results||[],sources:sources.results||[],
         gmail_connected:false,sheets_credentials_present:!!(env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON&&env.CONTROL_ACTIONS_SHEET_ID&&env.CONTROL_ARTISTS_SHEET_ID),
-        scheduled_sync_configured:false,offsite_backup_configured:false});
+        scheduled_sync_configured:!!env.CONTROL_CRON_TOKEN,
+        offsite_backup_configured:env.CONTROL_R2_BACKUP_ENABLED==="true"&&!!env.CONTROL_BACKUP_BUCKET,
+        verified_offsite_copies:(await db.prepare("SELECT COUNT(*) AS n FROM control_backup_copies").first())?.n||0});
     }
     if(route==="source/latest"&&request.method==="GET"){
       const key=url.searchParams.get("key");
@@ -215,6 +244,9 @@ export async function handleControl(request,env,url,zohoReader) {
       delete original.manifest_sha256;
       if(await hashBytes(ENC.encode(JSON.stringify(original)))!==parsed.manifest_sha256)
         return reject("manifest_integrity_failure",422);
+      // Independent backup precedes sealing whenever R2 is enabled.
+      // The original staging parts remain untouched if R2 fails.
+      const backup=await backupToR2(env,db,record,bytes);
       const meta={entity_count:parsed.entities.length,action_count:parsed.actions.length,
         artist_count:parsed.artists.length,triage_count:parsed.zoho_triage?.address_count||0};
       await db.batch([
@@ -222,7 +254,7 @@ export async function handleControl(request,env,url,zohoReader) {
           .bind(Date.now(),meta.entity_count,meta.action_count,meta.artist_count,meta.triage_count,id),
         audit(db,"snapshot_sealed",id,meta)
       ]);
-      return respond({ok:true,id,state:"sealed",...meta});
+      return respond({ok:true,id,state:"sealed",...meta,independent_backup:backup.verified});
     }
     const activate=/^snapshot\/([0-9a-f-]{36})\/activate$/.exec(route);
     if(activate&&request.method==="POST"){
@@ -235,6 +267,27 @@ export async function handleControl(request,env,url,zohoReader) {
         audit(db,"snapshot_activated",id,{raw_sha256:verified.record.raw_sha256})
       ]);
       return respond({ok:true,id,active:true});
+    }
+    const r2Route=/^snapshot\/([0-9a-f-]{36})\/backup$/.exec(route);
+    if(r2Route&&request.method==="POST"){
+      const restored=await loadSnapshot(db,r2Route[1]);
+      return respond({ok:true,id:r2Route[1],
+        ...(await backupToR2(env,db,restored.record,restored.bytes))});
+    }
+    const r2Download=/^snapshot\/([0-9a-f-]{36})\/backup-download$/.exec(route);
+    if(r2Download&&request.method==="GET"){
+      if(!env.CONTROL_BACKUP_BUCKET)return reject("r2_not_configured",409);
+      const receipt=await db.prepare("SELECT object_key,raw_sha256 FROM control_backup_copies WHERE snapshot_id=? AND provider='r2'")
+        .bind(r2Download[1]).first();
+      if(!receipt)return reject("r2_backup_not_found",404);
+      const object=await env.CONTROL_BACKUP_BUCKET.get(receipt.object_key);
+      if(!object)return reject("r2_backup_missing",503);
+      const bytes=new Uint8Array(await object.arrayBuffer());
+      if(await hashBytes(bytes)!==receipt.raw_sha256)
+        return reject("r2_backup_checksum_failure",503);
+      return new Response(bytes,{headers:{"Content-Type":"application/json; charset=utf-8",
+        "Cache-Control":"no-store","X-Content-Type-Options":"nosniff",
+        "X-Control-SHA256":receipt.raw_sha256}});
     }
     if(route==="audit"&&request.method==="GET"){
       const result=await db.prepare("SELECT id,occurred_ms,operation,target,details_json FROM control_audit ORDER BY occurred_ms DESC LIMIT 100").all();

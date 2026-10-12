@@ -695,6 +695,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Reserved for a future secured Zoho Mail OAuth callback. No public access yet.
     if (url.pathname === "/api/contact") {
       if (request.method !== "POST") {
         return json({ ok: false, error: "method_not_allowed" }, 405);

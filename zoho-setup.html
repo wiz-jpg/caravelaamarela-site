@@ -24,7 +24,7 @@
     #message.error { color: #ffb9a9; }
     .note { font-size: 13px; margin-top: 22px; }
   </style>
-  <script src="/zoho-setup.js?v=20261012b" defer></script>
+  <script src="/zoho-setup.js?v=20261012c" defer></script>
 </head>
 <body>
   <main>
@@ -37,10 +37,11 @@
       <input id="admin-token" type="password" autocomplete="off" spellcheck="false" required aria-describedby="help">
       <p id="help" class="note">Utiliza o token que configuraste no Cloudflare Preview. Não o envies por mensagem.</p>
       <button id="connect-button" type="submit">Ligar Zoho Mail</button>
+      <button id="status-button" type="button" style="margin-top:10px;background:#e7bd40">Confirmar ligação e leitura</button>
       <button id="diagnose-button" type="button" style="margin-top:10px;background:transparent;color:#f4ce4b;border:1px solid #9b864a">Verificar ligação ao Zoho</button>
       <p id="message" role="status" aria-live="polite"></p>
     </form>
-    <p class="note">Após carregares no botão, será aberta a página oficial do Zoho para confirmares as permissões.</p>
+    <p class="note">Se já autorizaste a conta, usa «Confirmar ligação e leitura». Não precisas de voltar a autorizar o Zoho.</p>
   </main>
 </body>
 </html>

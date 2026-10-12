@@ -93,11 +93,17 @@ export async function handleControl(request,env,url,zohoReader) {
      env.ZOHO_ENABLED!=="true"||env.CONTROL_VAULT_ENABLED!=="true"||!env.ZOHO_DB||
      typeof env.ZOHO_ADMIN_TOKEN!=="string"||env.ZOHO_ADMIN_TOKEN.length<43)
     return reject("not_found",404);
-  if(await constantEqual(request.headers.get("Authorization")||"",
-     "Bearer "+env.ZOHO_ADMIN_TOKEN)===false)return reject("unauthorized",401);
+  const route=url.pathname.slice("/api/control/".length);
+  const supplied=request.headers.get("Authorization")||"";
+  const admin=await constantEqual(supplied,"Bearer "+env.ZOHO_ADMIN_TOKEN);
+  const cron=(
+    (route==="zoho/sync"||route==="sheets/sync")&&
+    typeof env.CONTROL_CRON_TOKEN==="string"&&env.CONTROL_CRON_TOKEN.length>=43&&
+    await constantEqual(supplied,"Bearer "+env.CONTROL_CRON_TOKEN)
+  );
+  if(!admin&&!cron)return reject("unauthorized",401);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
-  const route=url.pathname.slice("/api/control/".length);
   const db=env.ZOHO_DB;
   try{
     if(route==="sheets/sync"){
@@ -109,7 +115,12 @@ export async function handleControl(request,env,url,zohoReader) {
       catch{return reject("sheets_sync_failed",502);}
     }
     if(route==="zoho/sync"){
-      const result=await syncZohoMail(request,env,url,zohoReader);
+      // Cron bearer never reaches Zoho: create a request with the existing
+      // admin credential exclusively inside this server-side function.
+      const delegated=cron?new Request(request,{headers:{
+        Authorization:"Bearer "+env.ZOHO_ADMIN_TOKEN,Origin:url.origin
+      }}):request;
+      const result=await syncZohoMail(delegated,env,url,zohoReader);
       return respond(result,result.status||200);
     }
     if(route==="status"&&request.method==="GET"){

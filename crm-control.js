@@ -22,6 +22,16 @@
     else contents(td);
     row.appendChild(td);
   }
+  function operationalActionsFor(entity) {
+    return (manifest?.actions||[]).filter(action=>
+      action.matched_entity_id===entity.id ||
+      (Array.isArray(action.candidate_entity_ids) && action.candidate_entity_ids.includes(entity.id))
+    );
+  }
+  function blockedActionsFor(entity) {
+    return operationalActionsFor(entity).filter(action=>
+      action.contact_policy==="blocked" || action.status==="Não avançar");
+  }
   function renderStats() {
     $("stat-records").textContent=manifest?fmt.format(manifest.entities.length):"—";
     $("stat-mails").textContent=reconciled?fmt.format(reconciled.classified.length):"—";
@@ -66,8 +76,25 @@
       cell(row,e.emails.length?e.emails.join(", "):"Sem email na fonte");
       cell(row,td=>{
         const original=document.createElement("div");
-        setText(original,e.status_2027||e.contacted_source||"Sem estado específico");
+        setText(original,"Planeamento 2027 (fonte): "+(e.status_2027||e.contacted_source||"Sem estado específico"));
         td.appendChild(original);
+        const related=operationalActionsFor(e);
+        const blocked=related.filter(action=>action.contact_policy==="blocked"||action.status==="Não avançar");
+        for(const action of blocked.slice(0,3)){
+          const p=document.createElement("div");
+          p.className="flag";
+          setText(p,"NÃO AVANÇAR · "+(action.artist||"Artista não indicado")+
+            " — decisão registada no Caravela Control (ligação da entidade a confirmar)");
+          td.appendChild(p);
+        }
+        if(related.length&&!blocked.length) {
+          const operational=document.createElement("small");
+          setText(operational,"AÇÕES operacionais relacionadas: "+
+            related.slice(0,3).map(a=>(a.artist||"Artista não indicado")+": "+a.status).join(" · ")+
+            (related.length>3?" +"+(related.length-3):"")+
+            " (correspondência a confirmar)");
+          td.appendChild(operational);
+        }
         if(e.control_action) {
           const control=document.createElement("small");
           setText(control,"Control operacional (a verificar no Zoho): "+
@@ -93,6 +120,11 @@
       cell(row,td=>{
         const warnings=[];
         if(e.suppressed)warnings.push("Não contactar");
+        const operationalBlocks=blockedActionsFor(e);
+        if(operationalBlocks.length)warnings.push("Não avançar: "+
+          [...new Set(operationalBlocks.map(a=>a.artist||"artista não indicado"))].join(", ")+
+          " (AÇÕES; rever associação)");
+        else if(e.control_blocked_possible)warnings.push("Possível bloqueio operacional; rever");
         if(e.shared_email)warnings.push("Email partilhado");
         if(e.review_required)warnings.push("Rever fonte");
         const stat=reconciled?.perEntity.get(e.id);

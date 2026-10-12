@@ -6,6 +6,8 @@ on:
       - '_worker.js'
       - 'control-*.js'
       - 'crm-*.js'
+      - 'crm-control.html'
+      - 'control-*.css'
       - 'migrations/**'
       - 'tests/**'
       - '.github/workflows/control-preview-tests.yml'
@@ -23,8 +25,13 @@ jobs:
           node-version: '22'
       - name: Validate CRM and Zoho behavior
         run: node --test tests/*.test.mjs
+      - name: Check Worker and workspace JavaScript syntax
+        run: |
+          for file in _worker.js control-*.js crm-*.js; do
+            node --check "$file"
+          done
       - name: Guard against accidental destructive migration
         run: |
-          if grep -Ei '\\b(DROP TABLE|DELETE FROM zoho_connection|DELETE FROM control_snapshots)\\b' migrations/0003_control_vault.sql; then
+          if grep -Ei '\\b(DROP TABLE|DELETE FROM zoho_connection|DELETE FROM control_snapshots)\\b' migrations/0003_control_vault.sql migrations/0004_control_auth.sql; then
             echo 'Destructive migration statement detected'; exit 1
           fi

@@ -84,12 +84,28 @@
         oauth_network_failure: "O Cloudflare não conseguiu estabelecer a ligação ao servidor Zoho.",
         oauth_timeout: "A comunicação com o Zoho excedeu o tempo limite.",
         oauth_unexpected_response: "O servidor Zoho respondeu num formato inesperado.",
+        oauth_redirect_blocked: "O Zoho tentou redirecionar um pedido da API. Vamos confirmar para onde, sem enviar credenciais.",
+        oauth_dns_failure: "O Cloudflare não conseguiu resolver o domínio do Zoho.",
+        oauth_tls_failure: "A ligação HTTPS segura do Cloudflare ao Zoho falhou.",
+        oauth_host_blocked: "A ligação de saída parece estar bloqueada no Cloudflare.",
+        oauth_runtime_incompatible: "O ambiente Cloudflare não suporta uma opção da chamada à API.",
         storage_error: "Houve um erro interno na verificação."
       };
       let detailText = descriptions[detail];
       if (!detailText && /^oauth_non_json_(200|301|302|400|401|403|404|405|429|500|502|503|504|other)$/.test(detail)) {
         const status = detail.slice("oauth_non_json_".length);
         detailText = "Resposta HTTP " + status + " do Zoho, mas não em JSON. Pode existir um bloqueio de segurança ou um erro de encaminhamento.";
+      }
+      if (!detailText && /^oauth_redirect_http_(301|302|303|307|308|other)$/.test(detail)) {
+        detailText = "O Zoho respondeu com um redirecionamento HTTP " + detail.slice("oauth_redirect_http_".length) + ". O servidor não o seguiu para proteger as credenciais.";
+      }
+      if (Array.isArray(result.connectivity)) {
+        const probes = result.connectivity
+          .filter(item => ["accounts_home", "token_endpoint"].includes(item.path))
+          .map(item => (item.path === "accounts_home" ? "Página Zoho" : "API de tokens") +
+            ": " + (item.outcome === "http" ? "HTTP " + String(item.status) : String(item.outcome)))
+          .join(" | ");
+        if (probes) detailText = (detailText || "Diagnóstico da comunicação:") + " Testes: " + probes + ".";
       }
       report(detailText || "Resultado do diagnóstico: " + String(detail || "desconhecido"), !result.ok);
     } catch (error) {

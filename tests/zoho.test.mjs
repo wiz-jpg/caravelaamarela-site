@@ -107,7 +107,7 @@ test('read routes pin account and region, validate IDs/pagination, never write Z
   }
   for (const call of calls) {
     assert.equal(call.options.method, 'GET'); assert.match(call.url, /^https:\/\/mail.zoho.eu\/api\/accounts\/1234567890123456789\//);
-    assert.equal(call.options.redirect, 'error');
+    assert.equal(call.options.redirect, 'manual');
   }
   for (const path of ['messages?limit=101', 'messages?start=0', 'content?folderId=../&messageId=2']) assert.equal((await request('/api/zoho/' + path)).status, 400);
 });
@@ -205,4 +205,69 @@ test('diagnostic is not available on production and is administrative', async ()
   assert.equal(response.status, 404);
   const denied = await request('/api/zoho/diagnose', { method: 'POST', admin: false });
   assert.equal(denied.status, 401);
+});
+
+test('OAuth manual redirect is classified and never automatically followed', async () => {
+  const preview = 'https://feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev';
+  env.ZOHO_REDIRECT_URI = preview + '/api/zoho/callback';
+  let requests = 0;
+  globalThis.fetch = async (url, options) => {
+    requests++;
+    assert.equal(options.redirect, 'manual');
+    if (options.method === 'POST') return new Response(null, {
+      status: 302, headers: { Location: 'https://untrusted.example.test/grab-secret' }
+    });
+    return new Response(null, {status: 200});
+  };
+  const response = await worker.fetch(new Request(preview + '/api/zoho/diagnose', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.ZOHO_ADMIN_TOKEN }
+  }), env, {});
+  assert.equal(response.status, 200);
+  const json = await response.json();
+  assert.equal(json.result, 'oauth_redirect_http_302');
+  assert.equal(json.ok, false);
+  assert.equal(json.connectivity.length, 2);
+  assert.equal(requests, 3);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM zoho_connection').get().n, 0);
+});
+
+test('OAuth transport exceptions are classified without leaking messages', async () => {
+  const preview = 'https://feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev';
+  env.ZOHO_REDIRECT_URI = preview + '/api/zoho/callback';
+  globalThis.fetch = async (url, options) => {
+    if (options.method === 'POST') throw new TypeError('fetch failed: redirect mode is set to error PRIVATE');
+    return new Response(null, {status: 200});
+  };
+  const response = await worker.fetch(new Request(preview + '/api/zoho/diagnose', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.ZOHO_ADMIN_TOKEN }
+  }), env, {});
+  const json = await response.json();
+  assert.equal(json.result, 'oauth_redirect_blocked');
+  assert.ok(!JSON.stringify(json).includes('PRIVATE'));
+  assert.deepEqual(json.connectivity.map(x => x.status), [200, 200]);
+});
+
+test('OAuth anonymous connectivity probes do not include secrets or access mailbox', async () => {
+  const preview = 'https://feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev';
+  env.ZOHO_REDIRECT_URI = preview + '/api/zoho/callback';
+  const seen = [];
+  globalThis.fetch = async (url, options) => {
+    seen.push({url: String(url), options});
+    if (options.method === 'POST') throw new TypeError('some network problem');
+    return new Response(null, { status: 405 });
+  };
+  const response = await worker.fetch(new Request(preview + '/api/zoho/diagnose', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.ZOHO_ADMIN_TOKEN }
+  }), env, {});
+  assert.equal(response.status, 200);
+  const json = await response.json();
+  assert.equal(json.result, 'oauth_network_failure');
+  assert.deepEqual(json.connectivity.map(x => x.status), [405,405]);
+  for(const call of seen.slice(1)){
+    assert.equal(call.options.method,'GET');
+    assert.equal(call.options.headers.Accept, 'application/json');
+    assert.ok(call.url.startsWith('https://accounts.zoho.eu/'));
+    assert.ok(!JSON.stringify(call).includes(env.ZOHO_CLIENT_SECRET));
+    assert.ok(!call.url.includes('/api/accounts'));
+  }
 });

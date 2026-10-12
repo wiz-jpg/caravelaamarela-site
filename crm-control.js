@@ -183,11 +183,12 @@
   }
   scanButton.addEventListener("click",async()=>{
     if(!manifest||scanButton.disabled)return;
+    const signed=!!window.CaravelaControlSession?.authenticated;
     const token=tokenField.value.trim();tokenField.value="";
-    if(!token)return status("mail-status","Introduz o token administrativo.",true);
+    if(!token&&!signed)return status("mail-status","Inicia sessão para consultar o Zoho.",true);
     scanButton.disabled=true;
     const limit=Number($("mail-limit").value)||200;
-    const opts={method:"GET",headers:{Authorization:"Bearer "+token},cache:"no-store",
+    const opts={method:"GET",headers:signed?{"X-Caravela-Request":"1"}:{Authorization:"Bearer "+token},cache:"no-store",
       credentials:"same-origin",redirect:"error"};
     async function fromAPI(path) {
       const response=await fetch(path,opts);

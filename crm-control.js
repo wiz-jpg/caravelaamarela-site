@@ -68,6 +68,12 @@
         const original=document.createElement("div");
         setText(original,e.status_2027||e.contacted_source||"Sem estado específico");
         td.appendChild(original);
+        if(e.control_action) {
+          const control=document.createElement("small");
+          setText(control,"Control operacional (a verificar no Zoho): "+
+            e.control_action.status+" · "+(e.control_action.last_contact_iso||e.control_action.last_contact||"sem data"));
+          td.appendChild(control);
+        }
         if(e.historical) {
           const hist=document.createElement("small");setText(hist,"Histórico: "+e.historical.slice(0,260));
           td.appendChild(hist);
@@ -108,9 +114,17 @@
     manifest=null;reconciled=null;visible=50;scanButton.disabled=true;
     status("file-status","A validar os contactos…");
     try {
-      if(file.size>3*1024*1024)throw new Error("O ficheiro ultrapassa o limite de 3 MB.");
+      if(file.size>12*1024*1024)throw new Error("O ficheiro ultrapassa o limite de 12 MB.");
       const contents=JSON.parse(await file.text());
       manifest=logic.validateImport(contents);
+      // Verify full source snapshot integrity before trusting imported state.
+      const digestCopy={...contents};
+      delete digestCopy.manifest_sha256;
+      const bytes=new TextEncoder().encode(JSON.stringify(digestCopy));
+      const digest=await crypto.subtle.digest("SHA-256",bytes);
+      const fingerprint=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,"0")).join("");
+      if(fingerprint!==contents.manifest_sha256)throw new Error("O ficheiro foi alterado ou ficou incompleto (SHA-256 não coincide).");
+      window.dispatchEvent(new CustomEvent("caravela-crm-imported",{detail:{manifest}}));
       // Preview is local only: no fetch/upload of the import JSON.
       scanButton.disabled=false;
       status("file-status","Concluído: "+fmt.format(manifest.entities.length)+

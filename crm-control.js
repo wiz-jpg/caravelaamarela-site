@@ -164,7 +164,7 @@
       status("file-status","Concluído: "+fmt.format(manifest.entities.length)+
         " registos, "+fmt.format(manifest.summary.shared_emails||0)+
         " emails partilhados. "+(fromVault?"Versão recuperada do cofre D1.":"Nenhum dado foi enviado ao servidor."));
-      status("mail-status","Contactos prontos. Introduz o token administrativo e carrega em «Analisar histórico Zoho».");
+      status("mail-status","Contactos prontos. Carrega em «Analisar histórico Zoho» para consultar as mensagens com a tua sessão.");
     } catch(error) {
       status("file-status",error.message||"O ficheiro não foi aceite.",true);
     }

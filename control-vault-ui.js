@@ -17,6 +17,7 @@
     '<button type="button" class="secondary" id="vault-r2-backup">Descarregar backup R2</button>'+
     '<button type="button" class="secondary" id="vault-zoho">Atualizar histórico Zoho</button>'+
     '<button type="button" class="secondary" id="vault-sheets">Atualizar Google Sheets</button>'+
+    '<button type="button" class="secondary" id="vault-live">Ver AÇÕES e artistas atuais</button>'+
     '</div><div class="status" id="vault-result" role="status" aria-live="polite">Base permanente ainda não verificada. Para todas as operações, usa o token administrativo acima.</div>'+
     '<div id="vault-summary" class="muted"></div>'+
     '<p class="muted" style="margin-top:12px">Esta fase não substitui backups externos; a sincronização automática de Sheets e Gmail ainda exige ligações próprias. Não são efetuados envios de email.</p>';
@@ -52,7 +53,7 @@
   }
   function busyMode(value){
     busy=value;
-    for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-r2-backup","vault-zoho","vault-sheets"])$(id).disabled=value;
+    for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-r2-backup","vault-zoho","vault-sheets","vault-live"])$(id).disabled=value;
     if(!value)$("vault-save").disabled=!currentFile;
   }
   async function action(work){
@@ -171,4 +172,11 @@
   }
   $("vault-zoho").addEventListener("click",()=>action(()=>sync("zoho")));
   $("vault-sheets").addEventListener("click",()=>action(()=>sync("sheets")));
+  $("vault-live").addEventListener("click",()=>action(async()=>{
+    const actions=await (await api("source/latest?key=control_actions")).json();
+    const artists=await (await api("source/latest?key=artist_pipeline")).json();
+    window.dispatchEvent(new CustomEvent("caravela-control-live-sources",{detail:{actions,artists}}));
+    say("Concluído: AÇÕES atuais e fichas artísticas apresentadas em modo de leitura.");
+    $("control-live-sheets")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }));
 })();

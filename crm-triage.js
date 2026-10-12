@@ -9,7 +9,7 @@ section.className="results";
 section.id="crm-triage";
 section.hidden=true;
 section.innerHTML=
-'<h2>3. Endereços Zoho por identificar — revisão privada</h2>'+
+'<h2>Endereços Zoho por identificar — revisão privada</h2>'+
 '<p class="muted" id="triage-summary"></p>'+
 '<p class="note">Fotografia das 1000 mensagens analisadas. Mensagens recebidas não provam resposta a propostas. Ninguém nesta lista está autorizado para envio.</p>'+
 '<div class="toolbar">'+

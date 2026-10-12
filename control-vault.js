@@ -1,4 +1,5 @@
 import { syncZohoMail } from "./control-sync-zoho.js";
+import { syncGoogleSheets } from "./control-sync-sheets.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -99,6 +100,14 @@ export async function handleControl(request,env,url,zohoReader) {
   const route=url.pathname.slice("/api/control/".length);
   const db=env.ZOHO_DB;
   try{
+    if(route==="sheets/sync"){
+      if(request.method!=="POST")return reject("method_not_allowed",405);
+      if(!env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON||
+         !env.CONTROL_ACTIONS_SHEET_ID||!env.CONTROL_ARTISTS_SHEET_ID)
+        return reject("sheets_credentials_required",409);
+      try{return respond(await syncGoogleSheets(env));}
+      catch{return reject("sheets_sync_failed",502);}
+    }
     if(route==="zoho/sync"){
       const result=await syncZohoMail(request,env,url,zohoReader);
       return respond(result,result.status||200);
@@ -112,7 +121,7 @@ export async function handleControl(request,env,url,zohoReader) {
       const sources=await db.prepare("SELECT source_key,MAX(captured_ms) AS last_capture_ms,COUNT(*) AS versions FROM control_source_revisions GROUP BY source_key").all();
       return respond({ok:true,schema_ready:true,active_snapshot:selected?.value||null,
         snapshots:snapshots.results||[],mail:mail.results||[],sources:sources.results||[],
-        gmail_connected:false,sheets_connected:!!env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON,
+        gmail_connected:false,sheets_credentials_present:!!(env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON&&env.CONTROL_ACTIONS_SHEET_ID&&env.CONTROL_ARTISTS_SHEET_ID),
         scheduled_sync_configured:false,offsite_backup_configured:false});
     }
     if(route==="snapshot/active"&&request.method==="GET"){

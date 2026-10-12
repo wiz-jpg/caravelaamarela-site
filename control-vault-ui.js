@@ -18,7 +18,7 @@
     '<button type="button" class="secondary" id="vault-zoho">Atualizar histórico Zoho</button>'+
     '<button type="button" class="secondary" id="vault-sheets">Atualizar Google Sheets</button>'+
     '<button type="button" class="secondary" id="vault-live">Ver AÇÕES e artistas atuais</button>'+
-    '</div><div class="status" id="vault-result" role="status" aria-live="polite">Base permanente ainda não verificada. Para todas as operações, usa o token administrativo acima.</div>'+
+    '</div><div class="status" id="vault-result" role="status" aria-live="polite">Base permanente ainda não verificada. Inicia sessão para consultar o cofre. No modo de transição usa o token técnico.</div>'+
     '<div id="vault-summary" class="muted"></div>'+
     '<p class="muted" style="margin-top:12px">Esta fase não substitui backups externos; a sincronização automática de Sheets e Gmail ainda exige ligações próprias. Não são efetuados envios de email.</p>';
   target.appendChild(area);
@@ -35,7 +35,7 @@
   function token(){
     const given=$("admin-token").value.trim();
     if(given){transientToken=given;$("admin-token").value="";}
-    if(!transientToken)throw Error("Introduz primeiro o token administrativo acima.");
+    if(!transientToken)throw Error("Introduz o token técnico no painel Comunicações.");
     return transientToken;
   }
   async function api(path,options={}){

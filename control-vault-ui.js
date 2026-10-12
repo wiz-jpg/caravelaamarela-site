@@ -14,6 +14,8 @@
     '<button type="button" id="vault-save" disabled>Guardar versão importada</button>'+
     '<button type="button" class="secondary" id="vault-load">Abrir base guardada</button>'+
     '<button type="button" class="secondary" id="vault-backup">Descarregar cópia de segurança</button>'+
+    '<button type="button" class="secondary" id="vault-zoho">Atualizar histórico Zoho</button>'+
+    '<button type="button" class="secondary" id="vault-sheets">Atualizar Google Sheets</button>'+
     '</div><div class="status" id="vault-result" role="status" aria-live="polite">Base permanente ainda não verificada. Para todas as operações, usa o token administrativo acima.</div>'+
     '<div id="vault-summary" class="muted"></div>'+
     '<p class="muted" style="margin-top:12px">Esta fase não substitui backups externos; a sincronização automática de Sheets e Gmail ainda exige ligações próprias. Não são efetuados envios de email.</p>';
@@ -49,7 +51,7 @@
   }
   function busyMode(value){
     busy=value;
-    for(const id of ["vault-status","vault-save","vault-load","vault-backup"])$(id).disabled=value;
+    for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-zoho","vault-sheets"])$(id).disabled=value;
     if(!value)$("vault-save").disabled=!currentFile;
   }
   async function action(work){
@@ -139,4 +141,19 @@
   $("vault-save").addEventListener("click",()=>action(save));
   $("vault-load").addEventListener("click",()=>action(()=>restore(false)));
   $("vault-backup").addEventListener("click",()=>action(()=>restore(true)));
+  async function sync(provider) {
+    say("A sincronizar "+provider+" em modo de leitura. Nenhuma mensagem será modificada…");
+    const payload=await (await api(provider+"/sync",{method:"POST"})).json();
+    await info();
+    if(provider==="zoho"){
+      say("Concluído: "+payload.scanned+" mensagens consultadas, "+
+        payload.new_records+" novos registos de metadados preservados, "+
+        payload.total_indexed+" no histórico D1.");
+    }else{
+      say("Concluído: "+payload.sources_scanned+" fontes Sheets verificadas. "+
+        payload.changed_sources.length+" com nova revisão preservada.");
+    }
+  }
+  $("vault-zoho").addEventListener("click",()=>action(()=>sync("zoho")));
+  $("vault-sheets").addEventListener("click",()=>action(()=>sync("sheets")));
 })();

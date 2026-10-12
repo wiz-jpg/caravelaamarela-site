@@ -111,7 +111,9 @@
 
   function followUpCandidate(entity,stats,now=Date.now()) {
     // A candidate for HUMAN REVIEW only. Never treat an inbound message as proof of a reply.
-    if(!stats||entity.suppressed||entity.shared_email||entity.review_required)return false;
+    if(!stats||entity.suppressed||entity.shared_email||entity.review_required||
+       entity.control_blocked||entity.control_blocked_possible||
+       (entity.crm_safety && !entity.crm_safety.mail_delivery_confirmed))return false;
     if(!stats.last_sent||stats.last_sent>now||now-stats.last_sent<14*86400000||now-stats.last_sent>180*86400000)return false;
     return !stats.last_received||stats.last_received<stats.last_sent;
   }

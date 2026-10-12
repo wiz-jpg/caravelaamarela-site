@@ -1,7 +1,7 @@
 -- Caravela Control Vault v1 | Preview D1 ONLY.
 -- Apply manually to caravela-zoho-test after reviewing the migration.
 -- No deletion or mutation of Zoho OAuth tables or public-site data.
-PRAGMA foreign_keys = ON;
+-- Cloudflare D1 manages foreign keys; do not alter PRAGMA inside migrations.
 
 CREATE TABLE IF NOT EXISTS control_snapshots (
   id TEXT PRIMARY KEY,

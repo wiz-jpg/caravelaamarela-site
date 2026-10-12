@@ -1,0 +1,145 @@
+/* Caravela Control / workspace design. Preview only. */
+:root{
+  --cc-bg:#090c11;--cc-sidebar:#10151d;--cc-panel:#151c26;--cc-card:#1b2430;
+  --cc-line:#2a3544;--cc-text:#f1f3f6;--cc-muted:#9daab9;--cc-yellow:#e9c462;
+  --cc-green:#69d0a0;--cc-red:#ed9e9e;--cc-radius:15px;
+  color-scheme:dark;
+}
+body{background:var(--cc-bg);color:var(--cc-text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+#control-app{display:grid;grid-template-columns:245px minmax(0,1fr);min-height:100vh}
+#control-app[hidden],#cc-auth-overlay[hidden]{display:none!important}
+#control-app .cc-sidebar{position:sticky;top:0;align-self:start;height:100vh;background:var(--cc-sidebar);
+  border-right:1px solid var(--cc-line);padding:26px 16px;display:flex;flex-direction:column;gap:24px}
+#control-app .cc-logo{display:flex;align-items:center;gap:12px;padding:2px 10px}
+#control-app .cc-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;
+  color:#15130a;font-weight:900;font-size:24px;background:var(--cc-yellow)}
+#control-app .cc-logo strong{font-size:13px;letter-spacing:.095em;line-height:1.3}
+#control-app .cc-logo small{display:block;font-weight:500;color:var(--cc-muted);letter-spacing:.025em;margin-top:4px}
+#control-app .cc-nav{display:grid;gap:5px}
+#control-app .cc-nav-label{padding:0 12px 8px;color:#6f7f8f;text-transform:uppercase;
+  font-size:10px;letter-spacing:.17em;font-weight:750}
+#control-app .cc-nav button{width:100%;text-align:left;display:flex;align-items:center;gap:12px;
+  background:transparent;border:1px solid transparent;border-radius:10px;color:#a9b6c5;
+  padding:12px;font-size:13px;font-weight:650;letter-spacing:0;box-shadow:none}
+#control-app .cc-nav button:hover{background:#1a2430;color:#fff}
+#control-app .cc-nav button[aria-current="page"]{background:#293139;color:var(--cc-yellow);border-color:#514830}
+#control-app .cc-nav-symbol{width:20px;text-align:center;font-size:16px;color:inherit}
+#control-app .cc-side-bottom{margin-top:auto;display:grid;gap:14px;padding:0 8px}
+#control-app .cc-side-bottom .cc-role{font-size:10px;letter-spacing:.12em;color:var(--cc-yellow);text-transform:uppercase}
+#control-app .cc-user{display:flex;align-items:center;gap:9px;overflow:hidden}
+#control-app .cc-avatar{display:grid;place-items:center;border:1px solid #6a5732;border-radius:11px;
+  min-width:36px;height:36px;background:#332f27;color:var(--cc-yellow);font-weight:800}
+#control-app .cc-user-details{min-width:0}
+#control-app .cc-user-details strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#control-app .cc-user-details small{font-size:11px}
+#control-app #cc-logout{margin:0;width:100%;font-size:12px;text-align:center;padding:10px;background:#1c2631;border:1px solid #364252;color:#d8e1ed}
+#control-app main.cc-workspace{width:auto;max-width:none;margin:0;padding:28px clamp(22px,3vw,52px) 80px;min-width:0}
+.cc-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:24px;margin-bottom:26px;border-bottom:1px solid var(--cc-line)}
+.cc-topbar small{display:block;color:var(--cc-muted);text-transform:uppercase;font-weight:750;font-size:10px;letter-spacing:.16em}
+.cc-topbar h1{margin:3px 0 0;font-size:clamp(25px,3vw,34px);letter-spacing:-.045em}
+.cc-top-meta{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--cc-muted)}
+.cc-dot{width:7px;height:7px;background:var(--cc-green);border-radius:50%}
+.cc-view[hidden],#control-app #crm-extra[hidden],#control-app #crm-triage[hidden],
+#control-app #control-live-sheets[hidden]{display:none!important}
+.cc-view h2{font-size:21px;letter-spacing:-.035em;margin:0 0 6px}
+.cc-view .cc-lead{color:var(--cc-muted);font-size:13px;margin:0 0 22px;max-width:850px}
+.cc-panel-head{margin-bottom:22px}
+#control-app .panel{background:var(--cc-panel);border:1px solid var(--cc-line);
+  border-radius:var(--cc-radius);padding:22px}
+#control-app .bars{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+#control-app .results{margin-top:0}
+#control-app .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:13px;margin:0 0 24px}
+#control-app .stat{background:linear-gradient(155deg,#202b36,#151c27);border:1px solid #354250;
+  padding:19px;border-radius:var(--cc-radius)}
+#control-app .stat span{font-size:12px;color:#afbbc7}
+#control-app .stat strong{font-size:clamp(24px,3vw,31px);margin-top:9px;color:#f1f3f6;font-weight:770;letter-spacing:-.04em}
+#control-app .stat:first-child strong{color:var(--cc-yellow)}
+#control-app .cc-actions{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 28px}
+#control-app button:not(.cc-nav button){transition:background .15s,border-color .15s}
+#control-app .cc-actions button{margin:0;padding:11px 14px;border-radius:9px;font-size:12px}
+#control-app .cc-primary{border:1px solid #e3c266;background:var(--cc-yellow);color:#16140e}
+#control-app .cc-neutral{background:#202b38;color:#e9eff6;border:1px solid #384657}
+#control-app button.secondary{color:var(--cc-yellow);border-color:#75633c}
+#control-app .note{margin:20px 0;color:var(--cc-muted);background:#1d241e;border-color:#b5964d;border-radius:0 10px 10px 0}
+#control-app .cc-notice{padding:17px;border:1px dashed #495366;border-radius:12px;
+ background:#171f29;color:#bbc5cf;font-size:13px;margin:12px 0 20px}
+#control-app input[type="text"],#control-app input[type="password"],#control-app input[type="search"],
+#control-app input[type="file"],#control-app select{
+ background:#10161e;border:1px solid #465263;color:#f8fafc;border-radius:9px}
+#control-app input:focus-visible,#control-app button:focus-visible,#control-app select:focus-visible{
+ outline:2px solid var(--cc-yellow);outline-offset:2px}
+#control-app label{color:#cad4de}
+#control-app .toolbar{display:grid;gap:12px;grid-template-columns:2fr 1fr 1fr}
+#control-app .tableWrap{border-color:var(--cc-line);background:#121923;border-radius:12px}
+#control-app table{min-width:800px}
+#control-app th{background:#202a36;color:#d9bd75;border-color:#364252}
+#control-app td{border-color:#2a3542;color:#d8e0e9}
+#control-app tr:hover td{background:#18212c}
+#control-app .name{color:#fff}
+#control-app .flag{color:#eeb3a1}
+#control-app #cc-view-contacts .results>h2{display:none}
+#control-app #cc-view-booking .results>h2{display:none}
+#control-app #cc-view-artists .panel{margin-top:0!important}
+#control-app #cc-view-booking .panel{margin-top:0!important}
+#control-app #cc-view-sources footer{color:var(--cc-muted)}
+#control-app #cc-view-communications .panel{margin-bottom:18px}
+#control-app #cc-view-team .cc-team-card{background:#151c26;border:1px solid var(--cc-line);padding:22px;border-radius:var(--cc-radius);margin-top:16px}
+.cc-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}
+.cc-field-grid .wide{grid-column:1/-1}
+#control-app .cc-team-list{display:grid;gap:10px;margin-top:15px}
+.cc-member{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;
+ background:#111924;border:1px solid #354354;border-radius:11px}
+.cc-member .cc-member-info{min-width:0}
+.cc-member strong{display:block;font-size:13px}
+.cc-member small{display:block;color:var(--cc-muted);font-size:11px}
+.cc-member-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cc-member-controls select{max-width:130px!important}
+.cc-member-controls button{padding:9px!important;font-size:11px}
+#cc-auth-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;
+ background:radial-gradient(ellipse at 70% 0%,#29354a 0%,#0d121a 44%,#080b10 100%);padding:22px;overflow:auto}
+.cc-auth-box{width:min(450px,100%);background:#151c25;border:1px solid #334052;padding:34px;
+ border-radius:20px;box-shadow:0 20px 65px #0007}
+.cc-auth-mark{display:flex;align-items:center;gap:12px;font-size:13px;letter-spacing:.14em;
+ text-transform:uppercase;font-weight:850;color:var(--cc-yellow);margin-bottom:28px}
+.cc-auth-logo{display:grid;place-items:center;width:41px;height:41px;border-radius:12px;
+ background:var(--cc-yellow);color:#15130b;font-size:23px}
+.cc-auth-box h1{font-size:27px;margin:0 0 10px;letter-spacing:-.04em}
+.cc-auth-box p{font-size:13px;color:#b2bfcb;line-height:1.6}
+.cc-auth-box form{display:grid;gap:11px;margin-top:24px}
+.cc-auth-box label{font-size:12px;color:#e4ebf2;margin:0 0 -5px;font-weight:700}
+.cc-auth-box input{width:100%;padding:13px;color:#fff;background:#0e141d;border:1px solid #4b596a;
+ border-radius:9px;font:inherit}
+.cc-auth-box button{margin-top:10px;padding:13px;border-radius:9px}
+.cc-auth-box .cc-auth-error{font-size:12px;color:#ffc2b8;min-height:18px}
+.cc-auth-hint{font-size:11px!important;margin-top:18px}
+.cc-auth-box [hidden]{display:none!important}
+.cc-role-tag{color:var(--cc-yellow);font-size:11px;font-weight:750}
+@media(max-width:980px){#control-app{grid-template-columns:78px minmax(0,1fr)}
+ #control-app .cc-sidebar{padding:22px 10px}#control-app .cc-logo strong,
+ #control-app .cc-logo small,#control-app .cc-nav-label,#control-app .cc-nav-text,
+ #control-app .cc-user-details,#control-app .cc-side-bottom .cc-role{display:none}
+ #control-app .cc-logo{padding:0 8px}
+ #control-app .cc-nav button{justify-content:center;padding:12px 8px}
+ #control-app .cc-side-bottom{padding:0}
+ #control-app .cc-user{justify-content:center}
+ #control-app #cc-logout{font-size:10px;padding:9px 4px}
+}
+@media(max-width:640px){#control-app{display:block}
+ #control-app .cc-sidebar{position:sticky;z-index:50;top:0;width:100%;height:auto;padding:10px 12px;
+  flex-direction:row;align-items:center;gap:10px;overflow:hidden}
+ #control-app .cc-logo{display:none}
+ #control-app .cc-nav{display:flex;overflow-x:auto;gap:5px;flex:1;scrollbar-width:thin}
+ #control-app .cc-nav button{min-width:43px}
+ #control-app .cc-side-bottom{margin:0;display:block}
+ #control-app .cc-user{display:none}
+ #control-app #cc-logout{max-width:53px}
+ #control-app main.cc-workspace{padding:20px 14px 55px}
+ #control-app .cc-topbar{margin-bottom:20px;padding-bottom:15px}
+ #control-app .cc-topbar h1{font-size:25px}
+ #control-app .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #control-app .bars,#control-app .toolbar{grid-template-columns:1fr}
+ .cc-field-grid{grid-template-columns:1fr}
+ .cc-member{align-items:flex-start;flex-direction:column}
+ .cc-member-controls{width:100%}
+ .cc-auth-box{padding:24px}
+}

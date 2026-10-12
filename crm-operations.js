@@ -4,7 +4,7 @@
   const get=id=>document.getElementById(id);
   const fmt=n=>new Intl.NumberFormat("pt-PT").format(n||0);
   const sanitize=x=>x===null||x===undefined||x===""?"—":String(x);
-  let data=null,limit=50;
+  let data=null,limit=50,triageByAddress=new Map();
   function td(tr,value,className) {
     const cell=document.createElement("td");
     cell.textContent=sanitize(value);
@@ -37,7 +37,16 @@
       td(row,action.artist);
       td(row,action.status,action.contact_policy==="blocked"?"flag":"");
       td(row,action.last_contact_iso||action.last_contact||"—");
-      td(row,action.email||"sem email operacional");
+      const emailCell=td(row,action.email||"sem email operacional");
+      const observed=(action.contact_emails_normalized||[])
+        .map(email=>triageByAddress.get(String(email).toLowerCase())).filter(Boolean);
+      for(const item of observed.slice(0,2)){
+        const note=document.createElement("small");
+        note.textContent="Zoho: "+item.sent+" enviado(s), "+item.received+
+          " recebido(s) neste endereço — não prova que seja esta proposta";
+        emailCell.appendChild(document.createElement("br"));
+        emailCell.appendChild(note);
+      }
       const quality=action.link_status==="verified_name_email"
           ?"Nome e email coincidem (ligação da entidade)"
           :"PENDENTE: "+sanitize(action.link_status).replaceAll("_"," ");
@@ -103,7 +112,10 @@
   window.addEventListener("caravela-crm-imported",event=>{
     const manifest=event.detail?.manifest;
     if(!manifest||!Array.isArray(manifest.actions)||!Array.isArray(manifest.artists))return;
-    data=manifest;limit=50;render();
+    data=manifest;limit=50;
+    triageByAddress=new Map((manifest.zoho_triage?.addresses||[])
+      .map(item=>[item.address,item]));
+    render();
   });
   get("crm-actions-search").addEventListener("input",()=>{limit=50;redrawActions()});
   get("crm-actions-state").addEventListener("change",()=>{limit=50;redrawActions()});

@@ -10,6 +10,30 @@
     message.classList.toggle("error", error);
   }
 
+  // The OAuth callback only passes a fixed, non-sensitive error identifier.
+  // Remove it immediately after displaying the explanation.
+  const outcome = new URLSearchParams(window.location.search).get("result");
+  if (outcome) {
+    const explanations = {
+      oauth_client_rejected: "O Zoho recusou as credenciais da aplicação. Precisamos de verificar a configuração do Client ID e Client Secret no Cloudflare.",
+      oauth_redirect_rejected: "O Zoho recusou o endereço de retorno. Precisamos de conferir o Redirect URI.",
+      oauth_provider_rejected: "O servidor de autenticação do Zoho recusou a troca do código por tokens. Vamos verificar os dados da aplicação.",
+      oauth_transport_error: "A ligação ao servidor de autenticação do Zoho falhou ou devolveu uma resposta inválida.",
+      accounts_provider_rejected: "A autenticação avançou, mas o Zoho recusou o pedido de consulta da conta de email.",
+      accounts_transport_error: "A autenticação avançou, mas não foi possível obter uma resposta válida da API do Zoho Mail.",
+      reauthorization_required: "O código de autorização não foi aceite ou expirou. Será necessária uma nova autorização.",
+      refresh_token_missing: "O Zoho não devolveu o token necessário para manter a ligação ativa.",
+      mailbox_mismatch: "A conta autorizada não corresponde à caixa de booking da Caravela.",
+      invalid_scopes: "As permissões concedidas pelo Zoho não correspondem às permissões de leitura exigidas.",
+      invalid_state: "A sessão de autorização expirou ou não coincide com este navegador.",
+      invalid_code: "O Zoho não devolveu um código de autorização válido.",
+      authorization_denied: "A autorização foi recusada ou cancelada.",
+      storage_error: "Não foi possível concluir a ligação por um erro interno. Não repitas a autorização por enquanto."
+    };
+    report(explanations[outcome] || "A ligação não ficou concluída. Não repitas a autorização por enquanto.", true);
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (button.disabled) return;

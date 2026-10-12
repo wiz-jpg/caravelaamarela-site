@@ -48,8 +48,8 @@ e negociação, mesmo quando uma entidade aparece noutras ações.
 
 ## Migração / ativação (não executada pelo código)
 
-1. Em Cloudflare D1 (APENAS carvavela? NÃO: selecionar exatamente
-   **caravela-zoho-test**), confirmar que existem 10 tabelas control_ da migração 0003.
+1. Em Cloudflare D1, selecionar exclusivamente **caravela-zoho-test** e confirmar
+   que existem as 10 tabelas control_ da migração 0003.
 2. Guardar o bookmark de recuperação D1, como na migração anterior.
 3. Aplicar migrations/0004_control_auth.sql na D1 de testes. O ficheiro só contém
    CREATE TABLE / CREATE INDEX IF NOT EXISTS. O Console D1 pode aceitar um
@@ -109,6 +109,6 @@ Os dados da versão V3 não são migrados, alterados nem duplicados por esta fas
   A integração Sheets exige a conta de serviço e permissões read-only próprias.
 - A infraestrutura exige testar o código no Preview após aplicar a migração,
   incluindo o tempo real de PBKDF2 no Cloudflare Workers, proteção Access,
-  expiracão das sessões, browser mobile, e recuperação D1/R2.
+  expiração das sessões, browser mobile, e recuperação D1/R2.
 - O R2 é usage-billed mesmo que o uso previsto caiba na oferta gratuita;
   manter alertas de custo. Não garantir custo zero para sempre.

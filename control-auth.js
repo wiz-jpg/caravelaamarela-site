@@ -163,21 +163,25 @@ async function bootstrap(request, env) {
     return fail("invalid_account", 400);
   const pw = await hashedPassword(data.password);
   const id = crypto.randomUUID();
-  // Unique initial-owner marker prevents concurrent bootstrap calls from creating two owners.
-  const marker = await db.prepare(
-    "INSERT OR IGNORE INTO control_auth_settings(key,value) VALUES('owner_created',?)"
-  ).bind(id).run();
-  if ((marker.meta?.changes ?? marker.changes) !== 1) return fail("already_initialized", 409);
+  // The unique owner marker and account are inserted in one D1 transaction.
+  // If a write fails, neither persists: there is no half-configured owner.
+  let applied;
   try {
-    await db.batch([
-      db.prepare("INSERT INTO control_users(id,username,display_name,role,enabled,must_change_password,password_salt,password_hash,rounds,created_ms) VALUES(?,?,?,'admin',1,0,?,?,?,?)")
-        .bind(id, name, String(data.display_name).trim().slice(0, 80), pw.salt, pw.hash, pw.rounds, Date.now()),
-      audit(db, id, "auth_bootstrap", id)
+    applied = await db.batch([
+      db.prepare("INSERT OR IGNORE INTO control_auth_settings(key,value) VALUES('owner_created',?)")
+        .bind(id),
+      db.prepare(
+        "INSERT INTO control_users(id,username,display_name,role,enabled,must_change_password,password_salt,password_hash,rounds,created_ms) " +
+        "SELECT ?,?,?,'admin',1,0,?,?,?,? WHERE EXISTS " +
+        "(SELECT 1 FROM control_auth_settings WHERE key='owner_created' AND value=?)"
+      ).bind(id, name, String(data.display_name).trim().slice(0, 80), pw.salt, pw.hash, pw.rounds, Date.now(), id),
+      db.prepare(
+        "INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) " +
+        "SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM control_users WHERE id=?)"
+      ).bind(crypto.randomUUID(), Date.now(), "auth_bootstrap", id, JSON.stringify({ actor: id }), id)
     ]);
-  } catch {
-    // If D1 returns an error, retain the marker rather than allow a race to create another owner.
-    return fail("bootstrap_incomplete_contact_admin", 503);
-  }
+  } catch { return fail("bootstrap_incomplete_contact_admin", 503); }
+  if ((applied[0].meta?.changes ?? applied[0].changes) !== 1) return fail("already_initialized", 409);
   const token = await issueSession(db, id);
   return json({ ok: true, user: { id, username: name, display_name: String(data.display_name).trim().slice(0, 80), role: "admin", enabled: true, must_change_password: false } },
     201, { "Set-Cookie": cookieHeader(token, 86400) });

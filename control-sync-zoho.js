@@ -53,9 +53,9 @@ async function unlockRun(db,id){
 }
 function insertBlocks(db,rows) {
   const statements=[];
-  // 8 bindings per message, maximum 96 bound parameters per statement.
-  for(let offset=0;offset<rows.length;offset+=12){
-    const subset=rows.slice(offset,offset+12);
+  // 9 bindings per message; 10 rows = 90 parameters (<100 D1 limit).
+  for(let offset=0;offset<rows.length;offset+=10){
+    const subset=rows.slice(offset,offset+10);
     if(!subset.length)continue;
     const values=subset.map(()=>"(?,?,?,?,?,?,?,?,?)").join(",");
     const query="INSERT OR IGNORE INTO control_mail_headers"+
@@ -71,7 +71,7 @@ export async function syncZohoMail(request,env,url,zohoReader) {
   if(typeof zohoReader!=="function")return {ok:false,error:"sync_not_available",status:503};
   const db=env.ZOHO_DB,id=crypto.randomUUID(),now=Date.now();
   if(!(await lockRun(db,id)))return {ok:false,error:"sync_in_progress",status:409};
-  let scanned=0,newRows=0,finished=false;
+  let scanned=0,newRows=0;
   try {
     const folders=await providerRead(url,"folders",request,env,zohoReader);
     if(!Array.isArray(folders))throw new Error("zoho_invalid_folders");
@@ -118,7 +118,6 @@ export async function syncZohoMail(request,env,url,zohoReader) {
     const current=await db.prepare("SELECT COUNT(*) AS n FROM control_mail_headers").first();
     newRows=(current?.n||0)-(previous?.n||0);
     await db.prepare("UPDATE control_sync_runs SET new_records=? WHERE id=?").bind(newRows,id).run();
-    finished=true;
     return {ok:true,provider:"zoho",scanned,new_records:newRows,
       total_indexed:current?.n||0,read_only:true,
       note:"Email recebido não demonstra resposta a proposta; assuntos e corpos não são guardados."};

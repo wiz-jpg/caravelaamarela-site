@@ -123,8 +123,9 @@ export async function operationalOverview(env,{showDetails=false,now=Date.now()}
     operational:{
       ...derived,
       /* A stale sheet must never be represented as reliable current data. */
+      // An unchanged Sheet does not create a new revision. Use the last
+      // successful sync run to decide freshness, not the revision timestamp.
       needs_source_review:!source||
-        (now-source.captured_ms>90*60000)||
         statuses.find(s=>s.provider==="sheets")?.freshness!=="recent"
     }
   };

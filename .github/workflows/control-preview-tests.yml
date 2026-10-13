@@ -1,0 +1,39 @@
+name: Caravela Control Preview Safety Tests
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '_worker.js'
+      - 'control-*.js'
+      - 'crm-*.js'
+      - 'crm-control.html'
+      - 'control-*.css'
+      - 'migrations/**'
+      - 'tests/**'
+      - 'examples/control-cron-worker.js'
+      - 'workers/control-automation/**'
+      - '.github/workflows/control-preview-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    name: Node 22 / SQLite safety tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate CRM and Zoho behavior
+        run: node --test tests/*.test.mjs
+      - name: Check Worker and workspace JavaScript syntax
+        run: |
+          for file in _worker.js control-*.js crm-*.js examples/control-cron-worker.js; do
+            node --check "$file"
+          done
+      - name: Guard against accidental destructive migration
+        run: |
+          if grep -Ei '\\b(DROP TABLE|DELETE FROM zoho_connection|DELETE FROM control_snapshots)\\b' migrations/0003_control_vault.sql migrations/0004_control_auth.sql; then
+            echo 'Destructive migration statement detected'; exit 1
+          fi

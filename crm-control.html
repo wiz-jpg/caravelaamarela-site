@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Caravela Control | Gestão e booking — Preview</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#11120f;color:#f6f4ec;line-height:1.45}
+main{width:min(1180px,calc(100% - 32px));margin:36px auto 64px}
+h1{font-size:clamp(30px,5vw,44px);letter-spacing:-.03em;margin:8px 0 14px}
+h2{font-size:20px;margin:0 0 10px}
+p{color:#c7c7bd;margin:8px 0 18px}
+.brand{color:#f0ce65;letter-spacing:.14em;text-transform:uppercase;font-size:12px;font-weight:750}
+.intro{max-width:760px}
+.bars{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+.panel{background:#1d1f1b;border:1px solid #454638;border-radius:12px;padding:20px}
+label{display:block;font-size:13px;font-weight:700;color:#dfdfd6;margin:10px 0 7px}
+input,select,button{font:inherit}
+input[type="text"],input[type="password"],input[type="search"],input[type="file"],select{
+ width:100%;padding:11px;background:#10110f;border:1px solid #6e7061;border-radius:7px;color:#fff}
+input[type="file"]{font-size:13px}
+input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid #f0ce65;outline-offset:3px}
+button{padding:12px 16px;border:1px solid #bb9f47;background:#e9c85d;border-radius:7px;color:#111;cursor:pointer;font-weight:750}
+button.secondary{background:transparent;color:#e9c85d}
+button:disabled{opacity:.45;cursor:not-allowed}
+button+button{margin-left:8px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.actions button+button{margin:0}
+small,.muted{font-size:12px;color:#b3b3a9}
+.status{font-size:13px;min-height:36px;overflow-wrap:anywhere;margin-top:14px}
+.error{color:#ffb4a6}
+.ok{color:#b2e5bf}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin:22px 0}
+.stat{padding:15px;background:#21231e;border-radius:10px;border:1px solid #48493e}
+.stat strong{display:block;font-size:24px;margin:4px 0;color:#f0ce65}
+.stat span{font-size:12px;color:#c3c3b8}
+.toolbar{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin:18px 0}
+section.results{margin-top:26px}
+.tableWrap{overflow:auto;border:1px solid #454638;border-radius:10px}
+table{width:100%;border-collapse:collapse;min-width:800px}
+th,td{font-size:13px;padding:12px 14px;text-align:left;border-bottom:1px solid #3a3c33;vertical-align:top}
+th{background:#24261f;color:#e9c85d;position:sticky;top:0}
+tr:last-child td{border:0}
+td{max-width:310px;overflow-wrap:anywhere}
+.name{font-weight:750;color:#f3f2e9}
+.name small{display:block;font-weight:400}
+.flag{color:#e6ba82}
+.actions-bottom{margin-top:12px}
+#filters{display:none}
+.note{border-left:3px solid #e9c85d;padding:8px 14px;margin:22px 0;color:#c7c7bd}
+footer{margin-top:30px;font-size:12px;color:#a9aa9d}
+@media(max-width:760px){.toolbar{grid-template-columns:1fr}main{margin-top:20px}.panel{padding:16px}}
+</style>
+<link rel="stylesheet" href="/control-app.css?v=20261013v2">
+<script src="/crm-logic.js?v=20261012v4" defer></script>
+<script src="/crm-control.js?v=20261012v5" defer></script>
+<script src="/control-vault-ui.js?v=20261013v2" defer></script>
+<script src="/control-live-sheets.js?v=20261012v6" defer></script>
+<script src="/crm-operations-boot.js?v=20261012v2" defer></script>
+<script src="/crm-operations.js?v=20261012v3" defer></script>
+<script src="/crm-triage.js?v=20261012v3" defer></script>
+<script src="/control-app.js?v=20261013v2" defer></script>
+<script src="/control-auth-ui.js?v=20261012v1" defer></script>
+<script src="/control-partnerships-ui.js?v=20261013v1" defer></script>
+<script src="/control-operations-ui.js?v=20261013v1" defer></script>
+</head>
+<body><main>
+<div class="brand">Caravela Control · Preview de testes</div>
+<h1>Booking CRM</h1>
+<p class="intro">Reconciliar os contactos de festivais, venues, promotores e imprensa com os emails do Zoho Mail Lite. <strong>Apenas leitura:</strong> os ficheiros originais e as mensagens não são modificados.</p>
+<div class="bars">
+  <section class="panel">
+    <h2>Importação de dados</h2>
+    <p class="muted">Seleciona o ficheiro JSON privado preparado a partir das bases de Booking e Media. O processamento é feito neste navegador.</p>
+    <label for="source-file">Ficheiro de importação CRM</label>
+    <input id="source-file" type="file" accept=".json,application/json">
+    <div class="status" id="file-status" role="status" aria-live="polite">Nenhum ficheiro carregado.</div>
+  </section>
+  <section class="panel">
+    <h2>Leitura Zoho</h2>
+    <p class="muted">Utiliza o token administrativo de Preview. Não é guardado nem enviado para fora do teu domínio de teste.</p>
+    <label for="admin-token">Token administrativo</label>
+    <input id="admin-token" type="password" autocomplete="off" spellcheck="false">
+    <label for="mail-limit">Até quantas mensagens por pasta?</label>
+    <select id="mail-limit"><option value="50">50 recebidos + 50 enviados</option><option value="200" selected>200 por pasta</option><option value="500">500 por pasta</option></select>
+    <div class="actions"><button type="button" id="scan-mail" disabled>Analisar histórico Zoho</button></div>
+    <div class="status" id="mail-status" role="status" aria-live="polite">A aguardar importação dos contactos.</div>
+  </section>
+</div>
+<div class="note">A análise utiliza apenas os endereços exatos. Emails partilhados entre eventos não são atribuídos automaticamente. Um email recebido não é, por si só, prova de resposta a uma proposta. Nenhum envio automático está disponível.</div>
+<section class="results">
+  <h2>Visão geral</h2>
+  <div class="stats" id="stats" aria-live="polite">
+    <div class="stat"><span>Contactos carregados</span><strong id="stat-records">—</strong></div>
+    <div class="stat"><span>Mensagens analisadas</span><strong id="stat-mails">—</strong></div>
+    <div class="stat"><span>Correspondências inequívocas</span><strong id="stat-matched">—</strong></div>
+    <div class="stat"><span>Mensagens ambíguas</span><strong id="stat-ambiguous">—</strong></div>
+    <div class="stat"><span>Registos com revisão necessária</span><strong id="stat-review">—</strong></div>
+  </div>
+  <div id="filters">
+    <div class="toolbar">
+      <div><label for="search">Pesquisar entidade, cidade ou email</label><input id="search" type="search" placeholder="Ex.: festival, Braga, email"></div>
+      <div><label for="kind">Tipo</label><select id="kind"><option value="all">Todos</option><option value="festival">Festivais</option><option value="venue">Venues</option><option value="promoter">Promotores</option><option value="press">Imprensa</option></select></div>
+      <div><label for="filter">Estado</label><select id="filter"><option value="all">Todos</option><option value="matched">Com email correspondente</option><option value="sent">Com envio encontrado</option><option value="review">Revisão necessária</option><option value="shared">Email partilhado</option><option value="followup">Follow-up para avaliar</option><option value="missing">Sem email na fonte</option></select></div>
+    </div>
+    <p id="result-total" class="muted"></p>
+    <div class="tableWrap"><table><thead><tr><th>Entidade / origem</th><th>Contacto</th><th>Estado original</th><th>Atividade observada</th><th>Validação</th></tr></thead><tbody id="results-body"></tbody></table></div>
+    <div class="actions actions-bottom">
+      <button type="button" id="load-more" class="secondary">Mostrar mais</button>
+      <button type="button" id="export-review" class="secondary" disabled>Exportar auditoria JSON</button>
+      <button type="button" id="export-triage" class="secondary" disabled>Exportar contactos por identificar (privado)</button>
+    </div>
+  </div>
+</section>
+<footer>Caravela Control · Preview privado. O histórico original permanece no D1 e R2 após guardar e verificar; as análises locais não substituem validação comercial nem constituem autorização para envio.</footer>
+</main></body></html>

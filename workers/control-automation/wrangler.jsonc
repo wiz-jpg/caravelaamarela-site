@@ -1,0 +1,18 @@
+{
+  "$schema": "https://www.unpkg.com/wrangler@latest/config-schema.json",
+  "name": "caravela-control-automation-preview",
+  "main": "../../examples/control-cron-worker.js",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": false,
+  "triggers": {
+    "crons": [
+      "*/15 * * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  }
+}

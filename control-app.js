@@ -18,11 +18,11 @@
     '<div class="cc-logo"><span class="cc-mark">C</span><div><strong>CARAVELA<br>CONTROL</strong><small>Workspace privado</small></div></div>' +
     '<nav class="cc-nav" aria-label="Navegação principal"><div class="cc-nav-label">Plataforma</div>' +
     '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Visão geral</span></button>' +
-    '<button type="button" data-view="contacts"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
-    '<button type="button" data-view="booking"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking e ações</span></button>' +
-    '<button type="button" data-view="artists"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
-    '<button type="button" data-view="partnerships"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
-    '<button type="button" data-view="communications"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações</span></button>' +
+    '<button type="button" data-view="contacts" data-min-role="admin"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
+    '<button type="button" data-view="booking" data-min-role="admin"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking e ações</span></button>' +
+    '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
+    '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
+    '<button type="button" data-view="communications" data-min-role="manager"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações</span></button>' +
     '<button type="button" data-view="sources" data-min-role="admin"><span class="cc-nav-symbol">⚙</span><span class="cc-nav-text">Dados e backups</span></button>' +
     '<button type="button" data-view="team" data-min-role="admin"><span class="cc-nav-symbol">♙</span><span class="cc-nav-text">Equipa e acessos</span></button></nav>' +
     '<div class="cc-side-bottom"><div class="cc-role" id="cc-sidebar-role"></div>' +
@@ -177,7 +177,9 @@
   const rank = { viewer: 1, manager: 2, admin: 3 };
   function openView(view) {
     if (!viewMap.has(view)) return;
-    if ((view === "team" || view === "sources") && currentUser?.role !== "admin") return;
+    const permitted = side.querySelector(`button[data-view="${view}"]`);
+    const requirement = permitted?.dataset.minRole;
+    if (requirement && (rank[currentUser?.role] || 0) < rank[requirement]) return;
     active = view;
     for (const [key, section] of viewMap) section.hidden = key !== view;
     for (const button of side.querySelectorAll("[data-view]")) {
@@ -185,6 +187,7 @@
       else button.removeAttribute("aria-current");
     }
     $("cc-page-title").textContent = labels[view];
+    window.dispatchEvent(new CustomEvent("caravela-control-view-opened",{detail:{view}}));
     if (view === "team") window.dispatchEvent(new Event("caravela-control-team-opened"));
     if (view === "partnerships") window.dispatchEvent(new Event("caravela-control-partnerships-opened"));
   }
@@ -254,12 +257,16 @@
     const adminOnly = ["vault-save","vault-backup","vault-r2-backup"];
     for (const id of adminOnly) if ($(id)) $(id).hidden = user.role !== "admin";
     openView("dashboard");
-    try {
-      const response = await fetch("/api/control/status",{credentials:"same-origin",cache:"no-store"});
-      const state = await response.json();
-      if (response.ok && state.active_snapshot) $("vault-load")?.click();
-      else $("vault-status")?.click();
-    } catch { $("cc-dashboard-brief").textContent = "Não foi possível confirmar o cofre. Verifica a ligação no painel Dados e backups."; }
+    if(user.role==="admin"){
+      try {
+        const response = await fetch("/api/control/status",{credentials:"same-origin",cache:"no-store"});
+        const state = await response.json();
+        if (response.ok && state.active_snapshot) $("vault-load")?.click();
+        else $("vault-status")?.click();
+      } catch { $("cc-dashboard-brief").textContent = "Não foi possível confirmar o cofre. Verifica a ligação em Dados e backups."; }
+    } else {
+      $("cc-dashboard-brief").textContent="Vista restrita. Apenas os dados operacionais autorizados são disponibilizados.";
+    }
   });
   window.addEventListener("caravela-control-signed-out", () => { app.hidden = true; currentUser = null; });
   function legacyMode() {

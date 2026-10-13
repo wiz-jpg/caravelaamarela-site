@@ -28,6 +28,13 @@ const l=document.createElement("label");l.textContent=label;l.htmlFor="cc-p-"+ke
 let input;if(type==="select"){input=document.createElement("select");populate(input,choices[key])}else if(type==="textarea"){input=document.createElement("textarea");input.rows=3;input.maxLength=max}else{input=document.createElement("input");input.type=type;input.maxLength=max}
 input.id="cc-p-"+key;input.required=["name","objective","next_step"].includes(key);wrap.append(l,input);$("cc-partners-fields").append(wrap)}
 const names=Object.keys(fields);
+function canEdit(){return !window.CaravelaControlSession?.authenticated ||
+  ["admin","manager"].includes(window.CaravelaControlSession.user?.role)}
+function syncEditControls(){
+  $("cc-partners-new").hidden=!canEdit();
+  $("cc-partners-import").parentElement.hidden=!canEdit();
+  if(!canEdit())$("cc-partners-form").hidden=true;
+}
 function message(s,bad=false){$("cc-partners-status").textContent=s;$("cc-partners-status").classList.toggle("error",bad)}
 async function api(method,entry){if(!window.CaravelaPartnershipTransport)throw Error("O cofre ainda não carregou.");return (await window.CaravelaPartnershipTransport.request(method,entry)).json()}
 function line(card,key,value){if(!value)return;const p=document.createElement("p"),label=document.createElement("strong"),v=document.createElement("span");label.textContent=key+": ";v.textContent=value;p.append(label,v);card.append(p)}
@@ -48,7 +55,7 @@ line(card,"Objetivo",p.objective);line(card,"Próximo passo",p.next_step);
 line(card,"Contacto",[p.contact_name,p.contact_email].filter(Boolean).join(" · "));
 line(card,"Origem",[p.source_label,choices.evidence_type[p.evidence_type],p.evidence_reference].filter(Boolean).join(" · "));
 if(p.notes){let details=document.createElement("details"),summary=document.createElement("summary"),body=document.createElement("p");summary.textContent="Contexto";body.textContent=p.notes;details.append(summary,body);card.append(details)}
-let foot=document.createElement("div");foot.className="cc-partners-foot";let date=document.createElement("small");date.textContent=p.next_review_iso?"Rever "+p.next_review_iso:"Sem prazo definido";let edit=document.createElement("button");edit.type="button";edit.className="cc-neutral";edit.textContent="Atualizar";edit.onclick=()=>editPartner(p);foot.append(date,edit);card.append(foot);list.append(card)}}
+let foot=document.createElement("div");foot.className="cc-partners-foot";let date=document.createElement("small");date.textContent=p.next_review_iso?"Rever "+p.next_review_iso:"Sem prazo definido";let edit=document.createElement("button");edit.type="button";edit.className="cc-neutral";edit.textContent="Atualizar";edit.hidden=!canEdit();edit.onclick=()=>editPartner(p);foot.append(date,edit);card.append(foot);list.append(card)}}
 function editPartner(record){editing=record?.id||"";$("cc-partners-form").reset();
 for(const key of names)if(record&&typeof record[key]==="string")$("cc-p-"+key).value=record[key];
 if(!record){$("cc-p-category").value="marca";$("cc-p-scope").value="agencia";$("cc-p-stage").value="idea";$("cc-p-priority").value="media";$("cc-p-evidence_type").value="none"}
@@ -82,6 +89,7 @@ catch(error){if(/partnership_already_exists/.test(error.message))skipped++;else 
 busy=false;await load();message("Importação concluída: "+added+" novas; "+skipped+" existentes. Estados referidos permanecem por validar.")}
 catch(error){busy=false;message(error.message,true)}finally{e.target.value=""}};
 window.addEventListener("caravela-control-partnerships-opened",load);
-window.addEventListener("caravela-control-signed-out",()=>{partners=[];render()});
-render();
+window.addEventListener("caravela-control-signed-out",()=>{partners=[];syncEditControls();render()});
+window.addEventListener("caravela-control-authenticated",()=>{syncEditControls();render()});
+syncEditControls();render();
 })();

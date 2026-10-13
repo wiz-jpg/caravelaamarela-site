@@ -2046,3 +2046,56 @@ p{line-height:1.63}
 .epk-section-head>.eyebrow{margin-bottom:0}
 .epk-section-head h2{max-width:14.5ch}
 .epk-section-head .stage-instruction{margin-top:0}
+
+
+/* V21 / editorial refresh: retain Archivo + Instrument Sans, improve the human rhythm. */
+h1,h2,h3,h4{letter-spacing:-.025em;text-wrap:pretty}
+h1{letter-spacing:-.038em;line-height:.97}
+h2{line-height:1.02}
+h3{font-weight:800;line-height:1.14}
+.eyebrow{letter-spacing:.105em;font-weight:800}
+.btn,.text-link{letter-spacing:.045em}
+.press-body h3{letter-spacing:-.012em;line-height:1.13}
+.press-card .press-body{gap:15px}
+.home-current .press-rail{scrollbar-width:thin;scrollbar-color:#504c43 transparent;scroll-padding:4px}
+.home-current .press-rail::-webkit-scrollbar{display:block;height:4px}
+.home-current .press-rail::-webkit-scrollbar-thumb{background:#504c43}
+.home-current .press-card{scroll-snap-align:start}
+
+/* On artist EPKs, press gets a clean editorial masthead instead of generic copy. */
+.artist-press .press-editorial-head{display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;gap:12px 28px;border-bottom:1px solid var(--line);padding-bottom:24px}
+.artist-press .press-editorial-head>.eyebrow{flex-basis:100%;margin:0}
+.artist-press .press-editorial-head h2{max-width:none;line-height:1.02}
+.press-issue{align-self:end;max-width:150px;text-align:right;font-family:Archivo,sans-serif;font-size:.66rem;line-height:1.4;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--artist-accent)}
+.artist-press .press-rail>.press-card:nth-child(2){transform:translateY(9px)}
+.artist-press .press-rail>.press-card:nth-child(2):hover{transform:translateY(4px)}
+.artist-press .press-card .press-body h3{font-weight:800}
+
+/* For artists: two routes shown IN the hero, each with a purposeful photographic image. */
+.artist-service-hero{min-height:min(850px,calc(100svh - var(--header)));padding-block:clamp(60px,7vw,100px);display:flex;align-items:center;isolation:isolate}
+.artist-service-hero>.hero-media{filter:grayscale(.65) brightness(.43);object-position:center 43%}
+.artist-service-hero>.hero-overlay{background:linear-gradient(90deg,rgba(2,2,2,.95) 3%,rgba(2,2,2,.64) 50%,rgba(2,2,2,.65)),linear-gradient(0deg,#050505 0%,transparent 40%)}
+.artist-service-layout{position:relative;z-index:2;display:grid;grid-template-columns:minmax(280px,.76fr) minmax(0,1.24fr);align-items:center;gap:clamp(30px,5vw,92px)}
+.artist-service-intro{max-width:540px}
+.artist-service-intro h1{font-size:clamp(3.4rem,5.5vw,6.2rem);line-height:.99;letter-spacing:-.036em}
+.artist-service-intro h1 span{color:var(--gold)}
+.artist-service-intro .hero-lead{max-width:440px;margin-top:24px;color:#d1cdc3;font-size:clamp(1.02rem,1.25vw,1.2rem);line-height:1.6}
+.artist-hero-direct{display:inline-flex;gap:25px;align-items:center;justify-content:space-between;min-width:230px;padding:17px 0;margin-top:26px;border-bottom:1px solid var(--gold);font-family:Archivo,sans-serif;font-size:.8rem;font-weight:800;letter-spacing:.015em}
+.artist-hero-direct span{color:var(--gold);font-size:1.15rem}
+.artist-service-cards{display:grid;grid-template-columns:1fr 1fr;gap:13px;min-width:0}
+.artist-service-card{position:relative;overflow:hidden;isolation:isolate;min-height:510px;display:flex;align-items:end;border:1px solid rgba(255,255,255,.25);transition:border-color .22s}
+.artist-service-card:hover{border-color:var(--gold)}
+.artist-service-card .service-card-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:saturate(.7) brightness(.85);transition:transform .35s,filter .35s}
+.artist-service-card:hover .service-card-image{transform:scale(1.035);filter:saturate(.9) brightness(.93)}
+.artist-service-card::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,rgba(3,3,3,.98) 0%,rgba(3,3,3,.91) 31%,rgba(3,3,3,.26) 100%)}
+.artist-service-card .service-card-content{padding:clamp(20px,2.3vw,34px);width:100%;display:grid;align-content:end;gap:13px}
+.artist-service-card .service-eyebrow{font-family:Archivo,sans-serif;font-size:.61rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--gold)}
+.artist-service-card h2{font-size:clamp(1.8rem,2.45vw,2.85rem);line-height:1.04;letter-spacing:-.029em;max-width:14ch}
+.artist-service-card .service-description{font-size:.88rem;color:#cbc7be;line-height:1.55;max-width:37ch}
+.artist-service-card .service-tags{display:flex;flex-wrap:wrap;gap:5px;padding-block:3px}
+.artist-service-card .service-tags span{font-family:Archivo,sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.02em;color:#e5e1da;border:1px solid rgba(255,255,255,.2);padding:5px 7px}
+.artist-service-card .service-action{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:13px;margin-top:3px;border-top:1px solid rgba(255,255,255,.28);font-family:Archivo,sans-serif;font-size:.75rem;font-weight:800}
+.artist-service-card .service-action span{font-size:1.16rem;color:var(--gold)}
+.artist-form-section{padding-block:clamp(76px,9vw,135px)}
+@media(max-width:1200px){.artist-service-layout{grid-template-columns:minmax(250px,.67fr) minmax(0,1.33fr);gap:30px}.artist-service-cards{grid-template-columns:1fr}.artist-service-card{min-height:320px}.artist-service-card .service-card-content{gap:10px}.artist-service-card h2{max-width:20ch;font-size:clamp(1.75rem,2.5vw,2.55rem)}.artist-service-card .service-description{max-width:62ch}}
+@media(max-width:760px){.artist-service-hero{min-height:0;padding-block:45px 70px}.artist-service-layout{grid-template-columns:1fr;gap:36px}.artist-service-intro h1{font-size:clamp(3rem,11vw,4.75rem)}.artist-service-intro .hero-lead{font-size:1rem}.artist-service-cards{grid-template-columns:1fr;gap:12px}.artist-service-card{min-height:380px}.artist-service-card .service-card-content{padding:26px}.artist-service-card h2{font-size:clamp(2rem,9vw,2.75rem)}.artist-press .press-editorial-head{gap:10px}.press-issue{text-align:left}.artist-press .press-rail>.press-card:nth-child(2){transform:none}}

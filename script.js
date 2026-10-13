@@ -574,7 +574,9 @@ function initializeMobileBookingAction() {
 }
 
 initializeAgenda();
-loadApprovedNews().finally(initializeAutoRails);
+// News is now curated manually in the HTML. No automatic publication, duplicate
+// carousel clones or background feed. Horizontal scrolling remains available.
+// Reactivate the old workflow only following an explicit editorial decision.
 initializeMobileBookingAction();
 
 

@@ -163,3 +163,14 @@ Uma frequência de duas vezes por dia é suficiente. O handler também inclui `s
 - Espanhol: `/es/`, `/es/wildchains`, `/es/devil-of-a-woman`, `/es/para-artistas`
 
 Documentação oficial relevante: [Cloudflare Pages Advanced Mode](https://developers.cloudflare.com/pages/functions/advanced-mode/), [D1 bindings](https://developers.cloudflare.com/pages/functions/bindings/#d1-databases) e [Email Sending REST API](https://developers.cloudflare.com/email-service/api/send-emails/rest-api/).
+
+
+## V21 — edição editorial e notícias assistidas (13/10/2026)
+
+- A atualização de notícias é **manual, com validação editorial**. O JavaScript já não consulta automaticamente o feed de notícias nem clona o carrossel. O código experimental da API permanece, mas não é usado pela interface nesta versão.
+- Nunca duplicar notícias na mesma página por URL ou, mais importante, por acontecimento. Cada entrevista autónoma conta como uma peça própria; anúncio e cobertura do mesmo concerto contam como **um único acontecimento**.
+- Em atualizações futuras, preservar as entradas aprovadas; acrescentar apenas eventos novos após verificação da fonte e da data. A exceção é a eliminação de duplicados expressamente sinalizados.
+- Entradas V21: MusicFest (entrevista 12/10/2026), Música Total (entrevista 10/10/2026), Livraria Lello (anúncio 16/10/2026) e Rádio EuroPub (entrevista 16/09/2026). No Tomate Blues não se adicionou segunda peça porque a notícia de confirmação já existia.
+- Cartões de serviços integrados no hero de Para Artistas; retiradas as secções autónomas «À deriva?» e «Trabalho que já existe».
+- Tipografia: mesmas famílias; redução de compressão e de maiúsculas selecionadas; composição editorial da secção de imprensa.
+- Este pacote não foi publicado; testar e validar em ambiente de desenvolvimento antes de produção.

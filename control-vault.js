@@ -2,6 +2,7 @@ import { syncZohoMail } from "./control-sync-zoho.js";
 import { syncGoogleSheets } from "./control-sync-sheets.js";
 import { handleControlAuth, sessionUser, roleAllows } from "./control-auth.js";
 import { handlePartnerships } from "./control-partnerships.js";
+import { operationalOverview } from "./control-operations.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -135,25 +136,31 @@ export async function handleControl(request,env,url,zohoReader) {
   if(!admin&&!cron&&!roleAllows(user,"viewer"))return reject("unauthorized",401);
   const hasAdmin=admin||roleAllows(user,"admin");
   const hasManager=hasAdmin||roleAllows(user,"manager");
-  const readRoutes=new Set(["status","source/latest","snapshot/active"]);
+  // Only aggregated operational data is visible to viewers.
+  // Raw snapshots, Sheets, backups, audit and configuration require admin.
+  const limitedReads=new Set(["ops/overview"]);
   const syncRoutes=new Set(["zoho/sync","sheets/sync"]);
-  const partnershipRead=route==="partnerships"&&request.method==="GET";
-  const partnershipWrite=route==="partnerships"&&["POST","PATCH"].includes(request.method);
-  if(!hasAdmin&&!cron&&!readRoutes.has(route)&&!partnershipRead&&
-     !(hasManager&&(syncRoutes.has(route)||partnershipWrite)))
+  const partnershipRoute=route==="partnerships"&&
+    (request.method==="GET"||request.method==="POST"||request.method==="PATCH");
+  if(!hasAdmin&&!cron&&!limitedReads.has(route)&&
+     !(hasManager&&(syncRoutes.has(route)||partnershipRoute)))
     return reject("forbidden",403);
-  if(route==="partnerships"&&cron&&!hasAdmin)return reject("forbidden",403);
+  if(route==="partnerships"&&!hasManager)return reject("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
   const db=env.ZOHO_DB;
   try{
+    if(route==="ops/overview"&&request.method==="GET"){
+      const data=await operationalOverview(env,{showDetails:hasManager});
+      return respond(data);
+    }
     if(route==="partnerships")return handlePartnerships(request,env,url,hasManager);
     if(route==="sheets/sync"){
       if(request.method!=="POST")return reject("method_not_allowed",405);
       if(!env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON||
          !env.CONTROL_ACTIONS_SHEET_ID||!env.CONTROL_ARTISTS_SHEET_ID)
         return reject("sheets_credentials_required",409);
-      try{return respond(await syncGoogleSheets(env));}
+      try{return respond(await syncGoogleSheets(env,{trigger:cron?"cron":"manual"}));}
       catch{return reject("sheets_sync_failed",502);}
     }
     if(route==="zoho/sync"){
@@ -162,7 +169,7 @@ export async function handleControl(request,env,url,zohoReader) {
       const delegated=(cron||!admin)?new Request(request,{headers:{
         Authorization:"Bearer "+env.ZOHO_ADMIN_TOKEN,Origin:url.origin
       }}):request;
-      const result=await syncZohoMail(delegated,env,url,zohoReader);
+      const result=await syncZohoMail(delegated,env,url,zohoReader,{trigger:cron?"cron":"manual"});
       return respond(result,result.status||200);
     }
     if(route==="status"&&request.method==="GET"){

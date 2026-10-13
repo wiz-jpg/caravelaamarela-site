@@ -54,7 +54,25 @@
     }
     return response;
   }
-  function busyMode(value){
+  // Narrow partner transport: reuse this session's in-memory admin credential.
+  // No credentials are persisted in localStorage or exposed through this API.
+  window.CaravelaPartnershipTransport={
+    setToken(value){
+      if(typeof value!=="string"||value.length<43)return false;
+      transientToken=value.trim();return true;
+    },
+    request(method,entry){
+      if(!["GET","POST","PATCH"].includes(method))throw Error("Operação inválida.");
+      return api("partnerships",{
+        method,
+        ...(method!=="GET"?{
+          headers:{"Content-Type":"application/json","X-Caravela-Request":"1"},
+          body:JSON.stringify(entry)
+        }:{})
+      });
+    }
+  };
+    function busyMode(value){
     busy=value;
     for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-r2-backup","vault-zoho","vault-sheets","vault-live"])$(id).disabled=value;
     if(!value)$("vault-save").disabled=!currentFile;

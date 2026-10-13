@@ -169,3 +169,39 @@ body{background:var(--cc-bg);color:var(--cc-text);font-family:Inter,system-ui,-a
  border:1px solid #66563c;border-radius:20px;padding:5px 9px}
 @media(max-width:700px){#control-app .cc-operational-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
  #control-app .cc-attention-item{align-items:flex-start;flex-direction:column}}
+
+/* Strategic partnerships */
+#cc-view-partnerships .cc-partners-intro{background:#18212a;border:1px solid #3b4856;border-radius:12px;padding:15px 18px;font-size:13px;color:#c5d0dd;line-height:1.6;margin-bottom:20px}
+#cc-view-partnerships .cc-partners-intro strong{color:#f3d483}
+#cc-view-partnerships .cc-partners-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}
+#cc-view-partnerships .cc-partners-stats>div{background:#18222d;border:1px solid #324051;border-radius:12px;padding:16px}
+#cc-view-partnerships .cc-partners-stats small{display:block;color:#aab8c5;font-size:11px;margin-bottom:6px}
+#cc-view-partnerships .cc-partners-stats strong{font-size:26px;color:#f3f5f8;display:block}
+#cc-view-partnerships .cc-partners-toolbar{display:grid;grid-template-columns:2fr 1fr auto;gap:14px;align-items:end;margin-bottom:14px}
+#cc-view-partnerships .cc-partners-toolbar>button{height:42px;border-radius:9px;padding:0 16px}
+#cc-view-partnerships .cc-partners-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}
+#cc-view-partnerships .cc-partners-card{background:#151e28;border:1px solid #34404e;border-radius:13px;padding:19px;min-width:0}
+#cc-view-partnerships .cc-partners-head{display:flex;align-items:start;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-bottom:14px}
+#cc-view-partnerships .cc-partners-head h3{font-size:17px;margin:0;letter-spacing:-.025em;color:#f2f4f7}
+#cc-view-partnerships .cc-partner-stage{font-size:10px;color:#ecd48f;border:1px solid #6c603d;border-radius:20px;padding:5px 8px}
+#cc-view-partnerships .cc-partners-card>p{font-size:12px;margin:9px 0;overflow-wrap:anywhere;line-height:1.5;color:#b9c7d7}
+#cc-view-partnerships .cc-partners-card>p strong{color:#e6edf4}
+#cc-view-partnerships .cc-partners-card details{margin:12px 0;padding-top:8px;border-top:1px solid #354151}
+#cc-view-partnerships .cc-partners-card summary{font-size:12px;cursor:pointer;color:#e4c879}
+#cc-view-partnerships .cc-partners-card details p{font-size:12px;white-space:pre-line;overflow-wrap:anywhere}
+#cc-view-partnerships .cc-partners-foot{border-top:1px solid #324051;margin-top:15px;padding-top:13px;display:flex;justify-content:space-between;align-items:center;gap:9px}
+#cc-view-partnerships .cc-partners-foot small{font-size:11px;color:#9faebf}
+#cc-view-partnerships .cc-partners-foot button{padding:8px 13px;border-radius:8px;font-size:11px}
+#cc-view-partnerships .cc-partners-actions{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:22px 0}
+#cc-view-partnerships .cc-partners-actions button{padding:12px 17px;border-radius:9px}
+#cc-view-partnerships .cc-partners-actions label{display:flex;align-items:center;gap:9px;margin:0;font-size:11px}
+#cc-view-partnerships .cc-partners-actions input[type=file]{max-width:265px;font-size:11px}
+#cc-view-partnerships .cc-partners-auth{background:#25231c;border:1px solid #655938;border-radius:12px;padding:18px;margin-bottom:18px}
+#cc-view-partnerships .cc-partners-auth>div{display:flex;gap:8px;align-items:center}
+#cc-view-partnerships .cc-partners-auth input{max-width:450px}
+#cc-view-partnerships .cc-partners-auth small{font-size:11px;color:#a9b9c8}
+#cc-view-partnerships .cc-partners-editor{padding:23px;margin:22px 0;background:#17212d;border:1px solid #475464;border-radius:13px}
+#cc-view-partnerships .cc-partners-editor h2{margin:0 0 6px}
+#cc-view-partnerships textarea{font:inherit;color:#f3f6f9;width:100%;background:#10161e;border:1px solid #465263;padding:11px;border-radius:9px;resize:vertical}
+@media(max-width:850px){#cc-view-partnerships .cc-partners-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){#cc-view-partnerships .cc-partners-toolbar{grid-template-columns:1fr}#cc-view-partnerships .cc-partners-list{grid-template-columns:1fr}}

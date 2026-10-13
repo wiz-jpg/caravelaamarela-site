@@ -66,7 +66,7 @@ function insertBlocks(db,rows) {
   }
   return statements;
 }
-export async function syncZohoMail(request,env,url,zohoReader) {
+export async function syncZohoMail(request,env,url,zohoReader,{trigger="manual"}={}) {
   if(request.method!=="POST")return {ok:false,error:"method_not_allowed",status:405};
   if(typeof zohoReader!=="function")return {ok:false,error:"sync_not_available",status:503};
   const db=env.ZOHO_DB,id=crypto.randomUUID(),now=Date.now();
@@ -113,8 +113,8 @@ export async function syncZohoMail(request,env,url,zohoReader) {
     // Observations are append-only; duplicate message IDs are ignored on repeat scans.
     const previous=await db.prepare("SELECT COUNT(*) AS n FROM control_mail_headers").first();
     await db.batch([...insertBlocks(db,rows),...updates,
-      db.prepare("INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,new_records,examined_records,reason,meta_json) VALUES(?,'zoho',?,?,'complete',0,?,'','{}')")
-        .bind(id,now,Date.now(),scanned)]);
+      db.prepare("INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,new_records,examined_records,reason,meta_json) VALUES(?,'zoho',?,?,'complete',0,?,'',?)")
+        .bind(id,now,Date.now(),scanned,JSON.stringify({trigger:trigger==="cron"?"cron":"manual"}))]);
     const current=await db.prepare("SELECT COUNT(*) AS n FROM control_mail_headers").first();
     newRows=(current?.n||0)-(previous?.n||0);
     await db.prepare("UPDATE control_sync_runs SET new_records=? WHERE id=?").bind(newRows,id).run();
@@ -122,8 +122,8 @@ export async function syncZohoMail(request,env,url,zohoReader) {
       total_indexed:current?.n||0,read_only:true,
       note:"Email recebido não demonstra resposta a proposta; assuntos e corpos não são guardados."};
   }catch{
-    await db.prepare("INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,new_records,examined_records,reason,meta_json) VALUES(?,'zoho',? ,?,'failed',0,?,'provider_or_storage_error','{}')")
-      .bind(id,now,Date.now(),scanned).run().catch(()=>{});
+    await db.prepare("INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,new_records,examined_records,reason,meta_json) VALUES(?,'zoho',? ,?,'failed',0,?,'provider_or_storage_error',?)")
+      .bind(id,now,Date.now(),scanned,JSON.stringify({trigger:trigger==="cron"?"cron":"manual"})).run().catch(()=>{});
     return {ok:false,error:"zoho_sync_failed",status:502};
   }finally{await unlockRun(db,id).catch(()=>{});}
 }

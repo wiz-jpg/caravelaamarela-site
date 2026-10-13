@@ -205,3 +205,30 @@ body{background:var(--cc-bg);color:var(--cc-text);font-family:Inter,system-ui,-a
 #cc-view-partnerships textarea{font:inherit;color:#f3f6f9;width:100%;background:#10161e;border:1px solid #465263;padding:11px;border-radius:9px;resize:vertical}
 @media(max-width:850px){#cc-view-partnerships .cc-partners-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){#cc-view-partnerships .cc-partners-toolbar{grid-template-columns:1fr}#cc-view-partnerships .cc-partners-list{grid-template-columns:1fr}}
+
+/* Operational home — readable priorities instead of spreadsheet-first workflow */
+#control-app .cc-live-ops{margin:0 0 26px;padding:21px;background:linear-gradient(145deg,#16212b,#121a23);border:1px solid #344657;border-radius:15px}
+#control-app .cc-live-heading{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+#control-app .cc-live-heading h2{font-size:19px;margin:0 0 6px}
+#control-app .cc-live-heading .cc-lead{margin:0 0 16px}
+#control-app .cc-live-heading button{font-size:12px;padding:10px 14px;border-radius:8px}
+#control-app .cc-ops-health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+#control-app .cc-ops-health-item{background:#1d2a35;border:1px solid #395064;border-radius:11px;padding:14px;min-width:0}
+#control-app .cc-ops-health-item small{display:block;font-size:11px;color:#acbccc;margin-bottom:8px}
+#control-app .cc-ops-health-item strong{display:block;font-weight:700;font-size:12px;line-height:1.45;color:#e8edf5;overflow-wrap:anywhere}
+#control-app .cc-health-recent{border-color:#2e785d}
+#control-app .cc-health-warning,#control-app .cc-health-stale,#control-app .cc-health-failed,#control-app .cc-health-never,#control-app .cc-health-not_configured{border-color:#85663d}
+#control-app .cc-ops-message{font-size:12px;line-height:1.55;color:#afbccc;padding:13px 0 15px;border-bottom:1px solid #334251;margin:8px 0 19px}
+#control-app .cc-ops-message.cc-ops-alert{color:#ead295}
+#control-app .cc-live-subheading{align-items:baseline;margin-bottom:12px}
+#control-app .cc-live-subheading small{font-size:11px;color:#9aaabb}
+#control-app .cc-ops-tasks{display:flex;flex-direction:column;gap:9px}
+#control-app .cc-ops-task{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border:1px solid #314254;background:#1a2631;border-radius:11px;padding:13px 15px}
+#control-app .cc-ops-task strong{display:block;font-size:13px;color:#f2f5f9;margin-bottom:3px}
+#control-app .cc-ops-task small{display:block;font-size:11px;color:#9baebf}
+#control-app .cc-ops-task p{font-size:12px;color:#becbd7;margin:9px 0 0;overflow-wrap:anywhere}
+#control-app .cc-ops-priority{font-size:10px;white-space:nowrap;background:#463a27;border:1px solid #79603b;color:#f0d392;padding:5px 8px;border-radius:7px}
+#control-app .cc-ops-tasks>button{align-self:flex-start;padding:10px 13px;font-size:11px;border-radius:8px}
+#control-app .cc-ops-disclaimer{margin:14px 0 0;font-size:11px;color:#8496a9;line-height:1.5}
+@media(max-width:900px){#control-app .cc-ops-health{grid-template-columns:1fr}}
+@media(max-width:600px){#control-app .cc-ops-task{flex-direction:column}#control-app .cc-ops-priority{align-self:flex-start}}

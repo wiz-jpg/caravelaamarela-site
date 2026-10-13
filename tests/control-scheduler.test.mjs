@@ -25,7 +25,7 @@ test("15-minute Cron polls only Zoho, headers use Access service token",async()=
 test("on the half-hour both Zoho and Sheets run without one blocking the other",async()=>{
   const calls=[];
   const fake=async(url)=>{
-    const provider=url.includes("zoho")?"zoho":"sheets";
+    const provider=url.endsWith("/zoho/sync")?"zoho":"sheets";
     calls.push(provider);
     return json(provider);
   };

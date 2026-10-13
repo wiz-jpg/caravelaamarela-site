@@ -106,7 +106,12 @@ test("sessions allow CRM reads; viewers cannot change snapshots or manage team",
   } });
   assert.equal(changed.status, 200);
   const viewerCookie = cookieOf(changed);
-  assert.equal((await route("status", { cookie: viewerCookie })).status, 200);
+  // Aggregated activity is readable; raw snapshots, origins and secrets never are.
+  assert.equal((await route("ops/overview", { cookie: viewerCookie })).status, 200);
+  assert.equal((await route("status", { cookie: viewerCookie })).status, 403);
+  assert.equal((await route("snapshot/active", { cookie: viewerCookie })).status, 403);
+  assert.equal((await route("source/latest?key=control_actions", { cookie: viewerCookie })).status, 403);
+  assert.equal((await route("partnerships", { cookie: viewerCookie })).status, 403);
   assert.equal((await route("snapshot/start", { method: "POST", cookie: viewerCookie, data: {} })).status, 403);
   assert.equal((await auth("users", { cookie: viewerCookie })).status, 403);
   assert.equal((await route("status", { cookie: firstCookie })).status, 401);
@@ -122,7 +127,10 @@ test("manager can synchronize, but cannot perform admin-only operations", async 
     old_password: "temporary-long-password-123", new_password: "another-long-password-1234"
   } });
   const manager = cookieOf(changed);
-  assert.equal((await route("status", { cookie: manager })).status, 200);
+  assert.equal((await route("ops/overview", { cookie: manager })).status, 200);
+  assert.equal((await route("status", { cookie: manager })).status, 403);
+  assert.equal((await route("source/latest?key=control_actions", { cookie: manager })).status, 403);
+  assert.equal((await route("snapshot/active", { cookie: manager })).status, 403);
   assert.equal((await route("sheets/sync", { method: "POST", cookie: manager })).status, 409);
   assert.equal((await route("snapshot/start", { method: "POST", cookie: manager, data: {} })).status, 403);
 });

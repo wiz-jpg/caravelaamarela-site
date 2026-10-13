@@ -1,6 +1,7 @@
 import { syncZohoMail } from "./control-sync-zoho.js";
 import { syncGoogleSheets } from "./control-sync-sheets.js";
 import { handleControlAuth, sessionUser, roleAllows } from "./control-auth.js";
+import { handlePartnerships } from "./control-partnerships.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -136,12 +137,17 @@ export async function handleControl(request,env,url,zohoReader) {
   const hasManager=hasAdmin||roleAllows(user,"manager");
   const readRoutes=new Set(["status","source/latest","snapshot/active"]);
   const syncRoutes=new Set(["zoho/sync","sheets/sync"]);
-  if(!hasAdmin&&!cron&&!readRoutes.has(route)&&!(hasManager&&syncRoutes.has(route)))
+  const partnershipRead=route==="partnerships"&&request.method==="GET";
+  const partnershipWrite=route==="partnerships"&&["POST","PATCH"].includes(request.method);
+  if(!hasAdmin&&!cron&&!readRoutes.has(route)&&!partnershipRead&&
+     !(hasManager&&(syncRoutes.has(route)||partnershipWrite)))
     return reject("forbidden",403);
+  if(route==="partnerships"&&cron&&!hasAdmin)return reject("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
   const db=env.ZOHO_DB;
   try{
+    if(route==="partnerships")return handlePartnerships(request,env,url,hasManager);
     if(route==="sheets/sync"){
       if(request.method!=="POST")return reject("method_not_allowed",405);
       if(!env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON||

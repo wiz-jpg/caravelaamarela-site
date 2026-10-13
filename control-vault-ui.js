@@ -34,7 +34,7 @@
   }
   function token(){
     const given=$("admin-token").value.trim();
-    if(given){transientToken=given;$("admin-token").value="";}
+    if(given){transientToken=given;$("admin-token").value="";window.dispatchEvent(new Event("caravela-control-token-ready"));}
     if(!transientToken)throw Error("Introduz o token técnico no painel Comunicações.");
     return transientToken;
   }
@@ -56,6 +56,12 @@
   }
   // Narrow partner transport: reuse this session's in-memory admin credential.
   // No credentials are persisted in localStorage or exposed through this API.
+  // One session-limited transport for private operational widgets.
+  // It reuses the in-memory legacy token or individual login session.
+  window.CaravelaControlRead={request(path){
+    if(path!=="ops/overview")throw Error("Vista não autorizada.");
+    return api(path);
+  }};
   window.CaravelaPartnershipTransport={
     setToken(value){
       if(typeof value!=="string"||value.length<43)return false;

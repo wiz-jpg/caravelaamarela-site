@@ -77,26 +77,64 @@ async function readWorkbook(source,token){
 }
 const hex=bytes=>Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,"0")).join("");
 async function hash(value){return hex(await crypto.subtle.digest("SHA-256",encoder.encode(value)));}
-export async function syncGoogleSheets(env){
+async function lockSheets(db,runId){
+  const now=Date.now();
+  const lock=await db.prepare(
+    "INSERT INTO control_state(key,value,changed_ms) VALUES('sheets_sync_lock',?,?) "+
+    "ON CONFLICT(key) DO UPDATE SET value=excluded.value,changed_ms=excluded.changed_ms "+
+    "WHERE control_state.changed_ms<? RETURNING value"
+  ).bind(runId,now,now-120000).first();
+  return lock?.value===runId;
+}
+async function unlockSheets(db,runId){
+  await db.prepare("UPDATE control_state SET value='',changed_ms=0 "+
+    "WHERE key='sheets_sync_lock' AND value=?").bind(runId).run();
+}
+export async function syncGoogleSheets(env,{trigger="manual"}={}){
   const sources=configs(env);
-  const token=await serviceAccountAccess(env);
   const db=env.ZOHO_DB,runId=crypto.randomUUID(),started=Date.now();
+  if(!(await lockSheets(db,runId)))throw Error("sheets_sync_in_progress");
   const added=[];
-  for(const source of sources){
-    const workbook=await readWorkbook(source,token);
-    const raw=JSON.stringify(workbook);
-    if(raw.length>1600000)throw Error("google_sheet_exceeds_storage_limit");
-    const digest=await hash(raw);
-    const exists=await db.prepare("SELECT revision_sha256 FROM control_source_revisions WHERE source_key=? AND revision_sha256=?")
-      .bind(source.key,digest).first();
-    if(!exists){
-      await db.prepare("INSERT INTO control_source_revisions(source_key,revision_sha256,provider,title,raw_json,row_count,captured_ms) VALUES(?,?,?,?,?,?,?)")
-        .bind(source.key,digest,"sheets",source.title,raw,workbook.rows,Date.now()).run();
-      added.push(source.key);
+  try{
+    const token=await serviceAccountAccess(env);
+    for(const source of sources){
+      const workbook=await readWorkbook(source,token);
+      const raw=JSON.stringify(workbook);
+      if(raw.length>1600000)throw Error("google_sheet_exceeds_storage_limit");
+      const digest=await hash(raw);
+      const exists=await db.prepare(
+        "SELECT revision_sha256 FROM control_source_revisions "+
+        "WHERE source_key=? AND revision_sha256=?"
+      ).bind(source.key,digest).first();
+      if(!exists){
+        // Concurrent schedulers cannot advance the same source twice.
+        await db.prepare(
+          "INSERT OR IGNORE INTO control_source_revisions "+
+          "(source_key,revision_sha256,provider,title,raw_json,row_count,captured_ms) "+
+          "VALUES(?,?,?,?,?,?,?)"
+        ).bind(source.key,digest,"sheets",source.title,raw,workbook.rows,Date.now()).run();
+        added.push(source.key);
+      }
     }
+    await db.prepare(
+      "INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,"+
+      "new_records,examined_records,reason,meta_json) "+
+      "VALUES(?,'sheets',?,?,'complete',?,?, '',?)"
+    ).bind(runId,started,Date.now(),added.length,sources.length,
+      JSON.stringify({trigger:trigger==="cron"?"cron":"manual",changed_sources:added})).run();
+    return {ok:true,provider:"sheets",sources_scanned:sources.length,
+      changed_sources:added,read_only:true,
+      reminder:"Revisões adicionadas sem substituir a fonte original."};
+  }catch(error){
+    // Preserve a fixed public error code and only safe metadata.
+    await db.prepare(
+      "INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,"+
+      "new_records,examined_records,reason,meta_json) "+
+      "VALUES(?,'sheets',?,?,'failed',0,?,'provider_or_storage_error',?)"
+    ).bind(runId,started,Date.now(),sources.length,
+      JSON.stringify({trigger:trigger==="cron"?"cron":"manual"})).run().catch(()=>{});
+    throw error;
+  }finally{
+    await unlockSheets(db,runId).catch(()=>{});
   }
-  await db.prepare("INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,new_records,examined_records,reason,meta_json) VALUES(?,'sheets',?,?,'complete',?,?, '',?)")
-    .bind(runId,started,Date.now(),added.length,sources.length,JSON.stringify({changed_sources:added})).run();
-  return {ok:true,provider:"sheets",sources_scanned:sources.length,
-    changed_sources:added,read_only:true,reminder:"Dados guardados como revisões; a base anterior nunca foi substituída."};
 }

@@ -874,7 +874,8 @@ async function handleZoho(request, env, url) {
         await zohoEqual(request.headers.get('Authorization') || '', `Bearer ${env.ZOHO_ADMIN_TOKEN}`);
       const account = !legacyAdmin && ['status','folders','messages'].includes(route)
         ? await sessionUser(request, env) : null;
-      if (!legacyAdmin && !roleAllows(account, 'viewer')) zohoFail('unauthorized', 401);
+      const level = route === 'status' ? 'viewer' : 'manager';
+      if (!legacyAdmin && !roleAllows(account, level)) zohoFail('unauthorized', 401);
       if ((request.headers.get('Origin') && request.headers.get('Origin') !== url.origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') zohoFail('invalid_origin', 403);
     }
     if (route === 'diagnose') {

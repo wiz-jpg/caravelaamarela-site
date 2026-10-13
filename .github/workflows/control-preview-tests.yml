@@ -10,6 +10,8 @@ on:
       - 'control-*.css'
       - 'migrations/**'
       - 'tests/**'
+      - 'examples/control-cron-worker.js'
+      - 'workers/control-automation/**'
       - '.github/workflows/control-preview-tests.yml'
   workflow_dispatch:
 permissions:
@@ -27,7 +29,7 @@ jobs:
         run: node --test tests/*.test.mjs
       - name: Check Worker and workspace JavaScript syntax
         run: |
-          for file in _worker.js control-*.js crm-*.js; do
+          for file in _worker.js control-*.js crm-*.js examples/control-cron-worker.js; do
             node --check "$file"
           done
       - name: Guard against accidental destructive migration

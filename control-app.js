@@ -21,6 +21,7 @@
     '<button type="button" data-view="contacts"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
     '<button type="button" data-view="booking"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking e ações</span></button>' +
     '<button type="button" data-view="artists"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
+    '<button type="button" data-view="partnerships"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
     '<button type="button" data-view="communications"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações</span></button>' +
     '<button type="button" data-view="sources" data-min-role="admin"><span class="cc-nav-symbol">⚙</span><span class="cc-nav-text">Dados e backups</span></button>' +
     '<button type="button" data-view="team" data-min-role="admin"><span class="cc-nav-symbol">♙</span><span class="cc-nav-text">Equipa e acessos</span></button></nav>' +
@@ -52,6 +53,7 @@
     ["contacts", "Contactos", "Festivais, salas, promotores e imprensa — com origens e validação."],
     ["booking", "Booking e ações", "Histórico operacional separado de mensagens observadas. Confirmar sempre a associação."],
     ["artists", "Artistas", "Projetos, condições e histórico das fichas originais."],
+    ["partnerships", "Parcerias", "Marcas, entidades e parceiros estratégicos: histórico, propostas, evidência e próximos passos."],
     ["communications", "Comunicações", "Leitura do Zoho e identificação de endereços, sem envios automáticos."],
     ["sources", "Dados e backups", "Importação, cofre, fontes sincronizadas e recuperação de versões."],
     ["team", "Equipa e acessos", "Criar contas, definir funções e revogar acessos."]
@@ -184,6 +186,7 @@
     }
     $("cc-page-title").textContent = labels[view];
     if (view === "team") window.dispatchEvent(new Event("caravela-control-team-opened"));
+    if (view === "partnerships") window.dispatchEvent(new Event("caravela-control-partnerships-opened"));
   }
   for (const button of side.querySelectorAll("[data-view]")) {
     button.addEventListener("click", () => openView(button.dataset.view));

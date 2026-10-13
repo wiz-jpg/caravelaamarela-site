@@ -70,7 +70,7 @@ function publicJson(data, status = 200) {
   return Response.json(data, {
     status,
     headers: {
-      "Cache-Control": "public, max-age=300, s-maxage=600",
+      "Cache-Control": "public, max-age=60, s-maxage=120",
       "X-Content-Type-Options": "nosniff",
     },
   });
@@ -85,7 +85,7 @@ function htmlResponse(markup, status = 200) {
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "no-referrer",
-      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src https:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     },
   });
 }
@@ -329,17 +329,29 @@ async function articleMetadata(candidate) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const response = await fetch(safeUrl, {
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        Accept: "text/html,application/xhtml+xml",
-        "User-Agent": "CaravelaAmarela-NewsMonitor/1.0 (+https://caravelaamarela.com/)",
-      },
-    });
-    if (!response.ok || !(response.headers.get("content-type") || "").includes("text/html")) return candidate;
+    let currentUrl = safeUrl;
+    let response;
+    for (let hop = 0; hop < 4; hop += 1) {
+      response = await fetch(currentUrl, {
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          Accept: "text/html,application/xhtml+xml",
+          "User-Agent": "CaravelaAmarela-NewsMonitor/1.0 (+https://caravelaamarela.com/)",
+        },
+      });
+      if (![301, 302, 303, 307, 308].includes(response.status)) break;
+      const redirect = response.headers.get("location");
+      if (!redirect) return candidate;
+      const nextUrl = safeExternalUrl(new URL(redirect, currentUrl).href);
+      if (!nextUrl) return candidate;
+      currentUrl = nextUrl;
+      if (hop === 3) return candidate;
+    }
+    if (!response?.ok || !(response.headers.get("content-type") || "").includes("text/html")) return candidate;
+    if (Number(response.headers.get("content-length") || "0") > 1_500_000) return candidate;
     const documentText = (await response.text()).slice(0, 750_000);
-    const finalUrl = safeExternalUrl(response.url) || safeUrl;
+    const finalUrl = safeExternalUrl(response.url) || currentUrl;
     const canonicalMatch = documentText.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["'][^>]*>/i)
       || documentText.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']canonical["'][^>]*>/i);
     const canonical = canonicalMatch?.[1] ? safeExternalUrl(new URL(decodeXml(canonicalMatch[1]), finalUrl).href) : "";
@@ -439,6 +451,8 @@ async function fetchNewsCandidates() {
     return [
       { config, url: `https://www.bing.com/news/search?q=${query}&format=rss&mkt=pt-PT` },
       { config, url: `https://news.google.com/rss/search?q=${query}&hl=pt-PT&gl=PT&ceid=PT:pt-150` },
+      { config, url: `https://news.google.com/rss/search?q=${query}&hl=es&gl=ES&ceid=ES:es` },
+      { config, url: `https://news.google.com/rss/search?q=${query}&hl=en-GB&gl=GB&ceid=GB:en` },
     ];
   });
   const results = await Promise.allSettled(jobs.map(async ({ config, url }) => {
@@ -446,6 +460,9 @@ async function fetchNewsCandidates() {
     if (!response.ok) throw new Error(`Feed returned ${response.status}`);
     return parseNewsFeed(await response.text(), config);
   }));
+  if (!results.some((result) => result.status === "fulfilled")) {
+    throw new Error("All news feeds failed; retry on the next scan");
+  }
   const unique = new Map();
   results.forEach((result) => {
     if (result.status !== "fulfilled") {
@@ -474,9 +491,17 @@ async function scanNews(env, baseUrl, force = false) {
     .run();
 
   const candidates = await fetchNewsCandidates();
+  // Metadata is fetched in short batches, to avoid the worst-case delay from
+  // fourteen serial article requests in the Cloudflare Pages worker.
+  const enriched = [];
+  for (let i = 0; i < candidates.length; i += 4) {
+    const batch = await Promise.allSettled(candidates.slice(i, i + 4).map(articleMetadata));
+    batch.forEach((result, offset) => enriched.push(
+      result.status === "fulfilled" ? result.value : candidates[i + offset]
+    ));
+  }
   let inserted = 0;
-  for (const rawCandidate of candidates) {
-    const candidate = await articleMetadata(rawCandidate);
+  for (const candidate of enriched) {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     try {
@@ -547,10 +572,16 @@ async function getPublishedNews(env, url) {
 }
 
 function reviewPage(candidate, id, token) {
+  const artistName = candidate.artist === "wild" ? "WILDCHAINS" : "Devil of a Woman";
   const statusNote = candidate.status === "pending"
-    ? "Ainda não publicada. Revê o conteúdo e escolhe uma ação."
-    : `Estado atual: ${candidate.status}. Podes voltar a publicar ou ignorar.`;
-  return `<!doctype html><html lang="pt"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rever notícia · Caravela Amarela</title><style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#050505;color:#f2efe7;font-family:Arial,sans-serif;line-height:1.5}main{width:min(820px,calc(100% - 32px));margin:40px auto 80px}header{border-top:4px solid #efc62f;padding:24px 0 18px}h1{font-size:clamp(30px,6vw,58px);line-height:.95;margin:0 0 18px}p{color:#bbb6ab}.source{color:#efc62f;font-weight:700}form{display:grid;gap:16px;margin-top:28px;padding:24px;border:1px solid #37352f;background:#0b0b0a}label{display:grid;gap:7px;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#bbb6ab}input,textarea{width:100%;padding:12px;border:1px solid #403e38;background:#141412;color:#fff;font:inherit;text-transform:none;letter-spacing:0}textarea{min-height:110px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}button{min-height:48px;padding:12px 18px;border:1px solid #efc62f;background:#efc62f;color:#080808;font-weight:800;cursor:pointer}button[name=action][value=ignore]{background:transparent;color:#ddd;border-color:#666}a{color:#efc62f;overflow-wrap:anywhere}</style><main><header><p class="source">CARAVELA AMARELA · REVISÃO EDITORIAL</p><h1>${escapeHtml(candidate.title)}</h1><p>${escapeHtml(statusNote)}</p><p><a href="${escapeHtml(candidate.url)}" rel="noopener noreferrer" target="_blank">Ler a notícia original ↗</a></p></header><form method="post" action="/api/news/review?id=${encodeURIComponent(id)}&amp;token=${encodeURIComponent(token)}"><label>Título<input name="title" maxlength="500" required value="${escapeHtml(candidate.title)}"></label><label>Fonte<input name="source" maxlength="180" value="${escapeHtml(candidate.source || "")}"></label><label>URL original<input name="url" type="url" required value="${escapeHtml(candidate.url)}"></label><label>Excerto relevante para vender o artista<textarea name="excerpt" maxlength="1000">${escapeHtml(candidate.excerpt || "")}</textarea></label><label>Imagem original da notícia<input name="image_url" type="url" value="${escapeHtml(candidate.image_url || "")}"></label><label>Data de publicação (ISO)<input name="published_at" value="${escapeHtml(candidate.published_at || "")}"></label><div class="actions"><button name="action" value="publish" type="submit">Aprovar e publicar</button><button name="action" value="ignore" type="submit">Ignorar notícia</button></div></form></main></html>`;
+    ? "Por publicar. Confirma a fonte e ajusta o texto antes de decidir."
+    : `Estado atual: ${candidate.status}. Podes atualizar ou retirar esta peça.`;
+  const preview = safeExternalUrl(candidate.image_url || "");
+  return `<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Rever notícia · Caravela Amarela</title>
+<style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#070707;color:#f2efe7;font-family:Arial,sans-serif;line-height:1.55}main{width:min(1100px,calc(100% - 36px));margin:46px auto 90px}.top{border-top:3px solid #efc62f;padding:25px 0 28px}.eyebrow{color:#efc62f;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.top h1{font-size:clamp(34px,5vw,62px);letter-spacing:-.04em;line-height:1.06;margin:14px 0}.top p{color:#b9b6af;max-width:690px}.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.62fr);gap:22px}.panel{border:1px solid #37352f;background:#0e0e0d;padding:clamp(22px,3vw,32px)}.panel h2{font-size:22px;letter-spacing:-.02em;margin:0 0 20px}.form{display:grid;gap:15px}label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#c6c2b9}input,textarea{width:100%;padding:12px;border:1px solid #44413a;background:#171715;color:#fff;font:15px/1.5 Arial,sans-serif}textarea{min-height:128px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}button{min-height:48px;padding:12px 18px;border:1px solid #efc62f;background:#efc62f;color:#080808;font:800 13px Arial,sans-serif;cursor:pointer}button[value=ignore]{background:transparent;border-color:#666;color:#eee}button:hover{filter:brightness(1.13)}a{color:#efc62f;overflow-wrap:anywhere}.preview{aspect-ratio:16/10;background:#1a1a19;overflow:hidden;border:1px solid #393730;margin:0 0 16px}.preview img{width:100%;height:100%;object-fit:cover}.hint{color:#a49f97;font-size:14px;line-height:1.6}.original{display:inline-block;margin-top:8px}.tag{font-size:12px;color:#efc62f;font-weight:800;text-transform:uppercase;letter-spacing:.09em}@media(max-width:760px){.layout{grid-template-columns:1fr}.top h1{font-size:34px}}</style></head>
+<body><main><header class="top"><p class="eyebrow">Caravela Amarela / Moderação de imprensa</p><h1>Rever antes de publicar.</h1><p><strong>${escapeHtml(artistName)}</strong> · ${escapeHtml(statusNote)}</p></header>
+<div class="layout"><section class="panel"><h2>Conteúdo editorial</h2><form class="form" method="post" action="/api/news/review?id=${encodeURIComponent(id)}&amp;token=${encodeURIComponent(token)}"><label>Título<input name="title" maxlength="500" required value="${escapeHtml(candidate.title)}"></label><label>Publicação / fonte<input name="source" maxlength="180" value="${escapeHtml(candidate.source || "")}"></label><label>Endereço do artigo<input name="url" type="url" required value="${escapeHtml(candidate.url)}"></label><label>Excerto (para o site)<textarea name="excerpt" maxlength="1000">${escapeHtml(candidate.excerpt || "")}</textarea></label><label>Endereço da imagem<input name="image_url" type="url" value="${escapeHtml(candidate.image_url || "")}"></label><label>Data (ISO)<input name="published_at" value="${escapeHtml(candidate.published_at || "")}"></label><div class="actions"><button name="action" value="publish" type="submit">Aprovar e publicar</button><button name="action" value="ignore" type="submit">Ignorar notícia</button></div></form></section>
+<aside class="panel"><h2>Fonte e imagem</h2>${preview ? `<figure class="preview"><img alt="Imagem proposta para a notícia" src="${escapeHtml(preview)}" referrerpolicy="no-referrer"></figure>` : `<p class="hint">Esta notícia ainda não tem imagem. Podes inserir um URL no formulário.</p>`}<p class="tag">${escapeHtml(candidate.source || "Fonte por confirmar")}</p><p class="hint">A aprovação adiciona esta notícia ao arquivo dinâmico de imprensa. Não altera os três destaques editoriais existentes.</p><p><a class="original" href="${escapeHtml(candidate.url)}" target="_blank" rel="noopener noreferrer">Consultar notícia original ↗</a></p></aside></div></main></body></html>`;
 }
 
 async function handleNewsReview(request, env, url) {
@@ -712,6 +743,23 @@ export default {
 
     if (url.pathname === "/api/news/review") {
       return handleNewsReview(request, env, url);
+    }
+
+    if (url.pathname === "/api/news/status") {
+      if (request.method !== "GET") return json({ ok: false, error: "method_not_allowed" }, 405);
+      if (!env.NEWS_SCAN_TOKEN || request.headers.get("authorization") !== `Bearer ${env.NEWS_SCAN_TOKEN}`) {
+        return json({ ok: false, error: "unauthorized" }, 401);
+      }
+      const configured = !!(env.CONTACTS_DB && env.NEWS_REVIEW_SECRET && env.RESEND_API_KEY);
+      if (!env.CONTACTS_DB) return json({ ok: true, configured: false, database: false });
+      await ensureNewsDatabase(env.CONTACTS_DB);
+      const counts = await env.CONTACTS_DB.prepare(
+        "SELECT status, count(*) AS count FROM news_candidates GROUP BY status"
+      ).all();
+      const last = await env.CONTACTS_DB.prepare(
+        "SELECT value FROM news_scan_state WHERE key='last_news_scan'"
+      ).first();
+      return json({ ok: true, configured, last_scan: last?.value || null, counts: counts.results || [] });
     }
 
     if (url.pathname === "/api/news/scan") {

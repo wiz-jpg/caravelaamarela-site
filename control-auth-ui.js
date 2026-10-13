@@ -79,7 +79,18 @@
       });
     } catch { throw Error("Não foi possível comunicar com o servidor."); }
     let result;
-    try { result = await response.json(); } catch { throw Error("Resposta inválida do servidor."); }
+    try { result = await response.json(); }
+    catch {
+      // Cloudflare Access challenges and Worker runtime errors can return HTML.
+      // Never display their HTML or include request bodies, tokens or passwords.
+      const status = response.status;
+      if (status === 429) throw Error("temporarily_locked");
+      if (status >= 500) throw Error("Falha de execução no Cloudflare (HTTP " + status +
+        "). Não foi possível confirmar a operação. Consulta o estado da conta antes de repetir.");
+      if (status === 403 || status === 401) throw Error("O Cloudflare bloqueou o pedido (HTTP " + status +
+        "). Verifica o Access e volta a entrar.");
+      throw Error("O servidor devolveu uma resposta inesperada (HTTP " + status + ").");
+    }
     if (!response.ok) throw Error(result.error || "Erro " + response.status);
     return result;
   }

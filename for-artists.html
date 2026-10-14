@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&amp;family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="/styles.css?v=21" rel="stylesheet"/>
+<link href="/styles.css?v=22" rel="stylesheet"/>
 <meta content="website" property="og:type"/>
 <meta content="Caravela Amarela" property="og:site_name"/>
 <meta content="Para Artistas | Caravela Amarela" property="og:title"/>
@@ -50,11 +50,28 @@
 <button aria-controls="mobile-nav" aria-expanded="false" class="nav-toggle" data-nav-toggle="" type="button"><span></span><span></span><span class="sr-only">Menu</span></button>
 </div>
 </div>
-<nav class="mobile-nav" data-mobile-nav="" id="mobile-nav"><a href="/#roster">Roster</a><a href="/for-artists">Para Artistas</a><a class="nav-book" data-booking-open="" href="/#contact">Pedir booking</a></nav></header><main><section class="artists-hero artist-service-hero"><img alt="" class="hero-media" fetchpriority="high" src="/assets/media/for-artists-services-1200.webp"/><div class="hero-overlay"></div>
-<div class="shell artist-service-layout">
-<div class="artist-service-intro"><p class="eyebrow">Para artistas</p><h1>A tua música. <span>O caminho até ao público.</span></h1><p class="hero-lead">O booking certo para projetos preparados. Imagem e comunicação para quem precisa de dar o próximo passo.</p><a class="artist-hero-direct" href="#artist-form">Apresentar o projeto <span aria-hidden="true">↗</span></a></div>
-<div aria-label="Serviços para artistas" class="artist-service-cards"><article class="artist-service-card service-booking"><img alt="" class="service-card-image" decoding="async" loading="eager" src="/assets/media/gallery-wild-stage-900.webp"/><div class="service-card-content"><p class="service-eyebrow">01 / Representação seletiva</p><h2>Mais palcos, com critério.</h2><p class="service-description">Se já tens repertório, identidade e um espetáculo preparado, procuramos datas que façam sentido para o teu projeto. Booking com acompanhamento e negociação, sem promessas vazias.</p><div class="service-tags"><span>Booking</span><span>Representação</span><span>Estratégia ao vivo</span></div><a class="service-action" href="#artist-form">Propor uma parceria <span aria-hidden="true">↗</span></a></div></article><article class="artist-service-card service-media"><img alt="" class="service-card-image" decoding="async" loading="eager" src="/assets/media/wildchains-release-800.webp"/><div class="service-card-content"><p class="service-eyebrow">02 / Serviços por projeto</p><h2>A tua música merece ser bem apresentada.</h2><p class="service-description">Não precisas de estar no nosso roster para trabalhar connosco. Criamos EPKs, fotografias, identidades e materiais de comunicação à medida da fase e do orçamento de cada artista.</p><div class="service-tags"><span>EPK</span><span>Fotografia</span><span>Design</span><span>Press &amp; comunicação</span></div><a class="service-action" href="#artist-form">Pedir um orçamento <span aria-hidden="true">↗</span></a></div></article></div>
-</div></section>
+<nav class="mobile-nav" data-mobile-nav="" id="mobile-nav"><a href="/#roster">Roster</a><a href="/for-artists">Para Artistas</a><a class="nav-book" data-booking-open="" href="/#contact">Pedir booking</a></nav></header><main><section class="artist-options-section" aria-label="Serviços para artistas">
+  <div class="shell artist-options-grid">
+    <a class="artist-option-card artist-option-booking" href="#artist-form" data-artist-path="booking">
+      <img src="/assets/media/wild-stage-forum-800.webp" alt="" class="artist-option-photo" fetchpriority="high" decoding="async"/>
+      <span class="artist-option-copy">
+        <span class="artist-option-number">01 / Booking</span>
+        <strong class="artist-option-title">Booking e representação</strong>
+        <span class="artist-option-description">Procuramos as datas certas para projetos prontos para subir a palco.</span>
+        <span class="artist-option-action">Propor parceria <span aria-hidden="true">↗</span></span>
+      </span>
+    </a>
+    <a class="artist-option-card artist-option-materials" href="#artist-form" data-artist-path="materials">
+      <img src="/assets/media/wildchains-release-800.webp" alt="" class="artist-option-photo" fetchpriority="high" decoding="async"/>
+      <span class="artist-option-copy">
+        <span class="artist-option-number">02 / Serviços criativos</span>
+        <strong class="artist-option-title">Imagem e comunicação</strong>
+        <span class="artist-option-description">EPKs, fotografia, design e materiais para apresentar o teu projeto.</span>
+        <span class="artist-option-action">Pedir orçamento <span aria-hidden="true">↗</span></span>
+      </span>
+    </a>
+  </div>
+</section>
 
 
 <section class="artist-form-section section" id="artist-form"><div class="shell artist-form-grid">
@@ -63,10 +80,10 @@
 <h2>Mostra-nos o projeto.</h2>
 <p>Links primeiro. Contexto depois. Nós percebemos o enquadramento.</p>
 </div>
-<form class="artist-form" id="artistContactForm"><div class="form-row"><label>Nome artístico<input id="artistName" maxlength="160" name="artistName" placeholder="Nome do projeto" required=""/></label><label>Email<input autocomplete="email" id="artistEmail" maxlength="254" name="contactEmail" placeholder="email@exemplo.com" required="" type="email"/></label></div><div class="form-row"><label>O que procuras?<select id="artistRequest" name="request" required=""><option value="">Selecionar</option><option>Representação / Booking</option><option>EPK / Press Kit</option><option>Fotografia</option><option>Design / Artwork</option><option>Materiais de lançamento</option><option>Outro</option></select></label><label>Links<input id="artistLinks" maxlength="4000" name="links" placeholder="Spotify, YouTube, Instagram, website…" required=""/></label></div><label class="full-field">Mensagem <span class="optional">opcional</span><textarea id="artistMessage" maxlength="20000" name="message" placeholder="Diz-nos em que fase estás e o que precisas." rows="4"></textarea></label><p class="form-privacy">Ao enviar, os dados serão usados apenas para responder ao pedido e guardados até 12 meses.</p><p aria-live="polite" class="form-status" data-form-status="" role="status"></p><button class="btn primary" type="submit">Enviar projeto</button></form>
+<form class="artist-form" id="artistContactForm"><div class="form-row"><label>Nome artístico<input id="artistName" maxlength="160" name="artistName" placeholder="Nome do projeto" required=""/></label><label>Email<input autocomplete="email" id="artistEmail" maxlength="254" name="contactEmail" placeholder="email@exemplo.com" required="" type="email"/></label></div><div class="form-row"><label>O que procuras?<select id="artistRequest" name="request" required=""><option value="">Selecionar</option><option>Representação / Booking</option><option>Imagem e comunicação</option><option>EPK / Press Kit</option><option>Fotografia</option><option>Design / Artwork</option><option>Materiais de lançamento</option><option>Outro</option></select></label><label>Links<input id="artistLinks" maxlength="4000" name="links" placeholder="Spotify, YouTube, Instagram, website…" required=""/></label></div><label class="full-field">Mensagem <span class="optional">opcional</span><textarea id="artistMessage" maxlength="20000" name="message" placeholder="Diz-nos em que fase estás e o que precisas." rows="4"></textarea></label><p class="form-privacy">Ao enviar, os dados serão usados apenas para responder ao pedido e guardados até 12 meses.</p><p aria-live="polite" class="form-status" data-form-status="" role="status"></p><button class="btn primary" type="submit">Enviar projeto</button></form>
 </div></section></main><footer class="site-footer"><div class="shell footer-main">
 <div class="footer-brand"><a aria-label="Caravela Amarela" class="footer-symbol" href="/"><img alt="" height="256" src="/assets/caravela-symbol.webp" width="256"/></a></div>
 <div class="footer-contact"><a class="footer-email" href="mailto:booking@caravelaamarela.com">booking@caravelaamarela.com</a><div class="footer-people"><a href="tel:+351935449151"><span>Booking</span><strong>João Abreu</strong><small>+351 935 449 151</small></a><a href="tel:+351934751993"><span>Press, comunicação e booking</span><strong>Sérgio Diogo</strong><small>+351 934 751 993</small></a></div><a aria-label="Instagram da Caravela Amarela" class="footer-instagram" href="https://www.instagram.com/caravela.amarela/" rel="noopener noreferrer" target="_blank"><svg aria-hidden="true" viewbox="0 0 24 24"><rect height="18" rx="5" width="18" x="3" y="3"></rect><circle cx="12" cy="12" r="4.25"></circle><circle class="icon-fill" cx="17.4" cy="6.7" r="1"></circle></svg><span>@caravela.amarela</span></a></div>
-</div><div class="shell footer-bottom"><nav aria-label="Footer"><a href="/#roster">Roster</a><a href="/for-artists">Para Artistas</a><button data-booking-open="" type="button">Pedir booking</button></nav><small>© <span data-year=""></span> Caravela Amarela</small></div></footer><script defer="" src="/script.js?v=21"></script>
+</div><div class="shell footer-bottom"><nav aria-label="Footer"><a href="/#roster">Roster</a><a href="/for-artists">Para Artistas</a><button data-booking-open="" type="button">Pedir booking</button></nav><small>© <span data-year=""></span> Caravela Amarela</small></div></footer><script defer="" src="/script.js?v=22"></script>
 </body>
 </html>

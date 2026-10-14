@@ -574,5 +574,52 @@ function initializeMobileBookingAction() {
 }
 
 initializeAgenda();
-loadApprovedNews().finally(initializeAutoRails);
+// News is now curated manually in the HTML. No automatic publication, duplicate
+// carousel clones or background feed. Horizontal scrolling remains available.
+// Reactivate the old workflow only following an explicit editorial decision.
 initializeMobileBookingAction();
+
+
+// V20 — stage cards: hover on pointer devices, click/keyboard on all devices.
+// Only the reveal itself contains external article links; the surface button
+// never navigates away from the artist profile.
+(function initializeStageSpotlights() {
+  const cards = [...document.querySelectorAll('[data-stage-card]')];
+  if (!cards.length) return;
+  function close(card) {
+    card.classList.remove('is-open');
+    card.querySelector('.stage-toggle')?.setAttribute('aria-expanded', 'false');
+    card.querySelector('.stage-reveal')?.setAttribute('aria-hidden', 'true');
+  }
+  cards.forEach((card) => {
+    const toggle = card.querySelector('.stage-toggle');
+    const detail = card.querySelector('.stage-reveal');
+    if (!toggle || !detail) return;
+    toggle.addEventListener('click', () => {
+      const opening = !card.classList.contains('is-open');
+      cards.forEach(close);
+      if (opening) {
+        card.classList.add('is-open');
+        toggle.setAttribute('aria-expanded', 'true');
+        detail.setAttribute('aria-hidden', 'false');
+      }
+    });
+    card.addEventListener('mouseenter', () => {
+      if (!window.matchMedia('(hover: hover)').matches) return;
+      detail.setAttribute('aria-hidden', 'false');
+    });
+    card.addEventListener('mouseleave', () => {
+      if (!card.classList.contains('is-open')) detail.setAttribute('aria-hidden', 'true');
+    });
+    card.addEventListener('focusin', () => detail.setAttribute('aria-hidden', 'false'));
+    card.addEventListener('focusout', (event) => {
+      if (!card.contains(event.relatedTarget) && !card.classList.contains('is-open')) detail.setAttribute('aria-hidden', 'true');
+    });
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') cards.forEach(close);
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-stage-card]')) cards.forEach(close);
+  });
+})();

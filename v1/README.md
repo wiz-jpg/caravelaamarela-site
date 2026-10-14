@@ -1,3 +1,39 @@
+# Caravela Amarela — V20 (pré-visualização, sem publicação)
+
+## Mudanças nesta versão
+
+- PT / EN / ES: a secção **Percurso / Palcos que contam** surge agora antes do bloco **Feitos para deixar marca**.
+- WILDCHAINS: cinco cartões fotográficos verticais em colunas; Devil of a Woman: três cartões fotográficos, com imagens distintas. As imagens de Faial da Terra e Tomate Blues **são provisórias e não representam esses concertos**.
+- Os cartões abrem contexto e ligações para cobertura efetiva ao passar o rato, tocar ou usar teclado. A ligação só é chamada de *notícia sobre a atuação* onde existe fonte diretamente associada; noutros casos identifica-se menção na imprensa, registo de concertos ou ausência de artigo.
+- Devil of a Woman: o bloco **FEITOS PARA DEIXAR MARCA** passou a usar o mesmo título dos WILDCHAINS (com traduções EN/ES equivalentes).
+- Tipografia global revista: pesos, tamanhos e alinhamentos mais equilibrados sem substituir a família Archivo / Instrument Sans nem o sistema de cores.
+- Monitor de notícias V19 mantido: recolha RSS, Cloudflare D1, email com ligação assinada e publicação apenas depois de revisão. Na V20 verifica feeds PT / ES / EN, processa metadados em pequenos lotes, melhora a página de revisão e disponibiliza um endpoint de diagnóstico autenticado.
+- A notícia aprovada é inserida no **arquivo de imprensa** da página de artista; a homepage pode apresentar notícias aprovadas. Os três artigos destacados de cada artista continuam curados manualmente.
+
+**Importante:** este ZIP não configura sozinho a Cloudflare; o monitor de notícias só fica operacional quando os bindings e secrets referidos abaixo estiverem ativos no ambiente de produção. Não houve deploy nem alteração do site público.
+
+## Imagens dos Devil of a Woman a substituir mais tarde
+
+| Cartão | Imagem provisória | Substituir por |
+| --- | --- | --- |
+| CA Vilar de Mouros | `news-devil-vilar.webp` (imagem do arquivo existente) | Fotografia oficial da atuação no palco principal |
+| Faial da Terra Blues | `devil-caldas.webp` | Fotografia da atuação nos Açores |
+| Tomate Blues | `devil-levs.webp` | Fotografia do concerto no festival em Sevilha |
+
+As imagens são trocadas nas seis páginas de artista (PT, EN, ES). Para uma futura V21, pode passar-se para um catálogo JSON único, sem duplicar essas referências.
+
+## Verificar o monitor de notícias
+
+Configurar em Cloudflare Pages: `CONTACTS_DB` (binding D1); `RESEND_API_KEY`, `NEWS_REVIEW_SECRET` e `NEWS_SCAN_TOKEN` (secrets); `PUBLIC_SITE_URL=https://caravelaamarela.com` (variável).
+
+Depois de publicar, o scan acontece no máximo a cada 12 horas quando `/api/news` recebe tráfego, ou através de um cron externo que faz `POST /api/news/scan` com `Authorization: Bearer <NEWS_SCAN_TOKEN>`. O cron externo é a via fiável se pretender deteção regular mesmo sem visitas ao site. A integração não publica as peças encontradas sem aprovação.
+
+**Diagnóstico novo:** `GET /api/news/status` com o mesmo `Authorization: Bearer <NEWS_SCAN_TOKEN>` devolve `configured`, `last_scan` e contagens por estado, sem revelar títulos nem excertos. Não coloques nenhum destes segredos no código JavaScript ou em páginas públicas.
+
+As candidatas enviam uma notificação para `NEWS_NOTIFY_TO` ou, por defeito, `booking@caravelaamarela.com`. Cada email contém ligação individual para **Aprovar e publicar** ou **Ignorar**; o ecrã permite editar título, imagem, resumo, URL e data.
+
+---
+
 # Caravela Amarela — site oficial
 
 Site estático para Cloudflare Pages, em português, inglês e espanhol.
@@ -127,3 +163,14 @@ Uma frequência de duas vezes por dia é suficiente. O handler também inclui `s
 - Espanhol: `/es/`, `/es/wildchains`, `/es/devil-of-a-woman`, `/es/para-artistas`
 
 Documentação oficial relevante: [Cloudflare Pages Advanced Mode](https://developers.cloudflare.com/pages/functions/advanced-mode/), [D1 bindings](https://developers.cloudflare.com/pages/functions/bindings/#d1-databases) e [Email Sending REST API](https://developers.cloudflare.com/email-service/api/send-emails/rest-api/).
+
+
+## V21 — edição editorial e notícias assistidas (13/10/2026)
+
+- A atualização de notícias é **manual, com validação editorial**. O JavaScript já não consulta automaticamente o feed de notícias nem clona o carrossel. O código experimental da API permanece, mas não é usado pela interface nesta versão.
+- Nunca duplicar notícias na mesma página por URL ou, mais importante, por acontecimento. Cada entrevista autónoma conta como uma peça própria; anúncio e cobertura do mesmo concerto contam como **um único acontecimento**.
+- Em atualizações futuras, preservar as entradas aprovadas; acrescentar apenas eventos novos após verificação da fonte e da data. A exceção é a eliminação de duplicados expressamente sinalizados.
+- Entradas V21: MusicFest (entrevista 12/10/2026), Música Total (entrevista 10/10/2026), Livraria Lello (anúncio 16/10/2026) e Rádio EuroPub (entrevista 16/09/2026). No Tomate Blues não se adicionou segunda peça porque a notícia de confirmação já existia.
+- Cartões de serviços integrados no hero de Para Artistas; retiradas as secções autónomas «À deriva?» e «Trabalho que já existe».
+- Tipografia: mesmas famílias; redução de compressão e de maiúsculas selecionadas; composição editorial da secção de imprensa.
+- Este pacote não foi publicado; testar e validar em ambiente de desenvolvimento antes de produção.

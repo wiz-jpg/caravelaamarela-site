@@ -1,3 +1,11 @@
+# V22 — ajustes de navegação e Para Artistas (13/10/2026)
+
+- A página Para Artistas começa diretamente com duas opções, sem frase hero nem texto introdutório: **Booking e representação** e **Imagem e comunicação**.
+- Os dois cartões fotográficos têm descrição mínima, são inteiramente clicáveis e pré-selecionam o serviço correto no formulário. Traduções PT/EN/ES incluídas.
+- A secção **Conquistas em curso** mantém o tamanho visual dos cartões, apresenta todas as notícias existentes (foi eliminada a regra que ocultava as entradas 7+), e permite percorrer continuamente para ambos os lados por toque/swipe, arrasto do rato, trackpad, setas ou teclado.
+- O carrossel cria cópias DOM apenas para garantir o efeito de continuidade: as entradas editoriais mantêm-se únicas, sem alterar títulos, fontes ou URLs. Não existe publicação automática nem movimento automático.
+- Sem publicação, sem merge e sem alterações no repositório remoto. Versão de revisão.
+
 # Caravela Amarela — V20 (pré-visualização, sem publicação)
 
 ## Mudanças nesta versão

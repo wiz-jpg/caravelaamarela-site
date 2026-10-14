@@ -398,6 +398,134 @@ function initializeAutoRails() {
   });
 }
 
+// Artist service tiles take visitors straight to the relevant request.
+document.querySelectorAll("[data-artist-path]").forEach((card) => {
+  card.addEventListener("click", () => {
+    const select = document.getElementById("artistRequest");
+    if (!select) return;
+    const isBooking = card.dataset.artistPath === "booking";
+    const text = isBooking
+      ? (isPortuguese ? "Representação / Booking" : isSpanish ? "Representación / Booking" : "Representation / Booking")
+      : (isPortuguese ? "Imagem e comunicação" : isSpanish ? "Imagen y comunicación" : "Creative & press materials");
+    const match = [...select.options].find((option) => option.textContent.trim() === text);
+    if (match) select.value = match.value;
+  });
+});
+
+// V22: a news carousel that can be dragged and swiped in either direction.
+// Only the middle group is editorial content; the outer groups are visual
+// buffers for seamless looping, hidden from assistive technology.
+function initializeLoopingNewsRails() {
+  document.querySelectorAll(".home-current [data-rail]").forEach((rail) => {
+    const originalCards = [...rail.querySelectorAll(":scope > .press-card")];
+    if (originalCards.length < 2) return;
+
+    const main = document.createElement("div");
+    main.className = "press-motion-group";
+    main.append(...originalCards);
+    const duplicate = () => {
+      const group = main.cloneNode(true);
+      group.setAttribute("aria-hidden", "true");
+      group.querySelectorAll("a,button").forEach((node) => node.tabIndex = -1);
+      return group;
+    };
+    const before = duplicate();
+    const after = duplicate();
+    rail.append(before, main, after);
+    rail.classList.add("is-loop-ready");
+    rail.setAttribute("aria-label", isPortuguese ? "Notícias, deslizar para percorrer" : isSpanish ? "Noticias, desliza para recorrer" : "News, swipe to browse");
+    rail.tabIndex = 0;
+
+    const gap = () => Number.parseFloat(getComputedStyle(rail).columnGap) || 14;
+    const span = () => main.getBoundingClientRect().width + gap();
+    const step = () => originalCards[0].getBoundingClientRect().width + gap();
+    const center = () => { rail.scrollLeft = span(); };
+    center();
+
+    let isAdjusting = false;
+    const wrap = () => {
+      if (isAdjusting) return;
+      const width = span();
+      if (width <= 0) return;
+      const x = rail.scrollLeft;
+      let next = x;
+      if (x < width * .55) next += width;
+      else if (x > width * 1.45) next -= width;
+      if (next !== x) {
+        isAdjusting = true;
+        rail.scrollLeft = next;
+        if (drag.active) drag.startScroll += next - x;
+        isAdjusting = false;
+      }
+    };
+    rail.addEventListener("scroll", wrap, { passive: true });
+
+    const move = (direction) => {
+      rail.scrollBy({ left: direction * step(), behavior: reducedMotion ? "instant" : "smooth" });
+    };
+    const section = rail.closest(".home-current");
+    section?.querySelector("[data-news-prev]")?.addEventListener("click", () => move(-1));
+    section?.querySelector("[data-news-next]")?.addEventListener("click", () => move(1));
+    rail.addEventListener("keydown", (event) => {
+      if (event.target !== rail) return;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        move(event.key === "ArrowLeft" ? -1 : 1);
+      }
+    });
+
+    const drag = { active: false, startX: 0, startScroll: 0, moved: false };
+    let suppressClick = false;
+    rail.addEventListener("dragstart", (event) => event.preventDefault());
+    rail.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "mouse" || event.button !== 0) return;
+      drag.active = true;
+      drag.moved = false;
+      drag.startX = event.clientX;
+      drag.startScroll = rail.scrollLeft;
+    });
+    window.addEventListener("pointermove", (event) => {
+      if (!drag.active) return;
+      const distance = event.clientX - drag.startX;
+      if (!drag.moved && Math.abs(distance) > 6) {
+        drag.moved = true;
+        rail.classList.add("is-dragging");
+      }
+      if (!drag.moved) return;
+      event.preventDefault();
+      rail.scrollLeft = drag.startScroll - distance;
+      wrap();
+    }, { passive: false });
+    const endDrag = () => {
+      if (!drag.active) return;
+      suppressClick = drag.moved;
+      drag.active = false;
+      rail.classList.remove("is-dragging");
+      // A drag must not accidentally open a news link. Do not suppress
+      // subsequent intentional clicks if the pointer ends outside the rail.
+      setTimeout(() => { suppressClick = false; }, 0);
+    };
+    window.addEventListener("pointerup", endDrag);
+    window.addEventListener("pointercancel", endDrag);
+    rail.addEventListener("click", (event) => {
+      if (suppressClick) {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressClick = false;
+      }
+    }, true);
+
+    let widthAtLastLayout = span();
+    window.addEventListener("resize", () => {
+      const width = span();
+      if (!width || Math.abs(width - widthAtLastLayout) < 1) return;
+      const relativeOffset = (rail.scrollLeft - widthAtLastLayout) / widthAtLastLayout;
+      rail.scrollLeft = width * (1 + relativeOffset);
+      widthAtLastLayout = width;
+    }, { passive: true });
+  });
+}
+
 function localizedValue(value) {
   if (value && typeof value === "object") return value[localeKey] || value.pt || Object.values(value)[0] || "";
   return value || "";
@@ -574,9 +702,9 @@ function initializeMobileBookingAction() {
 }
 
 initializeAgenda();
-// News is now curated manually in the HTML. No automatic publication, duplicate
-// carousel clones or background feed. Horizontal scrolling remains available.
-// Reactivate the old workflow only following an explicit editorial decision.
+// News remains manually curated. Visual carousel buffers are not additional
+// editorial stories; they only let visitors navigate continuously in both directions.
+initializeLoopingNewsRails();
 initializeMobileBookingAction();
 
 

@@ -191,10 +191,39 @@ function hint(holder,label,value){
 function badge(s,kind){
  return make("span",(choices[kind==="contacts"?"contact_policy":"stage"]||{})[s]||s,"cc-native-stage");
 }
+function contactCards(rows){
+ // Display grouping only: each archived identifier, revision and restriction survives.
+ // Press names may share a publisher but retain distinct editorial channels.
+ const cleanName=x=>lower(x).normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9]+/g," ").trim();
+ const output=[];
+ for(const record of rows){
+  const key=[record.kind,cleanName(record.name),cleanName(record.city),cleanName(record.country)].join("|");
+  const group=output.find(x=>{
+   if(x.key!==key)return false;
+   if(record.kind==="press")return true;
+   return (record.emails||[]).some(e=>(x.members[0].emails||[]).some(a=>lower(a)===lower(e)));
+  });
+  if(group)group.members.push(record);
+  else output.push({key,members:[record]});
+ }
+ return output.map(({members})=>{
+  if(members.length===1)return members[0];
+  const candidates=[...members].sort((a,b)=>
+   (Number(!!b.media_type)+Number(!!b.organizer)+Number(!!b.source_primary_email)+Number(!!b.revision))-
+   (Number(!!a.media_type)+Number(!!a.organizer)+Number(!!a.source_primary_email)+Number(!!a.revision)));
+  const row={...candidates[0],__members:members};
+  row.emails=[...new Set(members.flatMap(m=>m.emails||[]).map(lower).filter(Boolean))];
+  row.source_shared_email=members.some(x=>x.source_shared_email);
+  row.source_suppressed=members.some(x=>x.source_suppressed);
+  row.contact_policy=members.some(x=>x.contact_policy==="blocked")?"blocked":
+    members.every(x=>x.contact_policy==="allowed")?"allowed":"review";
+  return row;
+ });
+}
 function filtered(kind){
  const term=lower($("cc-native-"+kind+"-search").value);
  const filter=$("cc-native-"+kind+"-filter").value;
- return nativeRows(kind).filter(r=>{
+ const selected=nativeRows(kind).filter(r=>{
   if(kind==="contacts"){
    if(filter!=="all"&&r.contact_policy!==filter)return false;
    for(const [id,key] of [["cc-native-contact-type","kind"],["cc-native-contact-country","country"],["cc-native-contact-region","region"]]){
@@ -210,6 +239,7 @@ function filtered(kind){
   return !term||lower([r.name,r.city,r.emails?.join(" "),r.contact_name,r.artist,r.subject,
     r.contact_email,r.notes,r.next_step,r.owner].filter(Boolean).join(" ")).includes(term);
  });
+ return kind==="contacts"?contactCards(selected):selected;
 }
 function updateGeoFilters(){
  const rows=contactRows();
@@ -230,8 +260,9 @@ function render(kind){
  if(kind==="contacts"){
   const rows=contactRows();
   const saved=get(kind).length;
-  $("cc-native-contacts-summary").textContent=rows.length+" contactos disponíveis · "+
-   saved+" fichas operacionais guardadas · restantes do arquivo imutável.";
+  $("cc-native-contacts-summary").textContent=rows.length+" fichas preservadas · "+
+   all.length+" entidades apresentadas após agrupamento visual · "+saved+
+   " fichas operacionais. Os registos agrupados não foram fundidos.";
  }else{
   const due=get(kind).filter(x=>x.due_date&&x.due_date<=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())&&
     !["confirmed","declined","closed"].includes(x.stage)).length;
@@ -260,6 +291,8 @@ function render(kind){
    hint(card,"Origem",r.origin_label);
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
+   if(r.__members?.length)hint(card,"Fichas agrupadas",
+     r.__members.length+" registos históricos/operacionais apresentados em conjunto, sem fusão");
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
    const formPreferred=!!r.source_form_url&&/formul[aá]rio/i.test(r.source_channel_quality||"");
    if(formPreferred)hint(card,"Canal preferencial no arquivo","Formulário web (confirmar se continua ativo): "+r.source_form_url);
@@ -276,6 +309,10 @@ function render(kind){
    if(r.source_recommendation)hint(card,"Encaixe histórico",r.source_recommendation);
    if(r.source_suppressed)hint(card,"Restrição","Suprimido no arquivo: não contactar");
    if(r.source_shared_email)hint(card,"Contacto partilhado","Endereço usado por várias entidades: validar interlocutor");
+   if(r.__members?.length){
+    const kinds=[...new Set(r.__members.map(x=>x.media_type).filter(Boolean))];
+    if(kinds.length)hint(card,"Canais registados",kinds.join(" / "));
+   }
    if(r.relationship&&r.relationship!=="unknown")hint(card,"Relação",choices.relationship[r.relationship]);
    hint(card,"Próximo passo",r.next_step);
    hint(card,"Rever",r.review_date);
@@ -284,6 +321,16 @@ function render(kind){
   const actions=make("div",undefined,"cc-native-card-actions");
   const button=make("button",r.revision?"Atualizar":"Editar ficha","cc-neutral");
   button.type="button";button.onclick=()=>edit(kind,r);actions.append(button);
+  if(kind==="contacts"&&r.__members?.length){
+   const extra=make("details",undefined,"cc-contact-variants");
+   extra.append(make("summary","Rever as "+r.__members.length+" fichas originais"));
+   for(const original of r.__members){
+    const b=make("button","Editar "+original.name+
+      (original.media_type?" · "+original.media_type:"")+" · "+original.id.slice(0,7),"cc-neutral");
+    b.type="button";b.onclick=()=>edit("contacts",original);extra.append(b);
+   }
+   card.append(extra);
+  }
   if(kind==="contacts"){
    const b=make("button","Nova proposta","cc-neutral");b.type="button";
    b.onclick=()=>{window.CaravelaControlApp?.openView("booking");edit("booking",{
@@ -292,6 +339,25 @@ function render(kind){
        !((r.source_form_url||"")&&/formul[aá]rio/i.test(r.source_channel_quality||""))?
        (suggestedChannel(r)?.email||""):""
    });};actions.append(b);
+  }
+  if(kind==="contacts"&&r.revision&&!r.historical&&!r.origin_id){
+   const remove=make("button","Remover ficha de teste / duplicada","cc-neutral");
+   remove.type="button";remove.onclick=async()=>{
+    if(state.busy)return;
+    if(!window.confirm("Retirar a ficha nativa «"+r.name+"» do trabalho diário? O histórico fica guardado. Não remove entidades do arquivo."))return;
+    state.busy=true;remove.disabled=true;
+    try{
+     const res=await api("contacts","DELETE",{id:r.id,revision:r.revision});
+     const data=await res.json();
+     if(!res.ok)throw Error(({contact_has_dependencies:"Esta ficha está associada a propostas ou entidades. Retira as ligações primeiro.",
+       historical_contact_cannot_remove:"Os contactos históricos não podem ser removidos.",
+       revision_conflict:"Ficha alterada noutra sessão. Atualiza a página."})[data.error]||data.error||"Falha a remover ficha");
+     await load("contacts");
+     $("cc-native-contacts-status").textContent="Ficha retirada; revisões preservadas.";
+    }catch(error){$("cc-native-contacts-status").textContent=error.message}
+    finally{state.busy=false;remove.disabled=false}
+   };
+   actions.append(remove);
   }
   if(kind==="booking"&&r.revision&&r.stage!=="confirmed"){
     const remove=make("button","Remover proposta","cc-neutral");remove.type="button";

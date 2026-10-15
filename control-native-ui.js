@@ -811,7 +811,8 @@ function renderDashboard(){
  for(const row of state.actions){
   const due=row.next_action_iso||row.next_followup_iso;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(due||""))continue;
-  if(row.contact_policy==="blocked"||/não avançar|nao avancar|bloquead|não contactar|nao contactar/i.test(row.status||""))continue;
+  if(row.contact_policy==="blocked"||row.no_outreach||
+    /não avançar|nao avancar|bloquead|não contactar|nao contactar/i.test(row.status||""))continue;
   if(!/^(Enviado|Por contactar|Em conversa|Em negociação)$/i.test(row.status||""))continue;
   if(liveKeys.has(normalized(row.name)+"|"+normalized(row.artist)))continue;
   tasks.push({date:due,title:row.name+" · "+(row.artist||"projeto a confirmar"),
@@ -833,14 +834,19 @@ function renderDashboard(){
    click:()=>{window.CaravelaControlApp?.openView("partnerships");
      const search=$("cc-partners-search");if(search){search.value=p.name;search.dispatchEvent(new Event("input"))}}});
  }
- tasks.sort((a,b)=>{
-  const t=a.date.localeCompare(b.date);if(t)return t;
-  return (a.priority==="high"?-1:0)-(b.priority==="high"?-1:0);
- });
+ // Plan review-only work for the coming two weeks from genuinely old archived
+ // follow-ups. This is a recommendation, not a fabricated scheduled deadline.
+ const oldArchive=tasks.filter(x=>x.source==="arquivo"&&x.date<today);
+ oldArchive.sort((a,b)=>Number(b.priority==="high")-Number(a.priority==="high")||
+   b.date.localeCompare(a.date)||a.title.localeCompare(b.title,"pt-PT"));
+ oldArchive.slice(0,12).forEach(x=>{x.suggestedWeek="this"});
+ oldArchive.slice(12,24).forEach(x=>{x.suggestedWeek="next"});
+ tasks.sort((a,b)=>a.date.localeCompare(b.date)||
+   (a.priority==="high"?-1:0)-(b.priority==="high"?-1:0));
  const sections=[
-  {label:"Em atraso · verificar",description:"Prazos antigos requerem confirmar no Zoho ou no histórico antes de novo contacto.",test:x=>x.date<today},
-  {label:"Esta semana",description:"O que merece atenção até domingo.",test:x=>x.date>=today&&x.date<weekEnd},
-  {label:"Próxima semana",description:"Preparar sem esperar pela última hora.",test:x=>x.date>=weekEnd&&x.date<nextEnd}
+  {label:"Backlog em atraso · por revalidar",description:"Prazos históricos ainda sem triagem atribuída. Não pressupõem falta de resposta.",test:x=>x.date<today&&!x.suggestedWeek},
+  {label:"Esta semana · prioridades sugeridas",description:"Tarefas realmente agendadas e até 12 revisões antigas selecionadas automaticamente. Não são novos envios.",test:x=>(x.date>=today&&x.date<weekEnd)||x.suggestedWeek==="this"},
+  {label:"Próxima semana · preparação",description:"Prazos reais e até 12 revisões antigas propostas para a semana seguinte.",test:x=>(x.date>=weekEnd&&x.date<nextEnd)||x.suggestedWeek==="next"}
  ];
  const undated=active.filter(x=>!x.due_date);
  const stats=[["A rever",tasks.filter(sections[0].test).length],
@@ -858,8 +864,9 @@ function renderDashboard(){
   for(const entry of items.slice(0,16)){
    const action=make("button",undefined,"cc-native-dash-task");
    action.type="button";
-   action.append(make("strong",entry.title),make("span",entry.date+" · "+entry.note+
-    " · "+({arquivo:"Arquivo — por confirmar",contacto:"Contacto",booking:"Booking",parceria:"Parceria"}[entry.source]||entry.source)));
+   action.append(make("strong",entry.title),make("span",
+    (entry.suggestedWeek?"Triagem sugerida (prazo antigo "+entry.date+")":"Prazo "+entry.date)+
+    " · "+entry.note+" · "+({arquivo:"Arquivo — por confirmar",contacto:"Contacto",booking:"Booking",parceria:"Parceria"}[entry.source]||entry.source)));
    if(entry.date<today)action.classList.add("cc-native-overdue");
    action.onclick=entry.click;box.append(action);
   }

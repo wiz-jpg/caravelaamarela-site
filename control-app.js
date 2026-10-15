@@ -254,7 +254,7 @@
     $("cc-sidebar-role").textContent = ({admin:"Administrador",manager:"Gestor",viewer:"Consulta"})[user.role] || user.role;
     for (const button of side.querySelectorAll("[data-min-role]"))
       button.hidden = (rank[user.role] || 0) < (rank[button.dataset.minRole] || 3);
-    const adminOnly = ["vault-save","vault-backup","vault-r2-backup"];
+    const adminOnly = ["vault-save","vault-backup","vault-r2-backup","vault-native-export"];
     for (const id of adminOnly) if ($(id)) $(id).hidden = user.role !== "admin";
     openView("dashboard");
     if(user.role==="admin"){

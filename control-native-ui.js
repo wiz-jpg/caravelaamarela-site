@@ -725,6 +725,19 @@ function edit(kind,entry={}){
  const fields=kind==="contacts"?CONTACT_FIELDS:BOOKING_FIELDS;
  const grid=make("div",undefined,"cc-field-grid");
  for(const def of fields)editorField(grid,kind,def,entry);
+ if(kind==="booking"){
+  const artist=grid.querySelector('[name="artist"]'),commission=grid.querySelector('[name="commission_pct"]');
+  if(artist&&commission){
+   const suggest=()=>{
+    if(commission.value.trim())return;
+    if(/^(wildchains|devil of a woman)$/i.test(artist.value.trim()))commission.value="15";
+   };
+   artist.addEventListener("blur",suggest);
+   suggest();
+   const h=make("p","Roster principal: referência de comissão 15% sobre o cachet artístico. Confirma o acordo antes de guardar.","cc-lead");
+   grid.append(h);
+  }
+ }
  form.append(title,help,grid);
  const relationshipData=kind==="contacts"?contactRelationships(form,entry):null;
  const actions=make("div",undefined,"cc-actions");
@@ -962,6 +975,9 @@ function renderDashboard(){
   box.append(make("strong",label),make("p",belonging.filter(x=>!["declined","closed","confirmed"].includes(x.stage)).length+
    " negociações atuais · "+belonging.filter(x=>x.stage==="confirmed").length+
    " confirmadas · "+old.length+" ações no arquivo (a revalidar)"));
+  box.append(make("p",label==="WILDCHAINS"?
+   "Heavy / Alternative Rock · Festivais de dimensão relevante, Espanha/França e Japão 2027. Booking Caravela: 15%.":
+   "Blues Rock · Festivais rock/blues e circuito PT/ES. Double bills apenas com encaixe artístico e logístico. Booking Caravela: 15%.","cc-lead"));
   const btn=make("button","Abrir booking","cc-neutral");btn.type="button";btn.onclick=()=>window.CaravelaControlApp?.openView("booking");
   box.append(btn);artistSection.append(box);
  }

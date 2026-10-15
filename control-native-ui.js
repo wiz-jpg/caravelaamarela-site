@@ -17,6 +17,8 @@ const BOOKING_FIELDS=[
   ["artist","Artista","text",true],["subject","Proposta / evento","text",true],
   ["stage","Estado","select",true],["priority","Prioridade","select",true],
   ["contact_email","Email operacional","email"],["fee_amount","Cachet (€)","number"],
+  ["commission_pct","Comissão acordada (%)","number"],
+  ["event_date","Data prevista do concerto","date"],
   ["fee_note","Notas de valor / comissão","text"],
   ["conditions","Condições / deslocação / alojamento","textarea"],
   ["last_contact_date","Último contacto comprovado","date"],
@@ -180,6 +182,9 @@ function render(kind){
    hint(card,"Próximo passo",r.next_step);
    hint(card,"Rever",r.due_date||"Sem prazo");
    hint(card,"Cachet",r.fee_amount===null?"Não definido":Number(r.fee_amount).toLocaleString("pt-PT")+" €");
+   if(r.commission_pct!==null&&r.commission_pct!==undefined&&r.fee_amount!==null)
+    hint(card,"Comissão estimada",Number(r.fee_amount*r.commission_pct/100).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+" ("+r.commission_pct+"%) · ainda não recebida");
+   hint(card,"Data do concerto",r.event_date);
    hint(card,"Responsável",r.owner);
    hint(card,"Evidência",(choices.evidence_type[r.evidence_type]||"")+" · "+(r.evidence_reference||"não referenciada"));
    hint(card,"Origem",r.origin_label);
@@ -229,7 +234,10 @@ function renderHistory(){
 const history=make("section",undefined,"cc-native-history");
 history.id="cc-native-booking-history-wrap";
 history.innerHTML='<h2>Ações do arquivo</h2><label>Pesquisar ações originais<input id="cc-native-history-search" type="search" placeholder="Entidade, artista, estado..."></label><div id="cc-native-booking-history"></div>';
-bookingView.querySelector("#cc-native-booking")?.after(history);
+const historyToggle=make("details",undefined,"cc-archive-toggle");
+historyToggle.innerHTML='<summary>Ações importadas <small>Consultar ou retomar dados antigos</small></summary>';
+historyToggle.append(history);
+bookingView.querySelector("#cc-native-booking")?.after(historyToggle);
 $("cc-native-history-search").oninput=renderHistory;
 function editorField(parent,kind,def,current){
  const [key,label,type,required]=def;
@@ -247,7 +255,7 @@ function editorField(parent,kind,def,current){
  field.id=box.htmlFor;field.name=key;field.required=!!required;
  if(type==="number"){field.min="0";field.max="10000000";field.step="0.01"}
  if(key==="emails")field.value=(current.emails||[]).join(", ");
- else if(key==="fee_amount")field.value=current.fee_amount===null||current.fee_amount===undefined?"":current.fee_amount;
+ else if(key==="fee_amount"||key==="commission_pct")field.value=current[key]===null||current[key]===undefined?"":current[key];
  else field.value=current[key]??({
    kind:"venue",contact_policy:"review",stage:"research",priority:"medium",evidence_type:"none"
  }[key]||"");
@@ -280,6 +288,7 @@ function edit(kind,entry={}){
    record.source_label=entry.source_label||"Registo manual";
   }else{
    const money=record.fee_amount;record.fee_amount=money===""?null:Number(money);
+   record.commission_pct=record.commission_pct===""?null:Number(record.commission_pct);
    record.currency="EUR";record.origin_label=entry.origin_label||"Registo manual";
   }
   const id=entry.id,revision=entry.revision;

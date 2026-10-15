@@ -147,11 +147,11 @@ export async function handleControl(request,env,url,zohoReader) {
   const partnershipRoute=route==="partnerships"&&
     (request.method==="GET"||request.method==="POST"||request.method==="PATCH");
   if(!hasAdmin&&!cron&&!limitedReads.has(route)&&
-     !(hasManager&&(syncRoutes.has(route)||partnershipRoute||nativeRoute)))
+     !(hasManager&&(syncRoutes.has(route)||partnershipRoute||nativeRoute||nativeArchiveRoute)))
     return reject("forbidden",403);
   if(route==="partnerships"&&!hasManager)return reject("forbidden",403);
   if(nativeRoute&&!hasManager)return reject("forbidden",403);
-  if(nativeArchiveRoute&&!hasAdmin)return reject("forbidden",403);
+  if(nativeArchiveRoute&&!hasManager)return reject("forbidden",403);
   if(nativeExportRoute&&!hasAdmin)return reject("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);

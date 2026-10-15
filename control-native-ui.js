@@ -123,6 +123,18 @@ function build(kind,heading){
   '<button type="button" class="cc-neutral cc-native-more" id="cc-native-'+kind+'-more" hidden>Mostrar mais</button>';
  root.querySelector("#cc-native-"+kind+"-new").onclick=()=>edit(kind);
  root.querySelector("#cc-native-"+kind+"-search").oninput=()=>{state.shown[kind]=kind==="contacts"?40:30;render(kind)};
+ if(kind==="contacts"){
+  const geo=make("div",undefined,"cc-native-geo");
+  geo.innerHTML='<label>Tipo de entidade <select id="cc-native-contact-type"><option value="all">Todos</option></select></label>'+
+    '<label>País <select id="cc-native-contact-country"><option value="all">Todos</option></select></label>'+
+    '<label>Região <select id="cc-native-contact-region"><option value="all">Todas</option></select></label>';
+  root.querySelector(".cc-native-tools").after(geo);
+  for(const [value,label] of Object.entries(choices.kind)){
+    const opt=make("option",label);opt.value=value;$("cc-native-contact-type")?.append(opt);
+  }
+  for(const id of ["cc-native-contact-type","cc-native-contact-country","cc-native-contact-region"])
+    root.querySelector("#"+id).onchange=()=>render("contacts");
+ }
  const filter=root.querySelector("#cc-native-"+kind+"-filter");
  const opts=kind==="contacts"?{all:"Todos",...choices.contact_policy}:{all:"Todos",due:"Follow-ups vencidos",...choices.stage};
  for(const [key,label] of Object.entries(opts)){const el=make("option",label);el.value=key;filter.append(el)}
@@ -145,7 +157,12 @@ function filtered(kind){
  const term=lower($("cc-native-"+kind+"-search").value);
  const filter=$("cc-native-"+kind+"-filter").value;
  return nativeRows(kind).filter(r=>{
-  if(kind==="contacts"&&filter!=="all"&&r.contact_policy!==filter)return false;
+  if(kind==="contacts"){
+   if(filter!=="all"&&r.contact_policy!==filter)return false;
+   for(const [id,key] of [["cc-native-contact-type","kind"],["cc-native-contact-country","country"],["cc-native-contact-region","region"]]){
+    const chosen=$(id)?.value||"all";if(chosen!=="all"&&r[key]!==chosen)return false;
+   }
+  }
   if(kind==="booking"){
    if(filter==="due"){
     const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
@@ -156,7 +173,19 @@ function filtered(kind){
     r.contact_email,r.notes,r.next_step,r.owner].filter(Boolean).join(" ")).includes(term);
  });
 }
+function updateGeoFilters(){
+ const rows=contactRows();
+ for(const [id,field] of [["cc-native-contact-country","country"],["cc-native-contact-region","region"]]){
+  const select=$(id);if(!select)return;
+  const prior=select.value;
+  const options=[...new Set(rows.map(x=>normalize(x[field])).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-PT"));
+  select.replaceChildren();const all=make("option",field==="country"?"Todos":"Todas");all.value="all";select.append(all);
+  for(const value of options){const option=make("option",value);option.value=value;select.append(option)}
+  select.value=options.includes(prior)?prior:"all";
+ }
+}
 function render(kind){
+ if(kind==="contacts")updateGeoFilters();
  const all=filtered(kind),list=$("cc-native-"+kind+"-list"),limit=state.shown[kind];
  list.replaceChildren();
  let count=0;

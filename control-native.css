@@ -248,3 +248,5 @@
 .cc-partner-stage--negotiating,.cc-partner-stage--reply_reported{color:#f6d587;background:#403521;border-color:#9a8044}
 .cc-partner-stage--sent_verified,.cc-partner-stage--contact_reported{color:#d3deeb;background:#2a3747;border-color:#617589}
 .cc-partner-stage--paused,.cc-partner-stage--closed{color:#b5bfcc;background:#2d3139;border-color:#5b6571}
+
+.cc-partner-stage--declined{color:#f5aca8;background:#412627;border-color:#ab5b5c}

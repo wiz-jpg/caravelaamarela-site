@@ -708,6 +708,50 @@ window.addEventListener("caravela-crm-imported",event=>{
  updateGeoFilters();
  render("contacts");render("booking");renderDashboard();
 });
+window.addEventListener("caravela-control-contact-action",event=>{
+ const action=event.detail?.action;
+ window.CaravelaControlApp?.openView("contacts");
+ if(action==="open"){
+  const contact=contactRows().find(x=>x.id===event.detail?.id);
+  if(contact)edit("contacts",contact);
+  return;
+ }
+ const addr=String(event.detail?.email||"").trim().toLowerCase();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr))return;
+ if(action==="new"){
+  edit("contacts",{name:"",kind:"other",emails:[addr],country:"",city:"",
+   contact_policy:"review",relationship:"unknown",
+   source_label:"Sugestão pendente — endereço observado nos metadados Zoho",
+   notes:"A categoria, entidade e autorização de contacto exigem validação."});
+  return;
+ }
+ if(action!=="attach")return;
+ const panel=$("cc-native-contacts-editor");panel.hidden=false;panel.replaceChildren();
+ const container=make("div",undefined,"cc-native-form");
+ container.append(make("h3","Associar email a uma entidade existente"),
+  make("p","Seleciona uma entidade pelo nome. O endereço só será acrescentado quando guardares a ficha; não valida nem autoriza o envio.","cc-lead"));
+ const search=make("input");search.type="search";search.placeholder="Pesquisar entidade pelo nome, cidade ou país";
+ search.setAttribute("aria-label","Pesquisar entidade para associação");
+ const matches=make("div",undefined,"cc-review-matches");
+ const refresh=()=>{
+  const q=lower(search.value);matches.replaceChildren();
+  if(q.length<2){matches.append(make("p","Escreve pelo menos dois caracteres para procurar.","cc-lead"));return}
+  const found=contactRows().filter(x=>lower([x.name,x.city,x.country].join(" ")).includes(q)).slice(0,14);
+  if(!found.length)matches.append(make("p","Nenhuma entidade encontrada. Não cries duplicados sem confirmar.","cc-lead"));
+  for(const x of found){
+   const button=make("button",x.name+(x.city?" · "+x.city:""),"cc-neutral");button.type="button";
+   button.onclick=()=>{
+    if((x.emails||[]).includes(addr)){edit("contacts",x);return}
+    if((x.emails||[]).length>=15){matches.replaceChildren(make("p","A ficha atingiu o limite de endereços. Revê antes de alterar.","cc-lead"));return}
+    edit("contacts",{...x,emails:[...(x.emails||[]),addr]});
+   };matches.append(button);
+  }
+ };
+ search.oninput=refresh;
+ const cancel=make("button","Cancelar","cc-neutral");cancel.type="button";cancel.onclick=()=>{panel.hidden=true;panel.replaceChildren()};
+ container.append(search,matches,cancel);panel.append(container);refresh();
+ panel.scrollIntoView({behavior:"smooth",block:"start"});search.focus();
+});
 window.addEventListener("caravela-control-signed-out",()=>{
  archiveLoaded=false;archiveBusy=false;
  state.saved={contacts:[],booking:[]};state.historical=[];state.actions=[];

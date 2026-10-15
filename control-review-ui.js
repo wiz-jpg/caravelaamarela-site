@@ -18,7 +18,13 @@
  const caveats=make("p","A sincronização do Zoho atualiza somente remetentes, destinatários e datas: assuntos e texto dos emails ainda não são interpretados. Uma mensagem recebida não significa interesse confirmado.","cc-lead");
  box.append(head,status,metrics,content,caveats);
  const native=document.getElementById("cc-native-contacts");
- if(native)native.before(box);else container.append(box);
+ const originalReview=container.querySelector(".cc-contact-triage");
+ if(originalReview){
+  const archived=document.createElement("details");archived.className="cc-archive-toggle";
+  archived.append(make("summary","Revisão manual anterior · prazos e relações já registadas"));
+  originalReview.before(archived);archived.append(originalReview);
+  archived.before(box);
+ }else if(native)native.before(box);else container.append(box);
  let busy=false,loaded=false;
  const date=ms=>ms?new Date(ms).toLocaleDateString("pt-PT",{day:"2-digit",month:"short",year:"numeric"}):"sem data confirmada";
  const action=(payload)=>window.dispatchEvent(new CustomEvent("caravela-control-contact-action",{detail:payload}));

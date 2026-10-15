@@ -20,13 +20,13 @@
     '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Início</span></button>' +
     '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking</span></button>' +
     '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
-    '<button type="button" data-view="communications" data-min-role="manager"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações</span></button>' +
     '<button type="button" data-view="finance" data-min-role="manager"><span class="cc-nav-symbol">€</span><span class="cc-nav-text">Finanças</span></button>' +
     '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
     '<div class="cc-nav-label cc-nav-label-spaced">Apoio</div>' +
     '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
     '<button type="button" data-view="guide"><span class="cc-nav-symbol">?</span><span class="cc-nav-text">Como usar</span></button>' +
     '<details class="cc-nav-admin" data-min-role="admin"><summary><span class="cc-nav-symbol">⚙</span><span class="cc-nav-text">Administração</span></summary>' +
+    '<button type="button" data-view="communications" data-min-role="admin"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações · Zoho</span></button>' +
     '<button type="button" data-view="sources" data-min-role="admin"><span class="cc-nav-symbol">▥</span><span class="cc-nav-text">Dados e backups</span></button>' +
     '<button type="button" data-view="team" data-min-role="admin"><span class="cc-nav-symbol">♙</span><span class="cc-nav-text">Equipa e acessos</span></button></details></nav>' +
     '<div class="cc-side-bottom"><div class="cc-role" id="cc-sidebar-role"></div>' +
@@ -90,7 +90,7 @@
   actionRow.innerHTML =
     '<button type="button" class="cc-primary" data-open="booking">Abrir booking</button>' +
     '<button type="button" class="cc-neutral" data-open="contacts">Pesquisar contactos</button>' +
-    '<button type="button" class="cc-neutral" data-open="communications">Ver comunicações</button>';
+    '<button type="button" class="cc-neutral" data-open="finance">Ver finanças</button>';
   dashboard.appendChild(actionRow);
   const brief = document.createElement("div");
   brief.id = "cc-dashboard-brief";

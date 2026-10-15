@@ -994,6 +994,7 @@ function homeTaskCard(task){
  row.append(head);
  const info=make("p",task.note||"Verificar próximo passo","cc-home-task-info");
  row.append(info);
+ if(task.triageSuggested)row.append(make("small","Triagem sugerida esta semana — prazo histórico por verificar","cc-home-suggestion"));
  const owner=make("div",undefined,"cc-home-task-meta");
  owner.append(make("span","Responsável: "+(task.record?.owner||"Por atribuir")),
    make("span",task.date?"Prazo registado: "+task.date:"Sem prazo"));
@@ -1060,8 +1061,12 @@ function renderDashboard(){
  followups.sort(sorting);leads.sort(sorting);
  const followupOverdue=followups.filter(x=>x.date&&x.date<today);
  const followupSoon=followups.filter(x=>!x.date||x.date>=today);
- const newLate=leads.filter(x=>x.date&&x.date<today);
- const newWeek=leads.filter(x=>x.date&&x.date>=today&&x.date<endThisWeek);
+ const outstanding=leads.filter(x=>x.date&&x.date<today);
+ // A small batch of overdue prospects is suggested for triage this week, but
+ // their recorded deadline is never overwritten or represented as a new promise.
+ const suggested=outstanding.slice(0,8).map(x=>({...x,triageSuggested:true}));
+ const newLate=outstanding.slice(8);
+ const newWeek=[...leads.filter(x=>x.date&&x.date>=today&&x.date<endThisWeek),...suggested];
  const newFuture=leads.filter(x=>!x.date||x.date>=endThisWeek);
  const buckets=[
   {title:"Para follow-up",count:followups.length,

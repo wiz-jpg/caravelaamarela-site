@@ -145,7 +145,7 @@ async function listAll(db,kind){
     if(!validId(id))continue;
     try{
       const record=JSON.parse(event.evidence_json);
-      if(record?.deleted===true && kind==="booking"){map.delete(id);continue;}
+      if(record?.deleted===true && ["booking","contacts"].includes(kind)){map.delete(id);continue;}
       if(!validateNative(kind,record))continue;
       map.set(id,{id,...record,revision:event.id,updated_ms:event.created_ms});
     }catch{}
@@ -269,7 +269,7 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
     }catch{return fail("native_unavailable",503);}
   }
   if(!["POST","PATCH","DELETE"].includes(request.method))return fail("method_not_allowed",405);
-  if(request.method==="DELETE"&&kind!=="booking")return fail("method_not_allowed",405);
+  if(request.method==="DELETE"&&!["booking","contacts"].includes(kind))return fail("method_not_allowed",405);
   if(!canWrite)return fail("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site"||
@@ -280,6 +280,38 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
     if(raw.length>6500)return fail("payload_too_large",413);
     input=JSON.parse(raw);
   }catch{return fail("invalid_json",400);}
+  if(request.method==="DELETE"&&kind==="contacts"){
+    const id=input?.id,revision=input?.revision;
+    if(!UUID.test(id||"")||!UUID.test(revision||""))return fail("invalid_reference",422);
+    try{
+      const all=await listAll(env.ZOHO_DB,"contacts"),existing=all.find(x=>x.id===id);
+      if(!existing)return fail("record_not_found",404);
+      if(existing.revision!==revision)return fail("revision_conflict",409);
+      if(existing.origin_id)return fail("historical_contact_cannot_remove",409);
+      const [bookings,finance]=await Promise.all([listAll(env.ZOHO_DB,"booking"),listAll(env.ZOHO_DB,"finance")]);
+      if(bookings.some(x=>x.contact_id===id)||
+         all.some(x=>x.id!==id&&(x.canonical_id===id||x.linked_producer_ids?.includes(id)))||
+         finance.some(x=>x.contact_id===id))
+        return fail("contact_has_dependencies",409);
+      const now=Date.now(),eventId=crypto.randomUUID(),entity=prefix("contacts")+id;
+      const operationName=CONTACT_OP;
+      const deleteEvent=env.ZOHO_DB.prepare(
+        "INSERT INTO control_decision_events(id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms) "+
+        "SELECT ?,?,?,?,?,?,?,? WHERE (SELECT id FROM control_decision_events "+
+        "WHERE entity_id=? AND operation=? ORDER BY created_ms DESC,rowid DESC LIMIT 1)=?"
+      ).bind(eventId,entity,null,operationName,"removed",
+        "Ficha nativa retirada do trabalho diário por confirmação explícita",
+        JSON.stringify({deleted:true,source_revision:revision}),now,entity,operationName,revision);
+      const audit=env.ZOHO_DB.prepare(
+        "INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) "+
+        "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM control_decision_events WHERE id=?)"
+      ).bind(crypto.randomUUID(),now,"crm_contact_removed",entity,
+        JSON.stringify({actor:actor||"legacy_admin",revision_event:eventId}),eventId);
+      const result=await env.ZOHO_DB.batch([deleteEvent,audit]);
+      if((result[0]?.meta?.changes??result[0]?.changes)===0)return fail("revision_conflict",409);
+      return out({ok:true,removed:true,historical_events_preserved:true});
+    }catch{return fail("native_storage_failed",503)}
+  }
   if(request.method==="DELETE"){
     const id=input?.id,revision=input?.revision;
     if(!UUID.test(id||"")||!UUID.test(revision||""))return fail("invalid_reference",422);

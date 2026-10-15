@@ -64,10 +64,8 @@ export function reviewContacts({archive=[],working=[],headers=[],actions=[],asOf
     if(action.matched_entity_id||action.link_status==="linked")continue;
     const targetEmail=email(action.email);
     const matching=targetEmail?(emails.get(targetEmail)?.size||0):0;
-    if(matching!==1){
-      unresolvedActions.push({name:clean(action.name),artist:clean(action.artist),
-        status:clean(action.status),email:targetEmail,matched:matching});
-    }
+    unresolvedActions.push({name:clean(action.name),artist:clean(action.artist),
+      status:clean(action.status),email:targetEmail,matched:matching});
   }
   const date=today(asOf);
   const due=contacts.filter(x=>x.review_date&&x.review_date<date);

@@ -78,3 +78,14 @@ test("partnerships cannot be read with cron credentials",async()=>{
   env.CONTROL_CRON_TOKEN="cron-"+"x".repeat(48);
   assert.equal((await request("GET",null,{token:env.CONTROL_CRON_TOKEN})).status,401);
 });
+
+test("publicly listed partner requires named evidence without masquerading as a contract",async()=>{
+ assert.equal((await request("POST",partner({stage:"active_reported",evidence_type:"user_report"}))).status,422);
+ const saved=await request("POST",partner({name:"Public Sponsor",stage:"active_reported",
+  evidence_type:"user_report",evidence_reference:"https://caravelaamarela.com/wildchains",
+  objective:"Partnership publicly listed",next_step:"Verify current deliverables"}));
+ assert.equal(saved.status,201);
+ const records=(await (await request()).json()).partners;
+ assert.equal(records[0].stage,"active_reported");
+ assert.equal(records[0].evidence_type,"user_report");
+});

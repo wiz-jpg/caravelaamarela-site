@@ -21,6 +21,7 @@
     '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking</span></button>' +
     '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
     '<button type="button" data-view="communications" data-min-role="manager"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações</span></button>' +
+    '<button type="button" data-view="finance" data-min-role="manager"><span class="cc-nav-symbol">€</span><span class="cc-nav-text">Finanças</span></button>' +
     '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
     '<div class="cc-nav-label cc-nav-label-spaced">Apoio</div>' +
     '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
@@ -56,6 +57,7 @@
     ["contacts", "Contactos", "Entidades, interlocutores e restrições de contacto."],
     ["booking", "Booking", "Propostas em curso, decisões e próximos passos."],
     ["artists", "Artistas", "Projetos, condições e histórico das fichas originais."],
+    ["finance", "Finanças", "Comissões, serviços, despesas e valores a receber — apenas movimentos registados."],
     ["partnerships", "Parcerias", "Marcas, entidades e parceiros estratégicos: histórico, propostas, evidência e próximos passos."],
     ["communications", "Comunicações", "Leitura do Zoho e identificação de endereços, sem envios automáticos."],
     ["sources", "Dados e backups", "Importação, cofre, fontes sincronizadas e recuperação de versões."],
@@ -193,6 +195,7 @@
   const guideText=[
     ["Booking","Pesquisa a entidade em Contactos, cria uma proposta e guarda o estado real. Regista a próxima ação e o prazo. Só marca envio ou confirmação com evidência verificada.","contacts"],
     ["Comunicação e imprensa","Consulta as comunicações e prepara respostas ou conteúdos fora da plataforma. A leitura do Zoho não envia emails nem prova automaticamente um acordo.","communications"],
+    ["Finanças","Regista comissões, serviços e despesas. Associa o booking quando existir e distingue previsto, por receber e liquidado. Não é contabilidade oficial.","finance"],
     ["Parcerias e imagem","Regista contactos e oportunidades de parceria, com responsável e próximo passo. Os serviços criativos não são tratados como booking confirmado.","partnerships"],
     ["Coordenação","Revê o trabalho pendente no Início. Usa Artistas para consultar dados de projetos; em Administração, gere acessos e cópias de segurança.","dashboard"]
   ];

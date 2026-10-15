@@ -888,18 +888,25 @@ function createBookingFromTask(task,decision,formData){
  row.next_step=formData.next_step.trim().slice(0,400);
  row.due_date=(formData.next_date||"").trim();
  if(decision==="contacted"){
-  row.stage="contact_reported";row.evidence_type="user_report";
-  row.evidence_reference="";row.last_contact_date=formData.when||today;
+  // A newly reported contact must never erase pre-existing verified delivery.
+  row.stage=isNative&&["sent_verified","reply_reported","negotiating"].includes(original.stage)?
+    original.stage:"contact_reported";
+  row.evidence_type=row.stage==="contact_reported"?"user_report":original.evidence_type;
+  row.evidence_reference=row.stage==="contact_reported"?"":original.evidence_reference;
+  row.last_contact_date=formData.when||today;
  }else if(decision==="won"){
   row.stage="confirmed";row.evidence_type=formData.evidence_type==="received_message"?"received_message":"agreement";
   row.evidence_reference=formData.evidence.trim();row.event_date=formData.event_date;
   row.last_contact_date=formData.when||today;row.due_date="";
  }else if(decision==="lost"){
-  row.stage="declined";row.evidence_type="user_report";
-  row.evidence_reference="";row.due_date="";
+  row.stage="declined";row.evidence_type=isNative&&original.evidence_type!=="none"?
+    original.evidence_type:"user_report";
+  row.evidence_reference=isNative?original.evidence_reference||"":"";
+  row.due_date="";
  }else{
-  row.stage="paused";row.evidence_type="user_report";
-  row.evidence_reference="";
+  row.stage="paused";row.evidence_type=isNative&&original.evidence_type!=="none"?
+    original.evidence_type:"user_report";
+  row.evidence_reference=isNative?original.evidence_reference||"":"";
   if(decision==="paused")row.due_date="";
  }
  if(!isNative){delete row.id;delete row.revision;}

@@ -806,6 +806,7 @@ function renderDashboard(){
  for(const x of active){
   if(x.due_date)tasks.push({date:x.due_date,title:x.contact_name+" · "+x.artist,
    note:x.next_step||"Rever negociação",source:"booking",priority:x.priority,
+   followup:["sent_verified","reply_reported","negotiating","contact_reported"].includes(x.stage),
    click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
   if(x.stage==="confirmed"&&x.event_date&&(!x.press_status||x.press_status==="unknown"))
    tasks.push({date:x.event_date,title:x.contact_name+" · "+x.artist,
@@ -822,6 +823,7 @@ function renderDashboard(){
   tasks.push({date:due,title:row.name+" · "+(row.artist||"projeto a confirmar"),
    note:row.next_step||"Rever ação antiga",source:"arquivo",
    priority:/^A\b/i.test(row.priority||"")?"high":"medium",
+   followup:!/^Por contactar$/i.test(row.status||""),
    click:()=>displayHistoricalAction(row)});
  }
  for(const x of contactRows()){
@@ -847,6 +849,36 @@ function renderDashboard(){
  oldArchive.slice(12,24).forEach(x=>{x.suggestedWeek="next"});
  tasks.sort((a,b)=>a.date.localeCompare(b.date)||
    (a.priority==="high"?-1:0)-(b.priority==="high"?-1:0));
+ const followupTasks=tasks.filter(x=>x.followup);
+ const followupSection=make("section",undefined,"cc-followup-section");
+ const followupHeading=make("div",undefined,"cc-followup-heading");
+ followupHeading.append(make("h3","Follow-ups · negociação"),
+  make("p","Mensagens já trocadas ou propostas em andamento. Rever a conversa antes de insistir.","cc-lead"));
+ followupSection.append(followupHeading);
+ const followupGroups=[
+  {label:"Vencidos",icon:"!",entries:followupTasks.filter(x=>x.date<today&&!x.suggestedWeek)},
+  {label:"Para esta semana",icon:"↗",entries:followupTasks.filter(x=>x.suggestedWeek==="this"||(x.date>=today&&x.date<weekEnd))},
+  {label:"Próxima semana",icon:"→",entries:followupTasks.filter(x=>x.suggestedWeek==="next"||(x.date>=weekEnd&&x.date<nextEnd))}
+ ];
+ const followupMetrics=make("div",undefined,"cc-followup-cards");
+ for(const group of followupGroups){
+  const card=make("div",undefined,"cc-followup-card");
+  card.append(make("span",group.icon,"cc-followup-symbol"),make("strong",String(group.entries.length)),
+    make("small",group.label));
+  if(group.entries.length){
+   const b=make("button","Ver "+Math.min(5,group.entries.length)+" prioritários","cc-neutral");b.type="button";
+   b.onclick=()=>{const d=card.querySelector("details");if(d)d.open=!d.open};
+   card.append(b);
+   const details=make("details");details.append(make("summary","Entidades"));
+   for(const x of group.entries.slice(0,5)){
+    const link=make("button",x.title,"cc-native-dash-task");link.type="button";link.onclick=x.click;details.append(link);
+   }
+   card.append(details);
+  }
+  followupMetrics.append(card);
+ }
+ followupSection.append(followupMetrics);
+ root.append(followupSection);
  const sections=[
   {label:"Backlog em atraso · por revalidar",description:"Prazos históricos ainda sem triagem atribuída. Não pressupõem falta de resposta.",test:x=>x.date<today&&!x.suggestedWeek},
   {label:"Esta semana · prioridades sugeridas",description:"Tarefas realmente agendadas e até 12 revisões antigas selecionadas automaticamente. Não são novos envios.",test:x=>(x.date>=today&&x.date<weekEnd)||x.suggestedWeek==="this"},

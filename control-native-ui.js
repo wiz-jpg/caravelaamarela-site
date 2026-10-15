@@ -181,6 +181,7 @@ function build(kind,heading){
     '<label class="cc-basket-project">Projeto <select id="cc-basket-project"><option value="WILDCHAINS">WILDCHAINS</option>'+
     '<option value="Devil of a Woman">Devil of a Woman</option><option value="WILDCHAINS + Devil of a Woman">Ambos</option>'+
     '<option value="Caravela Amarela">Caravela Amarela</option></select></label>'+
+    '<button type="button" class="cc-neutral" id="cc-basket-review">CSV para revisão (não enviar)</button>'+
     '<button type="button" class="cc-primary" id="cc-basket-export">Exportar CSV elegível</button></div>'+
     '<p id="cc-basket-summary" class="cc-lead" aria-live="polite"></p>';
   geo.after(basket);
@@ -189,6 +190,7 @@ function build(kind,heading){
     render("contacts");
   };
   root.querySelector("#cc-basket-clear").onclick=()=>{mergeSelection.clear();render("contacts")};
+  root.querySelector("#cc-basket-review").onclick=()=>exportBasketReview();
   root.querySelector("#cc-basket-export").onclick=()=>exportBasket();
 
   for(const [value,label] of Object.entries(choices.kind)){
@@ -314,6 +316,27 @@ function renderBasket(){
  summary.textContent=eligible.length+" destinatários aptos para CSV · "+excluded.length+
   " excluídos por falta de aprovação, partilha de endereço ou canal inválido. Nenhum email foi enviado.";
  $("cc-basket-export").disabled=!eligible.length;
+ $("cc-basket-review").disabled=!total;
+}
+function exportBasketReview(){
+ const rows=contactCards(contactRows()).filter(x=>mergeSelection.has(x.id));
+ if(!rows.length)return;
+ const header=["Entidade","Tipo","Localidade","País","Emails por validar","Política","Motivo da revisão"];
+ const records=rows.map(x=>{
+  const address=[...new Set((x.emails||[]).map(lower).filter(Boolean))].join("; ");
+  const reason=x.contact_policy==="blocked"||x.source_suppressed?"NÃO CONTACTAR":
+   x.source_shared_email?"Contacto partilhado — validar entidade/interlocutor":
+   x.contact_policy!=="allowed"?"Rever autorização":
+   "Validar destinatário e personalização antes de enviar";
+  return [x.name,choices.kind[x.kind]||x.kind,x.city||"",x.country||"",
+   reason==="NÃO CONTACTAR"?"":address,x.contact_policy,reason];
+ });
+ const csv=[header,...records].map(x=>x.map(csvValue).join(",")).join("\r\n");
+ const url=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));
+ const a=make("a");a.href=url;a.download="caravela_para_revisao_NAO_ENVIAR.csv";
+ document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ $("cc-basket-summary").textContent=rows.length+
+  " fichas exportadas PARA REVISÃO. Este CSV não é uma lista de envio Zoho.";
 }
 function exportBasket(){
  const {eligible,excluded}=mergeRows();

@@ -96,3 +96,24 @@ test("review endpoint is private, read-only and never mutates the archive",async
   assert.equal(db.prepare("SELECT COUNT(*) n FROM control_decision_events").get().n,0);
  }finally{db.close()}
 });
+
+test("a bilateral exchange requires an identical thread, response chronology and unshared address",()=>{
+ const base=make("a","Festival Confirmado","festival",["book@festival.example"],"Braga");
+ const headers=[
+  {folder_kind:"outgoing",thread_id:"1001",from_email:"booking@caravelaamarela.com",
+   to_json:JSON.stringify(["book@festival.example"]),received_ms:10},
+  {folder_kind:"incoming",thread_id:"1001",from_email:"book@festival.example",
+   to_json:"[]",received_ms:20}
+ ];
+ const yes=reviewContacts({archive:[base],headers});
+ assert.equal(yes.counts.verified_exchange_threads,1);
+ assert.equal(yes.verified_exchanges[0].contact.id,"a");
+ assert.equal(reviewContacts({archive:[base],headers:[headers[0],{...headers[1],thread_id:"1002"}]})
+  .counts.verified_exchange_threads,0);
+ assert.equal(reviewContacts({archive:[base],headers:[headers[0],{...headers[1],received_ms:5}]})
+  .counts.verified_exchange_threads,0);
+ assert.equal(reviewContacts({archive:[base,{...base,id:"b",name:"Outro evento"}],headers})
+  .counts.verified_exchange_threads,0);
+ assert.equal(reviewContacts({archive:[{...base,suppressed:true}],headers})
+  .counts.verified_exchange_threads,0);
+});

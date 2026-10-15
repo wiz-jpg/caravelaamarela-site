@@ -29,7 +29,7 @@ function day(value){
 function contact(input){
   if(!input||typeof input!=="object"||Array.isArray(input))return null;
   const row={};
-  for(const [k,max] of Object.entries({name:140,city:120,country:80,region:120,notes:1600,next_step:400,review_date:10,source_label:160,authorization_email:254,authorization_reference:100})){
+  for(const [k,max] of Object.entries({name:140,city:120,country:80,region:120,owner:110,notes:1600,next_step:400,review_date:10,source_label:160,authorization_email:254,authorization_reference:100})){
     row[k]=field(input[k]??"",max);
     if(row[k]===null)return null;
   }

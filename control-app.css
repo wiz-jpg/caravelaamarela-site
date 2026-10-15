@@ -232,3 +232,34 @@ body{background:var(--cc-bg);color:var(--cc-text);font-family:Inter,system-ui,-a
 #control-app .cc-ops-disclaimer{margin:14px 0 0;font-size:11px;color:#8496a9;line-height:1.5}
 @media(max-width:900px){#control-app .cc-ops-health{grid-template-columns:1fr}}
 @media(max-width:600px){#control-app .cc-ops-task{flex-direction:column}#control-app .cc-ops-priority{align-self:flex-start}}
+
+/* Clear daily navigation and compact contextual guide. */
+#control-app .cc-nav-label-spaced{padding-top:14px}
+#control-app .cc-nav-admin{min-width:0}
+#control-app .cc-nav-admin>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px;color:#a9b6c5;font-size:13px;font-weight:650;border-radius:10px}
+#control-app .cc-nav-admin>summary::-webkit-details-marker{display:none}
+#control-app .cc-nav-admin>summary:hover{background:#1a2430;color:#fff}
+#control-app .cc-nav-admin[open]{background:#131d27;border-radius:10px}
+#control-app .cc-nav-admin>button{padding-left:22px}
+#control-app .cc-archive-toggle{background:#141c25;border:1px solid var(--cc-line);border-radius:12px;margin:16px 0}
+#control-app .cc-archive-toggle>summary{padding:16px 18px;cursor:pointer;font-size:13px;font-weight:750;color:#d8e2ed}
+#control-app .cc-archive-toggle>summary small{display:block;font-size:11px;color:var(--cc-muted);font-weight:400;margin-top:5px}
+#control-app .cc-archive-toggle>.results,#control-app .cc-archive-toggle>#crm-extra{padding:16px;margin:0}
+#control-app .cc-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+#control-app .cc-guide-card{border:1px solid var(--cc-line);background:var(--cc-panel);border-radius:13px;padding:23px;display:flex;flex-direction:column;align-items:flex-start}
+#control-app .cc-guide-card h3{font-size:17px;margin:0 0 10px}
+#control-app .cc-guide-card p{font-size:13px;color:#b4c2d0;line-height:1.65;flex:1}
+#control-app .cc-guide-card button{font-size:12px;padding:9px 14px;margin-top:12px}
+#control-app .cc-guide-foot{font-size:12px;color:var(--cc-muted);margin-top:20px}
+@media(max-width:980px){
+ #control-app .cc-nav-admin>summary{justify-content:center;padding:12px 8px}
+ #control-app .cc-nav-admin>summary .cc-nav-text{display:none}
+ #control-app .cc-nav-admin>button{padding-left:8px}
+}
+@media(max-width:640px){
+ #control-app .cc-guide-grid{grid-template-columns:1fr}
+ #control-app .cc-nav-admin{display:flex;align-items:center;flex-shrink:0}
+ #control-app .cc-nav-admin>summary{min-width:40px}
+ #control-app .cc-nav-admin[open]{display:flex}
+ #control-app .cc-archive-toggle>summary{padding:13px}
+}

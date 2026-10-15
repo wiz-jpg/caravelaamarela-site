@@ -856,247 +856,296 @@ function displayHistoricalAction(item){
  if(search){search.value=item.name;search.dispatchEvent(new Event("input"))}
  $("cc-native-booking-history-wrap")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
+
+const normalizeEntity=value=>lower(value).normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9]+/g," ").trim();
+function nextBusinessDay(day,offset=7){
+ const result=new Date(day+"T12:00:00Z");result.setUTCDate(result.getUTCDate()+offset);
+ return result.toISOString().slice(0,10);
+}
+const quickDefinitions=[
+ {key:"won",symbol:"✓",label:"Fechado",cls:"won"},
+ {key:"contacted",symbol:"✉",label:"Contactado",cls:"contacted"},
+ {key:"lost",symbol:"×",label:"Recusou",cls:"lost"},
+ {key:"later",symbol:"◷",label:"Adiar",cls:"later"},
+ {key:"paused",symbol:"Ⅱ",label:"Pausa",cls:"paused"}
+];
+function createBookingFromTask(task,decision,formData){
+ const original=task.record||{},isNative=task.source==="booking";
+ const rawArtist=(original.artist||task.artist||"").trim();
+ const contactName=(original.contact_name||task.name||"").trim();
+ const today=localToday(),notes=(original.notes||"").trim();
+ const updateNote="[Atualização manual "+today+" · "+decision+"] "+formData.note.trim();
+ const row=isNative?{...original}:{
+  contact_name:contactName,artist:rawArtist,subject:original.subject||"Proposta de booking · "+contactName,
+  contact_id:original.link_status==="verified_name_email"?(original.matched_entity_id||""):"",
+  contact_email:original.email||"",stage:"research",priority:/^A\b/.test(original.priority||"")?"high":"medium",
+  fee_amount:null,commission_pct:null,fee_note:"",conditions:"",event_date:"",press_status:"unknown",
+  press_reference:"",advance_status:"unknown",last_contact_date:"",currency:"EUR",
+  origin_label:"Ação histórica · "+(original.id||original.origin?.row||contactName),
+  evidence_reference:"",evidence_type:"none",notes:"",owner:""
+ };
+ row.owner=formData.owner.trim();row.notes=[notes,updateNote].filter(Boolean).join("\n").slice(-1600);
+ row.next_step=formData.next_step.trim().slice(0,400);
+ row.due_date=(formData.next_date||"").trim();
+ if(decision==="contacted"){
+  row.stage="contact_reported";row.evidence_type="user_report";
+  row.evidence_reference="";row.last_contact_date=formData.when||today;
+ }else if(decision==="won"){
+  row.stage="confirmed";row.evidence_type="agreement";
+  row.evidence_reference=formData.evidence.trim();row.event_date=formData.event_date;
+  row.last_contact_date=formData.when||today;row.due_date="";
+ }else if(decision==="lost"){
+  row.stage="declined";row.evidence_type="user_report";
+  row.evidence_reference="";row.due_date="";
+ }else{
+  row.stage="paused";row.evidence_type="user_report";
+  row.evidence_reference="";
+  if(decision==="paused")row.due_date="";
+ }
+ if(!isNative){delete row.id;delete row.revision;}
+ return row;
+}
+function createFastAction(container,task,decision){
+ container.querySelector(".cc-home-fast-form")?.remove();
+ const panel=make("form",undefined,"cc-home-fast-form");
+ panel.append(make("strong",quickDefinitions.find(x=>x.key===decision).label+" · "+task.title),
+  make("p","Registo manual no booking. Não envia emails, não altera contactos históricos e não confirma pagamentos.","cc-lead"));
+ const body=make("div",undefined,"cc-home-fast-fields");
+ const fields={};
+ const add=(key,label,type="text",value="",required=false)=>{
+  const wrapper=make("label",label),input=make("input");input.name=key;input.type=type;input.value=value;
+  input.required=required;fields[key]=input;wrapper.append(input);body.append(wrapper);return input;
+ };
+ const baseline=task.record||{};
+ add("owner","Responsável Caravela","text",baseline.owner||"",true);
+ if(!baseline.artist&& !task.artist){
+  const label=make("label","Artista"),select=make("select");
+  for(const artist of ["","WILDCHAINS","Devil of a Woman"]){
+    const option=make("option",artist||"Escolher artista");option.value=artist;select.append(option)
+  }
+  select.required=true;select.name="artist";fields.artist=select;label.append(select);body.append(label);
+ }
+ const nextDefault=decision==="contacted"?nextBusinessDay(localToday(),7):
+   decision==="later"?nextBusinessDay(localToday(),14):"";
+ if(["contacted","later"].includes(decision))
+   add("next_date","Próximo follow-up / revisão","date",nextDefault,true);
+ if(decision==="won") {
+  add("event_date","Data do concerto","date",baseline.event_date||"",true);
+  add("evidence","Referência do acordo / email confirmado","text",baseline.evidence_reference||"",true);
+ }
+ add("note",decision==="won"?"Nota de confirmação":
+  decision==="lost"?"Motivo da recusa":"O que aconteceu / próximo passo","text","",true);
+ panel.append(body);
+ const actions=make("div",undefined,"cc-home-fast-controls");
+ const submit=make("button","Guardar alteração","cc-primary");submit.type="submit";
+ const cancel=make("button","Cancelar","cc-neutral");cancel.type="button";cancel.onclick=()=>panel.remove();
+ actions.append(submit,cancel);panel.append(actions);
+ const notice=make("p",undefined,"cc-lead");notice.setAttribute("role","status");panel.append(notice);
+ panel.onsubmit=async e=>{
+  e.preventDefault();if(state.busy)return;
+  const raw=Object.fromEntries(Object.entries(fields).map(([k,input])=>[k,input.value.trim()]));
+  if(decision==="won"&&!baseline.contact_id&&
+     !(baseline.link_status==="verified_name_email"&&baseline.matched_entity_id)){
+    notice.textContent="A confirmação exige associar uma entidade autorizada. Abre o formulário de Booking para escolher o contacto e indicar o acordo.";
+    const move=make("button","Abrir Booking","cc-neutral");move.type="button";
+    move.onclick=()=>{
+      const draft=createBookingFromTask(task,"contacted",
+        {owner:raw.owner,note:raw.note,next_step:"Confirmar acordo e entidade",next_date:"",when:localToday()});
+      // This is only an editor draft; no provisional contact was persisted.
+      draft.stage="research";draft.evidence_type="none";draft.last_contact_date="";
+      window.CaravelaControlApp?.openView("booking");edit("booking",draft);
+    };notice.append(move);return;
+  }
+  const combined={...raw,next_step:
+    decision==="contacted"?"Rever resposta e decidir próximo passo":
+    decision==="won"?"Preparar concerto e condições técnicas":
+    decision==="lost"?"Recusado — conservar para histórico":
+    decision==="later"?"Retomar contacto na data definida":"Suspenso até nova decisão"};
+  const taskForSave=fields.artist?{...task,artist:raw.artist}:task;
+  const record=createBookingFromTask(taskForSave,decision,combined);
+  if(!record.owner||!record.artist){notice.textContent="Preenche o responsável e o artista.";return}
+  state.busy=true;submit.disabled=true;notice.textContent="A guardar...";
+  try{
+   const response=await api("booking",task.source==="booking"?"PATCH":"POST",record);
+   const result=await response.json();
+   if(!response.ok)throw Error(({
+    contact_review_required:"Contacto ainda por autorizar. Revê a ficha antes de confirmar.",
+    verified_contact_link_required:"Associa um contacto validado para confirmar.",
+    contact_identity_mismatch:"O contacto associado não corresponde ao nome/email.",
+    contact_email_review_required:"Este email está sujeito a restrições no arquivo.",
+    revision_conflict:"O estado foi alterado noutra sessão. Atualiza primeiro.",
+    invalid_record:"Revê os campos, datas e comprovativos."
+   })[result.error]||result.error||"Não foi possível guardar ("+response.status+")");
+   await load("booking");
+   panel.remove();
+  }catch(error){notice.textContent=error.message}
+  finally{state.busy=false;submit.disabled=false}
+ };
+ container.append(panel);
+ panel.scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function homeTaskCard(task){
+ const row=make("article",undefined,"cc-home-task");
+ const stage=task.stage||"research";
+ row.classList.add("cc-home-task--"+stage.replace(/[^a-z_-]/g,""));
+ const head=make("div",undefined,"cc-home-task-heading");
+ const name=make("button",task.title,"cc-home-task-name");name.type="button";name.onclick=task.click;
+ head.append(name,make("span",task.statusLabel||"Por analisar","cc-home-stage cc-home-stage--"+stage));
+ row.append(head);
+ const info=make("p",task.note||"Verificar próximo passo","cc-home-task-info");
+ row.append(info);
+ const owner=make("div",undefined,"cc-home-task-meta");
+ owner.append(make("span","Responsável: "+(task.record?.owner||"Por atribuir")),
+   make("span",task.date?"Prazo registado: "+task.date:"Sem prazo"));
+ row.append(owner);
+ if(task.source==="booking"||task.source==="arquivo"){
+  const tools=make("div",undefined,"cc-home-task-tools");
+  const commands=task.stage==="confirmed"||task.stage==="declined"||task.stage==="closed"?[]:quickDefinitions;
+  for(const opt of commands){
+    const button=make("button",opt.symbol,"cc-home-status cc-home-status--"+opt.cls);
+    button.type="button";button.title=opt.label;
+    button.setAttribute("aria-label",opt.label+" · "+task.title);
+    button.onclick=()=>createFastAction(row,task,opt.key);tools.append(button);
+  }
+  if(commands.length)row.append(tools);
+ }
+ return row;
+}
 function renderDashboard(){
  const root=$("cc-native-dash-body"),metrics=$("cc-native-dash-metrics");
  if(!root||!metrics)return;
  root.replaceChildren();metrics.replaceChildren();
- const today=localToday();
- const d=new Date(today+"T12:00:00Z");
- const monday=new Date(d);monday.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));
- const week=days=>{const x=new Date(monday);x.setUTCDate(x.getUTCDate()+days);return x.toISOString().slice(0,10)};
- const weekEnd=week(7),nextEnd=week(14);
- const live=get("booking"),tasks=[];
- const addDays=(day,shift)=>{const date=new Date(day+"T12:00:00Z");
-  if(Number.isNaN(date.getTime()))return day;
-  date.setUTCDate(date.getUTCDate()+shift);return date.toISOString().slice(0,10);
- };
- const active=live.filter(x=>!["declined","closed"].includes(x.stage));
- const normalized=x=>lower(x).normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9]+/g," ").trim();
- const liveKeys=new Set(live.map(x=>normalized(x.contact_name)+"|"+normalized(x.artist)));
- for(const x of active){
-  if(x.due_date)tasks.push({date:x.due_date,title:x.contact_name+" · "+x.artist,
-   note:x.next_step||"Rever negociação",source:"booking",priority:x.priority,
-   followup:["sent_verified","reply_reported","negotiating","contact_reported"].includes(x.stage),
-   click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
-  if(x.stage==="confirmed"&&/^\d{4}-\d{2}-\d{2}$/.test(x.event_date||"")){
-   if(!x.press_status||x.press_status==="unknown")
-    tasks.push({date:addDays(x.event_date,-21),title:x.contact_name+" · "+x.artist,
-     note:"Confirmar plano de imprensa e divulgação (21 dias antes do concerto)",
-     source:"booking",priority:x.priority,
-     click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
-   if(!x.advance_status||x.advance_status==="unknown"||x.advance_status==="planned")
-    tasks.push({date:addDays(x.event_date,-10),title:x.contact_name+" · "+x.artist,
-     note:"Verificar rider, horários, equipa técnica e deslocação (10 dias antes)",
-     source:"booking",priority:"high",
-     click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
-  }
+ const today=localToday(),day=new Date(today+"T12:00:00Z");
+ const monday=new Date(day);monday.setUTCDate(day.getUTCDate()-((day.getUTCDay()+6)%7));
+ const week=offset=>{const d=new Date(monday);d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10)};
+ const endThisWeek=week(7),endNextWeek=week(14);
+ const live=get("booking"),normalize=value=>lower(value).normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9]+/g," ").trim();
+ const liveKeys=new Set(live.map(x=>normalize(x.contact_name)+"|"+normalize(x.artist)));
+ const followups=[],leads=[],other=[],confirmed=[],paused=[];
+ for(const x of live){
+  const task={source:"booking",record:x,artist:x.artist,name:x.contact_name,
+   title:x.contact_name+" · "+x.artist,date:x.due_date||"",priority:x.priority,
+   note:x.next_step,stage:x.stage,statusLabel:choices.stage[x.stage]||"Por analisar",
+   click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}};
+  if(["confirmed","declined","closed"].includes(x.stage)){confirmed.push(task);continue}
+  if(x.stage==="paused"&&!x.due_date){paused.push(task);continue}
+  if(["sent_verified","reply_reported","negotiating","contact_reported"].includes(x.stage))followups.push(task);
+  else if(x.stage==="paused")other.push(task);
+  else leads.push(task);
  }
  for(const row of state.actions){
-  const due=row.next_action_iso||row.next_followup_iso;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(due||""))continue;
-  if(row.contact_policy==="blocked"||row.no_outreach||
-    /não avançar|nao avancar|bloquead|não contactar|nao contactar/i.test(row.status||""))continue;
-  // First-contact leads have their own prospecting queue, never a follow-up.
-  if(!/^(Enviado|Em conversa|Em negociação)$/i.test(row.status||""))continue;
-  if(liveKeys.has(normalized(row.name)+"|"+normalized(row.artist)))continue;
-  tasks.push({date:due,title:row.name+" · "+(row.artist||"projeto a confirmar"),
-   note:row.next_step||"Rever ação antiga",source:"arquivo",
-   priority:/^A\b/i.test(row.priority||"")?"high":"medium",
-   followup:!/^Por contactar$/i.test(row.status||""),
-   click:()=>displayHistoricalAction(row)});
+  if(row.no_outreach||row.contact_policy==="blocked"||!/^(Por contactar|Enviado|Em conversa|Em negociação)$/i.test(row.status||""))continue;
+  if(liveKeys.has(normalize(row.name)+"|"+normalize(row.artist)))continue;
+  const isFollowup=!/^Por contactar$/i.test(row.status||"");
+  const task={source:"arquivo",record:row,artist:row.artist,name:row.name,
+   title:row.name+" · "+(row.artist||"Artista a definir"),
+   date:row.next_action_iso||row.next_followup_iso||"",priority:/^A\b/i.test(row.priority||"")?"high":"medium",
+   stage:isFollowup?"contact_reported":"research",
+   statusLabel:isFollowup?"Arquivo · contacto registado":"Arquivo · por contactar",
+   note:(row.next_step||"Rever oportunidade")+(row.link_status!=="verified_name_email"?" · identidade por confirmar":""),
+   click:()=>displayHistoricalAction(row)};
+  if(isFollowup)followups.push(task);else leads.push(task);
  }
+ // Preserve dated individual contact reviews as a separate planning queue.
  for(const x of contactRows()){
-  if(!x.review_date||x.contact_policy==="blocked")continue;
-  tasks.push({date:x.review_date,title:x.name,
-   note:x.next_step||"Rever entidade e verificar se deve ser contactada",
-   source:"contacto",priority:"medium",
+  if(!x.review_date||x.contact_policy==="blocked"||!x.next_step)continue;
+  if(live.some(b=>b.contact_id===x.id))continue;
+  other.push({source:"contacts",record:x,name:x.name,artist:"",
+   title:x.name,date:x.review_date,stage:"research",
+   statusLabel:"Revisão de contacto",note:x.next_step,
    click:()=>{window.CaravelaControlApp?.openView("contacts");edit("contacts",x)}});
  }
- for(const row of financeTasks){
-  if(!row.due_date||["settled","cancelled"].includes(row.status))continue;
-  const due=row.status==="due";
-  tasks.push({date:row.due_date,title:row.title+" · "+(row.artist||"Caravela"),
-   note:(due?"Pagamento a tratar":"Valor previsto")+" · "+row.type+
-    " · "+Number(row.amount).toLocaleString("pt-PT",{style:"currency",currency:"EUR"}),
-   source:"financeiro",priority:due?"high":"medium",click:()=>window.CaravelaControlApp?.openView("finance")});
- }
- for(const p of partnerTasks){
-  if(!p.next_review_iso||["closed","confirmed"].includes(p.stage))continue;
-  tasks.push({date:p.next_review_iso,title:p.name,
-   note:p.next_step||"Rever proposta de parceria",source:"parceria",priority:p.priority==="alta"?"high":"medium",
-   click:()=>{window.CaravelaControlApp?.openView("partnerships");
-     const search=$("cc-partners-search");if(search){search.value=p.name;search.dispatchEvent(new Event("input"))}}});
- }
- // Plan review-only work for the coming two weeks from genuinely old archived
- // follow-ups. This is a recommendation, not a fabricated scheduled deadline.
- const oldArchive=tasks.filter(x=>x.source==="arquivo"&&x.date<today);
- oldArchive.sort((a,b)=>Number(b.priority==="high")-Number(a.priority==="high")||
-   b.date.localeCompare(a.date)||a.title.localeCompare(b.title,"pt-PT"));
- oldArchive.slice(0,12).forEach(x=>{x.suggestedWeek="this"});
- oldArchive.slice(12,24).forEach(x=>{x.suggestedWeek="next"});
- tasks.sort((a,b)=>a.date.localeCompare(b.date)||
-   (a.priority==="high"?-1:0)-(b.priority==="high"?-1:0));
- const followupTasks=tasks.filter(x=>x.followup);
- const followupSection=make("section",undefined,"cc-followup-section");
- const followupHeading=make("div",undefined,"cc-followup-heading");
- followupHeading.append(make("h3","Follow-ups · negociação"),
-  make("p","Mensagens já trocadas ou propostas em andamento. Rever a conversa antes de insistir.","cc-lead"));
- followupSection.append(followupHeading);
- const followupGroups=[
-  {label:"Vencidos",icon:"!",entries:followupTasks.filter(x=>x.date<today&&!x.suggestedWeek)},
-  {label:"Para esta semana",icon:"↗",entries:followupTasks.filter(x=>x.suggestedWeek==="this"||(x.date>=today&&x.date<weekEnd))},
-  {label:"Próxima semana",icon:"→",entries:followupTasks.filter(x=>x.suggestedWeek==="next"||(x.date>=weekEnd&&x.date<nextEnd))}
+ const sorting=(a,b)=>(a.date||"9999").localeCompare(b.date||"9999")||
+   Number(b.priority==="high")-Number(a.priority==="high")||a.title.localeCompare(b.title,"pt-PT");
+ followups.sort(sorting);leads.sort(sorting);
+ const followupOverdue=followups.filter(x=>x.date&&x.date<today);
+ const followupSoon=followups.filter(x=>!x.date||x.date>=today);
+ const newLate=leads.filter(x=>x.date&&x.date<today);
+ const newWeek=leads.filter(x=>x.date&&x.date>=today&&x.date<endThisWeek);
+ const newFuture=leads.filter(x=>!x.date||x.date>=endThisWeek);
+ const buckets=[
+  {title:"Para follow-up",count:followups.length,
+   help:"Contactos já registados. Verificar o histórico antes de insistir.",
+   items:[...followupOverdue,...followupSoon],id:"followup"},
+  {title:"Para contactar · atraso",count:newLate.length,
+   help:"Primeiros contactos com data original ultrapassada, ainda por revalidar.",
+   items:newLate,id:"late"},
+  {title:"Para contactar · esta semana",count:newWeek.length,
+   help:"Primeiros contactos agendados para esta semana.",
+   items:newWeek,id:"week"},
+  {title:"Para contactar · em breve",count:newFuture.length,
+   help:"Próximos contactos e oportunidades ainda sem data definida.",
+   items:newFuture,id:"future"}
  ];
- const followupMetrics=make("div",undefined,"cc-followup-cards");
- for(const group of followupGroups){
-  const card=make("div",undefined,"cc-followup-card");
-  card.append(make("span",group.icon,"cc-followup-symbol"),make("strong",String(group.entries.length)),
-    make("small",group.label));
-  if(group.entries.length){
-   const b=make("button","Ver "+Math.min(5,group.entries.length)+" prioritários","cc-neutral");b.type="button";
-   b.onclick=()=>{const d=card.querySelector("details");if(d)d.open=!d.open};
-   card.append(b);
-   const details=make("details");details.append(make("summary","Entidades"));
-   for(const x of group.entries.slice(0,5)){
-    const link=make("button",x.title,"cc-native-dash-task");link.type="button";link.onclick=x.click;details.append(link);
-   }
-   card.append(details);
-  }
-  followupMetrics.append(card);
- }
- followupSection.append(followupMetrics);
- root.append(followupSection);
- // First-contact leads are not follow-ups and require individual research.
- const prospects=state.actions.filter(x=>/^Por contactar$/i.test(x.status||"")&&
-  !x.no_outreach&&x.contact_policy!=="blocked"&&!liveKeys.has(normalized(x.name)+"|"+normalized(x.artist)));
- prospects.sort((x,y)=>Number(/^A\b/i.test(y.priority||""))-Number(/^A\b/i.test(x.priority||""))||
-  x.name.localeCompare(y.name,"pt-PT"));
- const prospectsBox=make("section",undefined,"cc-pipeline-prospects");
- prospectsBox.append(make("h3","Novas oportunidades · investigar"),
-  make("p",prospects.length+" entradas históricas «Por contactar». Validar programação, encaixe artístico e restrições antes de enviar.","cc-lead"));
- const prospectList=make("div",undefined,"cc-prospect-list");
- for(const x of prospects.slice(0,8)){
-  const button=make("button",undefined,"cc-prospect-item");button.type="button";
-  button.append(make("strong",x.name),make("span",(x.artist||"Artista a confirmar")+
-    " · "+(x.next_step||"Preparar abordagem")+" · Fonte: arquivo, não enviado"));
-  button.onclick=()=>displayHistoricalAction(x);prospectList.append(button);
- }
- if(!prospects.length)prospectList.append(make("p","Sem oportunidades históricas por verificar.","cc-lead"));
- prospectsBox.append(prospectList);root.append(prospectsBox);
- const pendingPartners=partnerTasks.filter(p=>
-  ["sent_verified","contact_reported","reply_reported","negotiating","draft"].includes(p.stage));
- if(pendingPartners.length){
-  const section=make("section",undefined,"cc-pipeline-partners");
-  section.append(make("h3","Parcerias por desbloquear · "+pendingPartners.length),
-    make("p","Propostas e conversas sem confirmação final. Datas em branco não são assumidas como atrasadas.","cc-lead"));
-  const list=make("div",undefined,"cc-prospect-list");
-  pendingPartners.sort((a,b)=>Number(b.priority==="alta")-Number(a.priority==="alta")||
-    (b.last_contact_iso||"").localeCompare(a.last_contact_iso||""));
-  for(const p of pendingPartners.slice(0,8)){
-   const btn=make("button",undefined,"cc-prospect-item");btn.type="button";
-   btn.append(make("strong",p.name+" · "+(p.scope==="devil"?"Devil of a Woman":
-    p.scope==="wildchains"?"WILDCHAINS":p.scope==="ambos"?"Ambas":p.scope==="agencia"?"Caravela":"Outro")),
-    make("span",(p.next_review_iso?"Rever "+p.next_review_iso:"Sem próximo prazo")+
-      " · "+(p.next_step||"Reavaliar oportunidade")+" · "+p.stage));
-   btn.onclick=()=>{window.CaravelaControlApp?.openView("partnerships");
-    const search=$("cc-partners-search");if(search){search.value=p.name;search.dispatchEvent(new Event("input"))}};
-   list.append(btn);
-  }
-  section.append(list);root.append(section);
- }
- const sections=[
-  {label:"Backlog em atraso · por revalidar",description:"Prazos históricos ainda sem triagem atribuída. Não pressupõem falta de resposta.",test:x=>x.date<today&&!x.suggestedWeek},
-  {label:"Esta semana · prioridades sugeridas",description:"Tarefas realmente agendadas e até 12 revisões antigas selecionadas automaticamente. Não são novos envios.",test:x=>(x.date>=today&&x.date<weekEnd)||x.suggestedWeek==="this"},
-  {label:"Próxima semana · preparação",description:"Prazos reais e até 12 revisões antigas propostas para a semana seguinte.",test:x=>(x.date>=weekEnd&&x.date<nextEnd)||x.suggestedWeek==="next"}
- ];
- const undated=active.filter(x=>!x.due_date);
- const partnersUndated=partnerTasks.filter(x=>!x.next_review_iso&&!["closed","confirmed","paused"].includes(x.stage));
- const paymentsUndated=financeTasks.filter(x=>x.status==="due"&&!x.due_date);
- const stats=[["A rever",tasks.filter(sections[0].test).length],
-  ["Esta semana",tasks.filter(sections[1].test).length],
-  ["Próxima semana",tasks.filter(sections[2].test).length],
-  ["Sem prazo",undated.length]];
+ const stats=[["Follow-ups",followups.length],["Primeiros contactos atrasados",newLate.length],
+   ["Esta semana",newWeek.length],["Em breve",newFuture.length]];
  for(const [label,count] of stats){
   const cell=make("div",undefined,"cc-native-metric");
   cell.append(make("small",label),make("strong",count));metrics.append(cell);
  }
- for(const section of sections){
-  const items=tasks.filter(section.test),box=make("section",undefined,"cc-agenda-section");
-  box.append(make("h3",section.label+" · "+items.length),make("p",section.description,"cc-lead"));
-  if(!items.length)box.append(make("p","Sem ações datadas neste período.","cc-agenda-empty"));
-  for(const entry of items.slice(0,16)){
-   const action=make("button",undefined,"cc-native-dash-task");
-   action.type="button";
-   action.append(make("strong",entry.title),make("span",
-    (entry.suggestedWeek?"Triagem sugerida (prazo antigo "+entry.date+")":"Prazo "+entry.date)+
-    " · "+entry.note+" · "+({arquivo:"Arquivo — por confirmar",contacto:"Contacto",booking:"Booking",parceria:"Parceria",financeiro:"Finanças"}[entry.source]||entry.source)));
-   if(entry.date<today)action.classList.add("cc-native-overdue");
-   action.onclick=entry.click;box.append(action);
+ const board=make("div",undefined,"cc-home-board");
+ for(const bucket of buckets){
+  const column=make("section",undefined,"cc-home-column");
+  column.append(make("h3",bucket.title+" · "+bucket.count),make("p",bucket.help,"cc-lead"));
+  if(!bucket.items.length)column.append(make("p","Sem ações identificadas.","cc-home-empty"));
+  const list=make("div",undefined,"cc-home-column-list");
+  const showMore=make("button","Mostrar mais","cc-neutral");showMore.type="button";
+  let visible=7;
+  function draw(){
+   list.replaceChildren();
+   for(const task of bucket.items.slice(0,visible))list.append(homeTaskCard(task));
+   showMore.hidden=visible>=bucket.items.length;
+   showMore.textContent="Mostrar mais ("+(bucket.items.length-visible)+")";
   }
-  if(items.length>16)box.append(make("p","+"+(items.length-16)+
-   " ações adicionais. Usa Booking ou Contactos para consultar todas; os prazos antigos são apenas candidatos a reavaliação.","cc-lead"));
-  root.append(box);
+  showMore.onclick=()=>{visible+=8;draw()};draw();
+  column.append(list,showMore);board.append(column);
  }
- const future=tasks.filter(x=>x.date>=nextEnd);
- if(future.length){
-  const box=make("details",undefined,"cc-archive-toggle");
-  box.append(make("summary","Mais à frente · "+future.length+" ações programadas"));
-  for(const x of future.slice(0,20)){
-   const btn=make("button",x.date+" · "+x.title,"cc-native-dash-task");
-   btn.type="button";btn.onclick=x.click;box.append(btn);
+ root.append(board);
+ // Supporting work stays below the four booking queues, not mixed with prospecting.
+ const pendingPartner=partnerTasks.filter(x=>
+   ["contact_reported","sent_verified","reply_reported","negotiating","draft"].includes(x.stage));
+ const pendingFinance=financeTasks.filter(x=>x.status==="due"&&!["settled","cancelled"].includes(x.status));
+ const secondary=make("div",undefined,"cc-home-secondary");
+ const summary=[
+  {title:"Parcerias pendentes",count:pendingPartner.length,view:"partnerships",
+    detail:"Propostas e conversas que ainda precisam de resolução"},
+  {title:"Pagamentos a tratar",count:pendingFinance.length,view:"finance",
+    detail:"Apenas movimentos financeiros lançados na plataforma"},
+  {title:"Datas confirmadas",count:confirmed.filter(x=>x.stage==="confirmed").length,view:"booking",
+    detail:"Concertos registados como confirmados com evidência"},
+  {title:"Contactos sem responsável",count:live.filter(x=>!x.owner).length,view:"booking",
+    detail:"Negociações que ainda precisam de responsável"}
+ ];
+ for(const item of summary){
+  const btn=make("button",undefined,"cc-home-secondary-card");btn.type="button";
+  btn.append(make("strong",item.count),make("span",item.title),make("small",item.detail));
+  btn.onclick=()=>window.CaravelaControlApp?.openView(item.view);secondary.append(btn);
+ }
+ root.append(secondary);
+ const extra=[{label:"Revisões de contactos",rows:other,route:"contacts"},
+  {label:"Negociações suspensas",rows:paused,route:"booking"}];
+ for(const group of extra){
+  if(!group.rows.length)continue;
+  const details=make("details",undefined,"cc-archive-toggle");
+  details.append(make("summary",group.label+" · "+group.rows.length));
+  for(const x of group.rows.slice(0,20)){
+   const b=make("button",x.title+" · "+(x.date||"Sem prazo"),"cc-native-dash-task");
+   b.type="button";b.onclick=x.click;details.append(b);
   }
-  root.append(box);
+  root.append(details);
  }
- if(paymentsUndated.length){
-  const box=make("details",undefined,"cc-archive-toggle");
-  box.append(make("summary","Pagamentos pendentes sem vencimento · "+paymentsUndated.length));
-  for(const p of paymentsUndated.slice(0,15)){
-   const link=make("button",p.title+" · "+Number(p.amount).toLocaleString("pt-PT",{style:"currency",currency:"EUR"}),"cc-native-dash-task");
-   link.type="button";link.onclick=()=>window.CaravelaControlApp?.openView("finance");box.append(link);
-  }
-  root.append(box);
+ const artist=make("section",undefined,"cc-agenda-artists");
+ artist.append(make("h3","Roster principal"));
+ for(const [name,rx] of [["WILDCHAINS",/wildchains/i],["Devil of a Woman",/devil\s*(of a woman)?/i]]){
+  const relevant=live.filter(x=>rx.test(x.artist||"")),card=make("article",undefined,"cc-agenda-artist");
+  card.append(make("strong",name),make("p",
+    relevant.filter(x=>!["confirmed","declined","closed"].includes(x.stage)).length+" negociações em acompanhamento · "+
+    relevant.filter(x=>x.stage==="confirmed").length+" concertos confirmados · "+
+    relevant.filter(x=>!x.owner).length+" sem responsável"));
+  const b=make("button","Ver booking","cc-neutral");b.type="button";
+  b.onclick=()=>window.CaravelaControlApp?.openView("booking");card.append(b);artist.append(card);
  }
- if(partnersUndated.length){
-  const box=make("details",undefined,"cc-archive-toggle");
-  box.append(make("summary","Parcerias sem próximo prazo · "+partnersUndated.length));
-  box.append(make("p","Associa uma data depois de verificares o último contacto; não inventamos follow-ups.","cc-lead"));
-  for(const x of partnersUndated.slice(0,14)){
-   const btn=make("button",x.name+" · "+x.next_step,"cc-native-dash-task");btn.type="button";
-   btn.onclick=()=>{
-    window.CaravelaControlApp?.openView("partnerships");
-    const q=$("cc-partners-search");if(q){q.value=x.name;q.dispatchEvent(new Event("input"))}
-   };box.append(btn);
-  }
-  root.append(box);
- }
- if(undated.length){
-  const box=make("details",undefined,"cc-archive-toggle");
-  box.append(make("summary","Negociações sem próxima data · "+undated.length));
-  for(const x of undated.slice(0,15)){
-   const btn=make("button",x.contact_name+" · "+x.artist,"cc-native-dash-task");
-   btn.type="button";btn.onclick=()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)};box.append(btn);
-  }
-  root.append(box);
- }
- const artistSection=make("section",undefined,"cc-agenda-artists");
- artistSection.append(make("h3","O que se passa com os artistas"));
- const profiles=[["WILDCHAINS",/wildchains/i],["Devil of a Woman",/devil\s*(of a woman)?/i]];
- for(const [label,re] of profiles){
-  const belonging=live.filter(x=>re.test(x.artist||""));
-  const old=state.actions.filter(x=>re.test(x.artist||"")&&!/bloquead|não avançar/i.test(x.status||""));
-  const box=make("article",undefined,"cc-agenda-artist");
-  box.append(make("strong",label),make("p",belonging.filter(x=>!["declined","closed","confirmed"].includes(x.stage)).length+
-   " negociações atuais · "+belonging.filter(x=>x.stage==="confirmed").length+
-   " confirmadas · "+old.length+" ações no arquivo (a revalidar)"));
-  box.append(make("p",label==="WILDCHAINS"?
-   "Heavy / Alternative Rock · 50+ concertos, Lugo/Madrid e Festas d’Amares. Prioridade: festivais estratégicos, Espanha/França e Japão 2027. Booking: 15%.":
-   "Blues Rock · Concurso António Barge / Vilar 2026 e Tomate Blues (Espanha). Prioridade: circuito PT/ES e double bills seletivos. Booking: 15%.","cc-lead"));
-  const btn=make("button","Abrir booking","cc-neutral");btn.type="button";btn.onclick=()=>window.CaravelaControlApp?.openView("booking");
-  box.append(btn);artistSection.append(box);
- }
- const other=live.filter(x=>!profiles.some(([,re])=>re.test(x.artist||"")));
- const more=make("details",undefined,"cc-archive-toggle");
- more.append(make("summary","Outros projetos · "+other.length));artistSection.append(more);root.append(artistSection);
+ root.append(artist);
 }
 function onOpened(event){
  const view=event.detail?.view;

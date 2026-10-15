@@ -918,7 +918,7 @@ function renderDashboard(){
  // First-contact leads are not follow-ups and require individual research.
  const prospects=state.actions.filter(x=>/^Por contactar$/i.test(x.status||"")&&
   !x.no_outreach&&x.contact_policy!=="blocked"&&!liveKeys.has(normalized(x.name)+"|"+normalized(x.artist)));
- prospects.sort((x,y)=>Number(/^A\\b/i.test(y.priority||""))-Number(/^A\\b/i.test(x.priority||""))||
+ prospects.sort((x,y)=>Number(/^A\b/i.test(y.priority||""))-Number(/^A\b/i.test(x.priority||""))||
   x.name.localeCompare(y.name,"pt-PT"));
  const prospectsBox=make("section",undefined,"cc-pipeline-prospects");
  prospectsBox.append(make("h3","Novas oportunidades · investigar"),

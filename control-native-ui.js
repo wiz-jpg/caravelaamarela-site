@@ -85,6 +85,7 @@ async function loadArchive(){
   state.historical=data.contacts||[];
   state.actions=data.actions||[];
   archiveLoaded=true;
+  updateGeoFilters();
   render("contacts");render("booking");renderDashboard();
  }catch(error){
   // Native manually authored records are still usable if the archive cannot be read.
@@ -99,6 +100,7 @@ async function load(kind){
   const data=await response.json();
   if(!response.ok||!data.ok)throw Error(data.error||"Erro "+response.status);
   state.saved[kind]=data.records||[];
+  if(kind==="contacts")updateGeoFilters();
   render(kind);renderDashboard();
   status.textContent="Registos operacionais guardados no D1 · histórico original preservado.";
   status.classList.remove("error");
@@ -185,7 +187,6 @@ function updateGeoFilters(){
  }
 }
 function render(kind){
- if(kind==="contacts")updateGeoFilters();
  const all=filtered(kind),list=$("cc-native-"+kind+"-list"),limit=state.shown[kind];
  list.replaceChildren();
  let count=0;
@@ -428,6 +429,7 @@ window.addEventListener("caravela-crm-imported",event=>{
  archiveLoaded=true;
  state.historical=event.detail?.manifest?.entities||[];
  state.actions=event.detail?.manifest?.actions||[];
+ updateGeoFilters();
  render("contacts");render("booking");renderDashboard();
 });
 window.addEventListener("caravela-control-signed-out",()=>{

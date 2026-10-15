@@ -65,9 +65,10 @@
   }};
   // Native contacts/booking use the same in-memory, authenticated Preview transport.
   // They cannot access arbitrary API routes or expose credentials to the UI.
-  window.CaravelaContactReview={request(){
-    return api("contacts/review",{method:"GET"});
-  }};
+  window.CaravelaContactReview={
+    request(){return api("contacts/review",{method:"GET"});},
+    sync(){return api("zoho/sync",{method:"POST",headers:{"X-Caravela-Request":"1"}});}
+  };
   window.CaravelaNativeTransport={
     request(kind,method="GET",entry=null){
       if(!["contacts","booking","finance","archive","export"].includes(kind)||!["GET","POST","PATCH","DELETE"].includes(method)||

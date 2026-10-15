@@ -89,6 +89,35 @@ async function listAll(db,kind){
   }
   return [...map.values()].sort((a,b)=>b.updated_ms-a.updated_ms);
 }
+// Recheck legacy restrictions server-side against the sealed archive; never
+// rely on a browser-supplied "allowed" flag for a historical contact.
+async function historicContact(db,id){
+  const selected=await db.prepare(
+    "SELECT s.id,s.raw_sha256,s.declared_bytes FROM control_snapshots s "+
+    "JOIN control_state t ON t.value=s.id "+
+    "WHERE t.key='active_snapshot' AND s.state='sealed'"
+  ).first();
+  if(!selected)return null;
+  const parts=await db.prepare(
+    "SELECT encoded FROM control_snapshot_parts WHERE snapshot_id=? ORDER BY part_index"
+  ).bind(selected.id).all();
+  const blocks=(parts.results||[]).map(x=>atob(x.encoded));
+  const bytes=new Uint8Array(blocks.reduce((sum,x)=>sum+x.length,0));
+  let offset=0;
+  for(const block of blocks){for(let i=0;i<block.length;i++)bytes[offset+i]=block.charCodeAt(i);offset+=block.length;}
+  if(bytes.length!==selected.declared_bytes)throw Error("archive_incomplete");
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)))
+    .map(x=>x.toString(16).padStart(2,"0")).join("");
+  if(digest!==selected.raw_sha256)throw Error("archive_checksum");
+  const manifest=JSON.parse(new TextDecoder().decode(bytes));
+  return Array.isArray(manifest.entities)?manifest.entities.find(x=>x.id===id)||null:null;
+}
+function legacyPolicy(entity){
+  if(!entity)return "missing";
+  if(entity.suppressed||entity.control_blocked||entity.control_blocked_possible)return "blocked";
+  if(entity.review_required||entity.shared_email)return "review";
+  return "allowed";
+}
 function insertEvent(db,kind,id,record,actor){
   return db.prepare(
     "INSERT INTO control_decision_events(id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms) "+
@@ -141,6 +170,16 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
       return fail("revision_conflict",409);
     if(request.method==="PATCH"&&kind==="contacts"&&found.origin_id!==record.origin_id)
       return fail("cannot_change_origin",422);
+    if(kind==="contacts"&&LEGACY_ID.test(id)){
+      const source=await historicContact(env.ZOHO_DB,id);
+      if(!source)return fail("historical_reference_not_found",422);
+      if(record.origin_id!==id)return fail("cannot_change_origin",422);
+      const level=legacyPolicy(source);
+      if(level==="blocked"&&record.contact_policy!=="blocked")
+        return fail("historical_contact_blocked",422);
+      if(level==="review"&&record.contact_policy==="allowed")
+        return fail("historical_contact_needs_review",422);
+    }
     if(request.method==="POST"&&kind==="contacts"){
       const emails=new Set(record.emails);
       if(before.some(x=>x.name.toLocaleLowerCase("pt-PT")===record.name.toLocaleLowerCase("pt-PT")||
@@ -151,6 +190,10 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
     if(kind==="booking"&&["sent_verified","confirmed"].includes(record.stage)&&record.contact_id){
       const linked=(await listAll(env.ZOHO_DB,"contacts")).find(x=>x.id===record.contact_id);
       if(linked?.contact_policy==="blocked")return fail("contact_blocked",422);
+      if(LEGACY_ID.test(record.contact_id)){
+        const source=await historicContact(env.ZOHO_DB,record.contact_id);
+        if(!source||legacyPolicy(source)!=="allowed")return fail("contact_review_required",422);
+      }
     }
     // Preserve revision event and audit together. There is no delete endpoint.
     await env.ZOHO_DB.batch([

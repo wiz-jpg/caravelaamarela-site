@@ -15,6 +15,7 @@
     '<button type="button" class="secondary" id="vault-load">Abrir base guardada</button>'+
     '<button type="button" class="secondary" id="vault-backup">Descarregar cópia de segurança</button>'+
     '<button type="button" class="secondary" id="vault-r2-backup">Descarregar backup R2</button>'+
+    '<button type="button" class="secondary" id="vault-native-export">Exportar registos operacionais</button>'+
     '<button type="button" class="secondary" id="vault-zoho">Atualizar histórico Zoho</button>'+
     '<button type="button" class="secondary" id="vault-sheets">Atualizar Google Sheets</button>'+
     '<button type="button" class="secondary" id="vault-live">Ver AÇÕES e artistas atuais</button>'+
@@ -66,8 +67,8 @@
   // They cannot access arbitrary API routes or expose credentials to the UI.
   window.CaravelaNativeTransport={
     request(kind,method="GET",entry=null){
-      if(!["contacts","booking","archive"].includes(kind)||!["GET","POST","PATCH"].includes(method)||
-         (kind==="archive"&&method!=="GET"))
+      if(!["contacts","booking","archive","export"].includes(kind)||!["GET","POST","PATCH"].includes(method)||
+         ((kind==="archive"||kind==="export")&&method!=="GET"))
         throw Error("Operação CRM inválida.");
       return api("native/"+kind,{
         method,
@@ -96,7 +97,7 @@
   };
     function busyMode(value){
     busy=value;
-    for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-r2-backup","vault-zoho","vault-sheets","vault-live"])$(id).disabled=value;
+    for(const id of ["vault-status","vault-save","vault-load","vault-backup","vault-r2-backup","vault-native-export","vault-zoho","vault-sheets","vault-live"])$(id).disabled=value;
     if(!value)$("vault-save").disabled=!currentFile;
   }
   async function action(work){
@@ -199,6 +200,18 @@
     document.body.appendChild(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(objectUrl),5000);
     say("Concluído: cópia R2 independente recuperada e verificada.");
+  }));
+  $("vault-native-export").addEventListener("click",()=>action(async()=>{
+    const response=await api("native/export");
+    const payload=await response.json();
+    if(payload.schema!=="caravela.crm.native-backup.v1")
+      throw Error("A exportação não passou a validação de estrutura.");
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob),link=document.createElement("a");
+    link.href=url;link.download="caravela_control_registos_operacionais.json";
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    say("Concluído: "+payload.count+" revisões operacionais exportadas. Guarda a cópia num local seguro.");
   }));
   async function sync(provider) {
     say("A sincronizar "+provider+" em modo de leitura. Nenhuma mensagem será modificada…");

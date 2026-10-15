@@ -1,5 +1,16 @@
 name: Caravela Control Preview Safety Tests
 on:
+  push:
+    branches: [feature/zoho-mail-readonly-oauth]
+    paths:
+      - '_worker.js'
+      - 'control-*.js'
+      - 'crm-*.js'
+      - 'crm-control.html'
+      - 'control-*.css'
+      - 'migrations/**'
+      - 'tests/**'
+      - '.github/workflows/control-preview-tests.yml'
   pull_request:
     branches: [main]
     paths:

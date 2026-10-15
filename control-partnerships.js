@@ -3,7 +3,7 @@
  * A conversation-reported contact is never silently promoted to a verified send. */
 const OPERATION="partnership_record_v1";
 const CATEGORIES=new Set(["marca","institucional","mobilidade","equipamento","producao","comunicacao","circuito","outra"]);
-const STAGES=new Set(["idea","draft","contact_reported","sent_verified","reply_reported","negotiating","collaboration_reported","confirmed","paused","closed"]);
+const STAGES=new Set(["idea","draft","contact_reported","sent_verified","reply_reported","negotiating","collaboration_reported","active_reported","confirmed","paused","closed"]);
 const PRIORITIES=new Set(["alta","media","baixa","a_definir"]);
 const SCOPES=new Set(["agencia","wildchains","devil","ambos","outro"]);
 const EVIDENCES=new Set(["none","discussion","user_report","sent_message","received_message","agreement"]);
@@ -36,6 +36,10 @@ function clean(input){
     if(typeof input[field]!=="string"||!set.has(input[field]))return null;
     row[field]=input[field];
   }
+  // Publicly identified ongoing support is distinct from an executed contract.
+  if(row.stage==="active_reported"&&(!row.evidence_reference||
+     !["user_report","agreement"].includes(row.evidence_type)))
+    return null;
   // Explicit message/contract evidence and a reference required for verified statuses.
   if(["sent_verified","confirmed"].includes(row.stage)&&
      (!row.evidence_reference||!["sent_message","received_message","agreement"].includes(row.evidence_type)))

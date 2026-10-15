@@ -420,7 +420,7 @@ function renderDashboard(){
   const area=make("section",undefined,"cc-agenda-section");
   const title=make("h3",section.label+" · "+agenda.filter(section.matches).length);
   const intro=make("p",section.description,"cc-lead");area.append(title,intro);
-  const entries=agenda.filter(section.matches).sort((x,y)=>x.date.localeCompare(y.date)||({high:0,medium:1,low:2}[x.row.priority]-({high:0,medium:1,low:2}[y.row.priority]));
+  const entries=agenda.filter(section.matches).sort((x,y)=>x.date.localeCompare(y.date));
   if(!entries.length)area.append(make("p","Sem ações com prazo neste período.","cc-agenda-empty"));
   for(const a of entries.slice(0,12)){
    const item=make("button",undefined,"cc-native-dash-task");

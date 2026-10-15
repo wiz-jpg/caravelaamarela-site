@@ -80,9 +80,10 @@ test("booking evidence and status guards; no inferred send or agreement",async()
    id:first.id,revision:first.revision,stage:"sent_verified",evidence_type:"sent_message",
    evidence_reference:"Zoho mail ID verified manually"
  }));
- assert.equal(amended.status,200);
+ assert.equal(amended.status,422);
+ assert.equal((await amended.json()).error,"verified_contact_link_required");
  assert.equal((await amended.json()).record.stage,"sent_verified");
- assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,2);
+ assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,1);
 });
 test("blocked native contact cannot be attached to verified booking",async()=>{
  const saved=await req("contacts","POST",contact({contact_policy:"blocked"}));
@@ -125,4 +126,15 @@ test("legacy contact references cannot be fabricated when no active sealed snaps
  const res=await req("contacts","POST",contact({id:origin,origin_id:origin}));
  assert.equal(res.status,422);
  assert.equal((await res.json()).error,"historical_reference_not_found");
+});
+
+test("verified proposal enforces approved matching native contact and email",async()=>{
+ const entry=await req("contacts","POST",contact({contact_policy:"allowed"}));
+ const id=(await entry.json()).record.id;
+ const verified=deal({contact_id:id,stage:"sent_verified",evidence_type:"sent_message",
+   evidence_reference:"Human-checked Zoho message ID"});
+ assert.equal((await req("booking","POST",deal({...verified,contact_id:crypto.randomUUID()}))).status,422);
+ assert.equal((await req("booking","POST",deal({...verified,contact_name:"Other Venue"}))).status,422);
+ assert.equal((await req("booking","POST",deal({...verified,contact_email:"another@example.pt"}))).status,422);
+ assert.equal((await req("booking","POST",verified)).status,201);
 });

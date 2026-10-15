@@ -828,7 +828,14 @@ dashboardPanel.innerHTML='<div class="cc-native-head"><div><h2>Trabalho diário<
  '<div id="cc-native-dash-body" class="cc-native-list"><p class="cc-lead">A consultar tarefas...</p></div>';
 dashboard.appendChild(dashboardPanel);
 $("cc-native-dash-open").onclick=()=>window.CaravelaControlApp?.openView("booking");
-let partnerTasks=[];
+let partnerTasks=[],financeTasks=[];
+async function loadFinanceTasks(){
+ try{
+  const response=await api("finance","GET");
+  const body=await response.json();
+  if(response.ok&&body.ok){financeTasks=body.records||[];renderDashboard()}
+ }catch{}
+}
 async function loadPartnerTasks(){
  try{
   if(!window.CaravelaPartnershipTransport)return;
@@ -888,6 +895,14 @@ function renderDashboard(){
    note:x.next_step||"Rever entidade e verificar se deve ser contactada",
    source:"contacto",priority:"medium",
    click:()=>{window.CaravelaControlApp?.openView("contacts");edit("contacts",x)}});
+ }
+ for(const row of financeTasks){
+  if(!row.due_date||["settled","cancelled"].includes(row.status))continue;
+  const due=row.status==="due";
+  tasks.push({date:row.due_date,title:row.title+" · "+(row.artist||"Caravela"),
+   note:(due?"Pagamento a tratar":"Valor previsto")+" · "+row.type+
+    " · "+Number(row.amount).toLocaleString("pt-PT",{style:"currency",currency:"EUR"}),
+   source:"financeiro",priority:due?"high":"medium",click:()=>window.CaravelaControlApp?.openView("finance")});
  }
  for(const p of partnerTasks){
   if(!p.next_review_iso||["closed","confirmed"].includes(p.stage))continue;
@@ -959,6 +974,7 @@ function renderDashboard(){
  ];
  const undated=active.filter(x=>!x.due_date);
  const partnersUndated=partnerTasks.filter(x=>!x.next_review_iso&&!["closed","confirmed","paused"].includes(x.stage));
+ const paymentsUndated=financeTasks.filter(x=>x.status==="due"&&!x.due_date);
  const stats=[["A rever",tasks.filter(sections[0].test).length],
   ["Esta semana",tasks.filter(sections[1].test).length],
   ["Próxima semana",tasks.filter(sections[2].test).length],
@@ -976,7 +992,7 @@ function renderDashboard(){
    action.type="button";
    action.append(make("strong",entry.title),make("span",
     (entry.suggestedWeek?"Triagem sugerida (prazo antigo "+entry.date+")":"Prazo "+entry.date)+
-    " · "+entry.note+" · "+({arquivo:"Arquivo — por confirmar",contacto:"Contacto",booking:"Booking",parceria:"Parceria"}[entry.source]||entry.source)));
+    " · "+entry.note+" · "+({arquivo:"Arquivo — por confirmar",contacto:"Contacto",booking:"Booking",parceria:"Parceria",financeiro:"Finanças"}[entry.source]||entry.source)));
    if(entry.date<today)action.classList.add("cc-native-overdue");
    action.onclick=entry.click;box.append(action);
   }
@@ -991,6 +1007,15 @@ function renderDashboard(){
   for(const x of future.slice(0,20)){
    const btn=make("button",x.date+" · "+x.title,"cc-native-dash-task");
    btn.type="button";btn.onclick=x.click;box.append(btn);
+  }
+  root.append(box);
+ }
+ if(paymentsUndated.length){
+  const box=make("details",undefined,"cc-archive-toggle");
+  box.append(make("summary","Pagamentos pendentes sem vencimento · "+paymentsUndated.length));
+  for(const p of paymentsUndated.slice(0,15)){
+   const link=make("button",p.title+" · "+Number(p.amount).toLocaleString("pt-PT",{style:"currency",currency:"EUR"}),"cc-native-dash-task");
+   link.type="button";link.onclick=()=>window.CaravelaControlApp?.openView("finance");box.append(link);
   }
   root.append(box);
  }
@@ -1041,11 +1066,11 @@ function onOpened(event){
  if(view==="contacts"||view==="booking"){
   loadArchive();load(view==="contacts"?"contacts":"booking");
   if(view==="booking")renderHistory();
- } else if(view==="dashboard"){loadArchive();load("contacts");load("booking");void loadPartnerTasks()}
+ } else if(view==="dashboard"){loadArchive();load("contacts");load("booking");void loadPartnerTasks();void loadFinanceTasks()}
 }
 window.addEventListener("caravela-control-view-opened",onOpened);
 window.addEventListener("caravela-control-token-ready",()=>{
- loadArchive();load("contacts");load("booking");void loadPartnerTasks();
+ loadArchive();load("contacts");load("booking");void loadPartnerTasks();void loadFinanceTasks();
 });
 window.addEventListener("caravela-crm-imported",event=>{
  archiveLoaded=true;

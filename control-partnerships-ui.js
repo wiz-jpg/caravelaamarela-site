@@ -93,7 +93,7 @@ try{if(file.size>80000)throw Error("O ficheiro deve ter menos de 80 KB.");
 const data=JSON.parse(await file.text());if(data.schema!=="caravela.partnerships.review.v1"||!Array.isArray(data.partners)||data.partners.length<1||data.partners.length>40)throw Error("Levantamento inválido.");
 if(!confirm("Importar "+data.partners.length+" oportunidades para revisão? Não serão apagados registos anteriores."))return;
 busy=true;let added=0,skipped=0;const normalized=name=>String(name||"").trim().normalize("NFD")
-  .replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-PT");
+  .replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-PT").replace(/[^a-z0-9]+/g," ").trim();
 const seen=new Set(partners.map(p=>normalized(p.name)));
 for(let i=0;i<data.partners.length;i++){let row=data.partners[i];message("A importar "+(i+1)+"/"+data.partners.length);
 if(seen.has(normalized(row.name))){skipped++;continue}

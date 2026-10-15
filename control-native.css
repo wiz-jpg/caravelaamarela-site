@@ -79,3 +79,20 @@
 .cc-native-overdue{border-color:#986750;background:#30231f}
 .cc-native-overdue strong{color:#f0c4a8}
 @media(max-width:900px){.cc-native-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+.cc-native-geo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
+.cc-native-geo label{font-size:12px}
+.cc-native-geo select{width:100%;min-height:40px;border:1px solid #556273;border-radius:8px;background:#17202a;color:#fff;padding:8px}
+.cc-agenda-section{margin:15px 0 21px;border-top:1px solid #384758;padding-top:17px;display:grid;gap:8px}
+.cc-agenda-section h3,.cc-agenda-artists h3{font-size:17px;margin:0}
+.cc-agenda-section .cc-lead{font-size:12px}
+.cc-agenda-empty{font-size:12px;color:#a9b7c6}
+.cc-agenda-artists{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border-top:1px solid #364655;padding-top:20px;margin-top:25px}
+.cc-agenda-artists>h3{grid-column:1/-1}
+.cc-agenda-artist{border:1px solid #36485a;background:#1d2a36;border-radius:12px;padding:17px}
+.cc-agenda-artist strong{font-size:14px}
+.cc-agenda-artist p{font-size:12px;color:#b7c6d4}
+.cc-agenda-artist button{font-size:12px;padding:8px 12px}
+.cc-agenda-artists>details{grid-column:1/-1}
+@media(max-width:720px){.cc-native-geo,.cc-agenda-artists{grid-template-columns:1fr}}

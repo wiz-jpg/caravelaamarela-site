@@ -20,7 +20,7 @@ export async function triggerReadOnlySync(provider,env,fetcher=fetch){
   let response;
   try{
     response=await fetcher(ENDPOINT+provider+"/sync",{
-      method:"POST",redirect:"error",signal:AbortSignal.timeout(25000),
+      method:"POST",redirect:"manual",signal:AbortSignal.timeout(25000),
       headers:{
         "Authorization":"Bearer "+env.CONTROL_CRON_TOKEN,
         "CF-Access-Client-Id":env.CF_ACCESS_CLIENT_ID,
@@ -29,10 +29,21 @@ export async function triggerReadOnlySync(provider,env,fetcher=fetch){
         "X-Caravela-Request":"1"
       }
     });
-  }catch{
-    throw Error(provider+"_transport_failed");
+  }catch(error){
+    // Only fixed diagnostic categories. Never log request headers or raw errors.
+    const message=String(error?.message||"");
+    const category=message.includes("1042")?"cloudflare_1042":
+      message.includes("1021")?"cloudflare_1021":
+      message.includes("1024")?"cloudflare_1024":
+      /redirect/i.test(message)?"redirect_exception":
+      /abort|timeout/i.test(message)||error?.name==="TimeoutError"?"timeout":
+      error?.name==="TypeError"?"type_error":"other_exception";
+    throw Error(provider+"_transport_"+category);
   }
   // A Cloudflare Access login page can return HTML 200. Never treat that as success.
+  // Do not follow redirects or send credentials to another hostname.
+  if(response.status>=300&&response.status<400)
+    throw Error(provider+"_redirect_http_"+response.status);
   const type=response.headers.get("Content-Type")||"";
   let body=null;
   if(type.includes("application/json"))body=await response.json().catch(()=>null);
@@ -69,7 +80,7 @@ export async function runControlAutomation(controller,env,fetcher=fetch){
     if(result.status!=="rejected")return null;
     const code=String(result.reason?.message||"");
     // Expose only a known diagnostic shape, never raw exception text.
-    const safe=/^(zoho|sheets)_(transport_failed|non_json_http_[1-5][0-9]{2}|sync_http_[1-5][0-9]{2}(?:_(?:unauthorized|invalid_origin|not_found|zoho_sync_failed|sheets_sync_failed|configuration_required|migration_required|vault_error))?)$/;
+    const safe=/^(zoho|sheets)_(transport_(?:cloudflare_1042|cloudflare_1021|cloudflare_1024|redirect_exception|timeout|type_error|other_exception)|redirect_http_3[0-9]{2}|non_json_http_[1-5][0-9]{2}|sync_http_[1-5][0-9]{2}(?:_(?:unauthorized|invalid_origin|not_found|zoho_sync_failed|sheets_sync_failed|configuration_required|migration_required|vault_error))?)$/;
     return providers[index]+":"+(safe.test(code)?code:"failed");
   }).filter(Boolean);
   if(failed.length)throw Error("caravela_scheduler_sync_failed_"+failed.join("_"));

@@ -16,15 +16,18 @@
   side.className = "cc-sidebar";
   side.innerHTML =
     '<div class="cc-logo"><span class="cc-mark">C</span><div><strong>CARAVELA<br>CONTROL</strong><small>Workspace privado</small></div></div>' +
-    '<nav class="cc-nav" aria-label="Navegação principal"><div class="cc-nav-label">Plataforma</div>' +
-    '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Visão geral</span></button>' +
+    '<nav class="cc-nav" aria-label="Navegação principal"><div class="cc-nav-label">Trabalho diário</div>' +
+    '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Início</span></button>' +
+    '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking</span></button>' +
     '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
-    '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking e ações</span></button>' +
-    '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
-    '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
     '<button type="button" data-view="communications" data-min-role="manager"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações</span></button>' +
-    '<button type="button" data-view="sources" data-min-role="admin"><span class="cc-nav-symbol">⚙</span><span class="cc-nav-text">Dados e backups</span></button>' +
-    '<button type="button" data-view="team" data-min-role="admin"><span class="cc-nav-symbol">♙</span><span class="cc-nav-text">Equipa e acessos</span></button></nav>' +
+    '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
+    '<div class="cc-nav-label cc-nav-label-spaced">Apoio</div>' +
+    '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
+    '<button type="button" data-view="guide"><span class="cc-nav-symbol">?</span><span class="cc-nav-text">Como usar</span></button>' +
+    '<details class="cc-nav-admin" data-min-role="admin"><summary><span class="cc-nav-symbol">⚙</span><span class="cc-nav-text">Administração</span></summary>' +
+    '<button type="button" data-view="sources" data-min-role="admin"><span class="cc-nav-symbol">▥</span><span class="cc-nav-text">Dados e backups</span></button>' +
+    '<button type="button" data-view="team" data-min-role="admin"><span class="cc-nav-symbol">♙</span><span class="cc-nav-text">Equipa e acessos</span></button></details></nav>' +
     '<div class="cc-side-bottom"><div class="cc-role" id="cc-sidebar-role"></div>' +
     '<div class="cc-user"><span class="cc-avatar" id="cc-user-avatar">C</span>' +
     '<div class="cc-user-details"><strong id="cc-user-name"></strong><small id="cc-user-handle"></small></div></div>' +
@@ -49,14 +52,15 @@
   views.id = "cc-views";
   top.after(views);
   const viewInfo = [
-    ["dashboard", "Visão geral", "O ponto de partida para consultar os dados e organizar as próximas decisões."],
-    ["contacts", "Contactos", "Festivais, salas, promotores e imprensa — com origens e validação."],
-    ["booking", "Booking e ações", "Histórico operacional separado de mensagens observadas. Confirmar sempre a associação."],
+    ["dashboard", "Início", "O que tens para fazer a seguir, a partir dos registos operacionais."],
+    ["contacts", "Contactos", "Entidades, interlocutores e restrições de contacto."],
+    ["booking", "Booking", "Propostas em curso, decisões e próximos passos."],
     ["artists", "Artistas", "Projetos, condições e histórico das fichas originais."],
     ["partnerships", "Parcerias", "Marcas, entidades e parceiros estratégicos: histórico, propostas, evidência e próximos passos."],
     ["communications", "Comunicações", "Leitura do Zoho e identificação de endereços, sem envios automáticos."],
     ["sources", "Dados e backups", "Importação, cofre, fontes sincronizadas e recuperação de versões."],
-    ["team", "Equipa e acessos", "Criar contas, definir funções e revogar acessos."]
+    ["team", "Equipa e acessos", "Criar contas, definir funções e revogar acessos."],
+    ["guide", "Como usar", "Guia rápido por área de trabalho da Caravela Amarela."]
   ];
   const viewMap = new Map();
   for (const [id, title, description] of viewInfo) {
@@ -82,7 +86,7 @@
   const actionRow = document.createElement("div");
   actionRow.className = "cc-actions";
   actionRow.innerHTML =
-    '<button type="button" class="cc-primary" data-open="booking">Consultar ações</button>' +
+    '<button type="button" class="cc-primary" data-open="booking">Abrir booking</button>' +
     '<button type="button" class="cc-neutral" data-open="contacts">Pesquisar contactos</button>' +
     '<button type="button" class="cc-neutral" data-open="communications">Ver comunicações</button>';
   dashboard.appendChild(actionRow);
@@ -90,7 +94,7 @@
   brief.id = "cc-dashboard-brief";
   brief.className = "cc-notice";
   brief.textContent = "Os dados guardados são carregados após a autenticação. As correspondências por email continuam sujeitas a validação.";
-  dashboard.appendChild(brief);
+  viewMap.get("sources").appendChild(brief);
   const attention = document.createElement("section");
   attention.className = "cc-dashboard-attention";
   attention.innerHTML =
@@ -107,15 +111,23 @@
   dashboard.appendChild(attention);
   $("cc-attention-open").addEventListener("click", () => openView("booking"));
   const note = Array.from(main.children).find(el => el.classList.contains("note"));
-  if (note) dashboard.appendChild(note);
+  if (note) viewMap.get("sources").appendChild(note);
 
-  viewMap.get("contacts").appendChild(legacyResults);
+  const contactArchive=document.createElement("details");
+  contactArchive.className="cc-archive-toggle";
+  contactArchive.innerHTML='<summary>Arquivo e análise histórica <small>Consultar dados originais, não editáveis</small></summary>';
+  contactArchive.appendChild(legacyResults);
+  viewMap.get("contacts").appendChild(contactArchive);
   const operational = $("crm-extra");
   const artistsView = viewMap.get("artists");
   if (operational) {
     const panels = operational.querySelectorAll(":scope > .panel");
     if (panels.length > 1) artistsView.appendChild(panels[1]);
-    viewMap.get("booking").appendChild(operational);
+    const oldBooking=document.createElement("details");
+    oldBooking.className="cc-archive-toggle";
+    oldBooking.innerHTML='<summary>Tabela original de AÇÕES <small>Apenas consulta; não são propostas nativas</small></summary>';
+    oldBooking.appendChild(operational);
+    viewMap.get("booking").appendChild(oldBooking);
   }
   const artistsEmpty = document.createElement("div");
   artistsEmpty.id = "cc-artists-empty";
@@ -126,7 +138,7 @@
   bookingEmpty.id = "cc-booking-empty";
   bookingEmpty.className = "cc-notice";
   bookingEmpty.textContent = "Abre a base guardada para consultar o histórico das ações.";
-  viewMap.get("booking").prepend(bookingEmpty);
+  if(operational) operational.prepend(bookingEmpty);
 
   const communication = viewMap.get("communications");
   const zoho = bars.querySelectorAll(":scope > .panel")[1];
@@ -184,6 +196,7 @@
     const permitted = side.querySelector(`button[data-view="${view}"]`);
     const requirement = permitted?.dataset.minRole;
     if (requirement && (rank[currentUser?.role] || 0) < rank[requirement]) return;
+    if(permitted?.closest("details.cc-nav-admin"))permitted.closest("details.cc-nav-admin").open=true;
     active = view;
     for (const [key, section] of viewMap) section.hidden = key !== view;
     for (const button of side.querySelectorAll("[data-view]")) {

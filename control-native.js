@@ -147,19 +147,23 @@ function legacyPolicy(entity){
   if(entity.review_required||entity.shared_email)return "review";
   return "allowed";
 }
-function insertEvent(db,kind,id,record,actor){
-  return db.prepare(
-    "INSERT INTO control_decision_events(id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms) "+
-    "VALUES(?,?,?,?,?,?,?,?)"
-  ).bind(crypto.randomUUID(),prefix(kind)+id,kind==="booking"?record.artist:null,
-    operation(kind),kind==="booking"?record.stage:record.contact_policy,
-    record.next_step||"Atualização manual",JSON.stringify(record),Date.now());
-}
-function audit(db,kind,id,actor,action){
-  return db.prepare(
-    "INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) VALUES(?,?,?,?,?)"
-  ).bind(crypto.randomUUID(),Date.now(),"crm_"+kind+"_"+action,prefix(kind)+id,
-    JSON.stringify({actor:actor||"legacy_admin",action}));
+function appendRevision(db,kind,id,record,actor,revision){
+  const eventId=crypto.randomUUID(),entity=prefix(kind)+id,op=operation(kind),now=Date.now();
+  const changeSql="INSERT INTO control_decision_events("+
+    "id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms) "+
+    "SELECT ?,?,?,?,?,?,?,? WHERE "+(revision
+      ?"(SELECT id FROM control_decision_events WHERE entity_id=? AND operation=? ORDER BY created_ms DESC,rowid DESC LIMIT 1)=?"
+      :"NOT EXISTS(SELECT 1 FROM control_decision_events WHERE entity_id=? AND operation=?)");
+  const query=db.prepare(changeSql).bind(eventId,entity,
+    kind==="booking"?record.artist:null,op,
+    kind==="booking"?record.stage:record.contact_policy,
+    record.next_step||"Atualização manual",JSON.stringify(record),now,
+    entity,op,...(revision?[revision]:[]));
+  const audit=db.prepare("INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) "+
+    "SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM control_decision_events WHERE id=?)")
+    .bind(crypto.randomUUID(),now,"crm_"+kind+"_"+(revision?"updated":"created"),entity,
+      JSON.stringify({actor:actor||"legacy_admin",revision_event:eventId}),eventId);
+  return [query,audit];
 }
 export async function handleNative(request,env,url,route,{canRead=false,canWrite=false,actor=""}={}){
   if(!env.ZOHO_DB||!canRead)return fail("forbidden",403);
@@ -223,11 +227,12 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
         if(!source||legacyPolicy(source)!=="allowed")return fail("contact_review_required",422);
       }
     }
-    // Preserve revision event and audit together. There is no delete endpoint.
-    await env.ZOHO_DB.batch([
-      insertEvent(env.ZOHO_DB,kind,id,record,actor),
-      audit(env.ZOHO_DB,kind,id,actor,request.method==="POST"?"created":"updated")
-    ]);
+    // Atomic compare-and-append: two tabs cannot silently overwrite each other.
+    // The audit row is inserted only if the guarded event was inserted.
+    const writes=await env.ZOHO_DB.batch(appendRevision(env.ZOHO_DB,kind,id,record,actor,
+      request.method==="PATCH"?input.revision:null));
+    const changes=writes[0]?.meta?.changes??writes[0]?.changes;
+    if(changes===0)return fail("revision_conflict",409);
     const current=(await listAll(env.ZOHO_DB,kind)).find(x=>x.id===id);
     return out({ok:true,record:current,append_only:true},request.method==="POST"?201:200);
   }catch{return fail("native_storage_failed",503);}

@@ -24,6 +24,7 @@ const BOOKING_FIELDS=[
   ["commission_pct","Comissão acordada (%)","number"],
   ["event_date","Data prevista do concerto","date"],
   ["press_status","Estado de comunicação / imprensa","select"],["press_reference","Referência de imprensa / divulgação","text"],
+  ["advance_status","Preparação técnica / advancing","select"],
   ["fee_note","Notas de valor / comissão","text"],
   ["conditions","Condições / deslocação / alojamento","textarea"],
   ["last_contact_date","Último contacto comprovado","date"],
@@ -35,6 +36,7 @@ const BOOKING_FIELDS=[
 const choices={
  kind:{festival:"Festival",venue:"Sala / espaço",promoter:"Promotor",press:"Imprensa",partnership:"Possível parceria",other:"Outro"},
  press_status:{unknown:"Por avaliar",planned:"Divulgação planeada",completed:"Divulgação realizada (referenciada)",not_applicable:"Não aplicável"},
+ advance_status:{unknown:"Por verificar",planned:"Em preparação",ready:"Pronto / validado pela equipa",not_applicable:"Não aplicável"},
  contact_policy:{review:"Rever antes de contactar",allowed:"Contacto autorizado",blocked:"Não contactar"},
  relationship:{unknown:"Por classificar",partner:"Parceria existente",target:"Queremos colaborar",in_discussion:"Em conversa",former:"Parceria anterior",not_applicable:"Não aplicável"},
  authorization_source:{none:"Sem prova confirmada",zoho_thread:"Conversa Zoho de ida e volta — verificar no servidor"},
@@ -393,6 +395,7 @@ function render(kind){
     hint(card,"Comissão estimada",Number(r.fee_amount*r.commission_pct/100).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+" ("+r.commission_pct+"%) · ainda não recebida");
    hint(card,"Data do concerto",r.event_date);
    hint(card,"Comunicação / imprensa",choices.press_status[r.press_status||"unknown"]);
+   hint(card,"Preparação técnica",choices.advance_status[r.advance_status||"unknown"]);
    hint(card,"Responsável",r.owner);
    hint(card,"Evidência",(choices.evidence_type[r.evidence_type]||"")+" · "+(r.evidence_reference||"não referenciada"));
    hint(card,"Origem",r.origin_label);
@@ -862,6 +865,10 @@ function renderDashboard(){
  const week=days=>{const x=new Date(monday);x.setUTCDate(x.getUTCDate()+days);return x.toISOString().slice(0,10)};
  const weekEnd=week(7),nextEnd=week(14);
  const live=get("booking"),tasks=[];
+ const addDays=(day,shift)=>{const date=new Date(day+"T12:00:00Z");
+  if(Number.isNaN(date.getTime()))return day;
+  date.setUTCDate(date.getUTCDate()+shift);return date.toISOString().slice(0,10);
+ };
  const active=live.filter(x=>!["declined","closed"].includes(x.stage));
  const normalized=x=>lower(x).normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9]+/g," ").trim();
  const liveKeys=new Set(live.map(x=>normalized(x.contact_name)+"|"+normalized(x.artist)));
@@ -870,10 +877,18 @@ function renderDashboard(){
    note:x.next_step||"Rever negociação",source:"booking",priority:x.priority,
    followup:["sent_verified","reply_reported","negotiating","contact_reported"].includes(x.stage),
    click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
-  if(x.stage==="confirmed"&&x.event_date&&(!x.press_status||x.press_status==="unknown"))
-   tasks.push({date:x.event_date,title:x.contact_name+" · "+x.artist,
-    note:"Verificar necessidade de imprensa para o concerto",source:"booking",priority:x.priority,
-    click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
+  if(x.stage==="confirmed"&&/^\d{4}-\d{2}-\d{2}$/.test(x.event_date||"")){
+   if(!x.press_status||x.press_status==="unknown")
+    tasks.push({date:addDays(x.event_date,-21),title:x.contact_name+" · "+x.artist,
+     note:"Confirmar plano de imprensa e divulgação (21 dias antes do concerto)",
+     source:"booking",priority:x.priority,
+     click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
+   if(!x.advance_status||x.advance_status==="unknown"||x.advance_status==="planned")
+    tasks.push({date:addDays(x.event_date,-10),title:x.contact_name+" · "+x.artist,
+     note:"Verificar rider, horários, equipa técnica e deslocação (10 dias antes)",
+     source:"booking",priority:"high",
+     click:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",x)}});
+  }
  }
  for(const row of state.actions){
   const due=row.next_action_iso||row.next_followup_iso;

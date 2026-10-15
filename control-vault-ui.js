@@ -66,7 +66,8 @@
   // They cannot access arbitrary API routes or expose credentials to the UI.
   window.CaravelaNativeTransport={
     request(kind,method="GET",entry=null){
-      if(!["contacts","booking"].includes(kind)||!["GET","POST","PATCH"].includes(method))
+      if(!["contacts","booking","archive"].includes(kind)||!["GET","POST","PATCH"].includes(method)||
+         (kind==="archive"&&method!=="GET"))
         throw Error("Operação CRM inválida.");
       return api("native/"+kind,{
         method,

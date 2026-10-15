@@ -209,6 +209,8 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
   const id=request.method==="POST"?(kind==="contacts"&&LEGACY_ID.test(input.id)?input.id:crypto.randomUUID()):input.id;
   if(!validId(id))return fail("invalid_id",422);
   // Do not allow hand-crafted historical references for newly created records.
+  if(request.method==="POST"&&kind==="contacts"&&record.origin_id&&record.origin_id!==id)
+    return fail("invalid_origin_reference",422);
   if(request.method==="POST"&&kind==="contacts"&&LEGACY_ID.test(id)&&record.origin_id!==id)
     return fail("invalid_origin_reference",422);
   try{
@@ -231,17 +233,41 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
         return fail("historical_contact_needs_review",422);
     }
     if(request.method==="POST"&&kind==="contacts"){
-      if(before.some(x=>x.name.toLocaleLowerCase("pt-PT")===record.name.toLocaleLowerCase("pt-PT")&&
-        x.city.toLocaleLowerCase("pt-PT")===record.city.toLocaleLowerCase("pt-PT")))
-        return fail("possible_duplicate_contact",409);
+      const normalized=x=>String(x||"").trim().toLocaleLowerCase("pt-PT");
+      const sameEntity=x=>normalized(x.name)===normalized(record.name)&&
+        normalized(x.city)===normalized(record.city);
+      if(before.some(sameEntity))return fail("possible_duplicate_contact",409);
+      // Continuation must reuse the immutable V3 ID instead of making a second record.
+      const manifest=await readActiveArchive(env.ZOHO_DB);
+      if(manifest?.entities.some(sameEntity))return fail("historical_contact_exists",409);
     }
-    // A blocked contact must not be linked to a verified proposal.
-    if(kind==="booking"&&["sent_verified","confirmed"].includes(record.stage)&&record.contact_id){
+    // Verified commercial states require a real, explicitly authorized contact.
+    // Neither a free-text name nor an unresolvable ID can bypass contact policy.
+    if(kind==="booking"&&["sent_verified","confirmed"].includes(record.stage)){
+      if(!record.contact_id)return fail("verified_contact_link_required",422);
       const linked=(await listAll(env.ZOHO_DB,"contacts")).find(x=>x.id===record.contact_id);
-      if(linked?.contact_policy==="blocked")return fail("contact_blocked",422);
-      if(LEGACY_ID.test(record.contact_id)){
-        const source=await historicContact(env.ZOHO_DB,record.contact_id);
-        if(!source||legacyPolicy(source)!=="allowed")return fail("contact_review_required",422);
+      const historical=LEGACY_ID.test(record.contact_id)
+        ?await historicContact(env.ZOHO_DB,record.contact_id):null;
+      if(!linked&&!historical)return fail("contact_reference_not_found",422);
+      if(linked?.contact_policy==="blocked"||
+         (!linked&&historical&&legacyPolicy(historical)==="blocked"))
+        return fail("contact_blocked",422);
+      if(linked?linked.contact_policy!=="allowed":legacyPolicy(historical)!=="allowed")
+        return fail("contact_review_required",422);
+      const known=linked||historical;
+      if(known.name.trim().toLocaleLowerCase("pt-PT")!==record.contact_name.toLocaleLowerCase("pt-PT"))
+        return fail("contact_identity_mismatch",422);
+      if(record.contact_email&&!(known.emails||[]).some(
+        email=>email.toLowerCase()===record.contact_email.toLowerCase()))
+        return fail("contact_identity_mismatch",422);
+      // A shared or suppressed historical address is never implicitly cleared
+      // by creating an unrelated native contact with the same email.
+      if(record.contact_email){
+        const manifest=await readActiveArchive(env.ZOHO_DB);
+        if(manifest?.entities.some(x=>x.id!==record.contact_id&&
+          (x.emails||[]).some(email=>email.toLowerCase()===record.contact_email.toLowerCase())&&
+          legacyPolicy(x)!=="allowed"))
+          return fail("contact_email_review_required",422);
       }
     }
     // Atomic compare-and-append: two tabs cannot silently overwrite each other.

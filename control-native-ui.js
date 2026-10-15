@@ -915,12 +915,30 @@ function renderDashboard(){
  }
  followupSection.append(followupMetrics);
  root.append(followupSection);
+ // First-contact leads are not follow-ups and require individual research.
+ const prospects=state.actions.filter(x=>/^Por contactar$/i.test(x.status||"")&&
+  !x.no_outreach&&x.contact_policy!=="blocked"&&!liveKeys.has(normalized(x.name)+"|"+normalized(x.artist)));
+ prospects.sort((x,y)=>Number(/^A\\b/i.test(y.priority||""))-Number(/^A\\b/i.test(x.priority||""))||
+  x.name.localeCompare(y.name,"pt-PT"));
+ const prospectsBox=make("section",undefined,"cc-pipeline-prospects");
+ prospectsBox.append(make("h3","Novas oportunidades · investigar"),
+  make("p",prospects.length+" entradas históricas «Por contactar». Validar programação, encaixe artístico e restrições antes de enviar.","cc-lead"));
+ const prospectList=make("div",undefined,"cc-prospect-list");
+ for(const x of prospects.slice(0,8)){
+  const button=make("button",undefined,"cc-prospect-item");button.type="button";
+  button.append(make("strong",x.name),make("span",(x.artist||"Artista a confirmar")+
+    " · "+(x.next_step||"Preparar abordagem")+" · Fonte: arquivo, não enviado"));
+  button.onclick=()=>displayHistoricalAction(x);prospectList.append(button);
+ }
+ if(!prospects.length)prospectList.append(make("p","Sem oportunidades históricas por verificar.","cc-lead"));
+ prospectsBox.append(prospectList);root.append(prospectsBox);
  const sections=[
   {label:"Backlog em atraso · por revalidar",description:"Prazos históricos ainda sem triagem atribuída. Não pressupõem falta de resposta.",test:x=>x.date<today&&!x.suggestedWeek},
   {label:"Esta semana · prioridades sugeridas",description:"Tarefas realmente agendadas e até 12 revisões antigas selecionadas automaticamente. Não são novos envios.",test:x=>(x.date>=today&&x.date<weekEnd)||x.suggestedWeek==="this"},
   {label:"Próxima semana · preparação",description:"Prazos reais e até 12 revisões antigas propostas para a semana seguinte.",test:x=>(x.date>=weekEnd&&x.date<nextEnd)||x.suggestedWeek==="next"}
  ];
  const undated=active.filter(x=>!x.due_date);
+ const partnersUndated=partnerTasks.filter(x=>!x.next_review_iso&&!["closed","confirmed","paused"].includes(x.stage));
  const stats=[["A rever",tasks.filter(sections[0].test).length],
   ["Esta semana",tasks.filter(sections[1].test).length],
   ["Próxima semana",tasks.filter(sections[2].test).length],
@@ -953,6 +971,19 @@ function renderDashboard(){
   for(const x of future.slice(0,20)){
    const btn=make("button",x.date+" · "+x.title,"cc-native-dash-task");
    btn.type="button";btn.onclick=x.click;box.append(btn);
+  }
+  root.append(box);
+ }
+ if(partnersUndated.length){
+  const box=make("details",undefined,"cc-archive-toggle");
+  box.append(make("summary","Parcerias sem próximo prazo · "+partnersUndated.length));
+  box.append(make("p","Associa uma data depois de verificares o último contacto; não inventamos follow-ups.","cc-lead"));
+  for(const x of partnersUndated.slice(0,14)){
+   const btn=make("button",x.name+" · "+x.next_step,"cc-native-dash-task");btn.type="button";
+   btn.onclick=()=>{
+    window.CaravelaControlApp?.openView("partnerships");
+    const q=$("cc-partners-search");if(q){q.value=x.name;q.dispatchEvent(new Event("input"))}
+   };box.append(btn);
   }
   root.append(box);
  }

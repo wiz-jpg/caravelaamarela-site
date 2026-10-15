@@ -708,9 +708,13 @@ window.addEventListener("caravela-crm-imported",event=>{
  updateGeoFilters();
  render("contacts");render("booking");renderDashboard();
 });
-window.addEventListener("caravela-control-contact-action",event=>{
+window.addEventListener("caravela-control-contact-action",async event=>{
  const action=event.detail?.action;
  window.CaravelaControlApp?.openView("contacts");
+ // Review results can load ahead of the native archive on a cold session.
+ // Resolve entity IDs against the actual workspace before editing.
+ await loadArchive();
+ await load("contacts");
  if(action==="open"){
   const contact=contactRows().find(x=>x.id===event.detail?.id);
   if(contact)edit("contacts",contact);

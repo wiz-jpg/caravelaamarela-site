@@ -162,3 +162,64 @@ test("agency finance ledger keeps artist cachets out of revenue and requires pay
  assert.equal((await req("finance","POST",{...base,booking_id:crypto.randomUUID()})).status,422);
  assert.equal((await req("finance","GET",null,{token:"bad"})).status,401);
 });
+
+test("one promoter can be linked to two events without merging or altering originals",async()=>{
+ const promoter=await (await req("contacts","POST",contact({
+  name:"Example Productions",kind:"promoter",emails:["producer@example.org"],city:"Porto"
+ }))).json();
+ const p=promoter.record;
+ const festival=await (await req("contacts","POST",contact({
+  name:"Independent Festival",kind:"festival",city:"Braga",emails:["festival@example.org"],
+  linked_producer_ids:[p.id],people:[{name:"Alex Booking",role:"Booking",email:"alex@example.org",phone:"0000000"}]
+ }))).json();
+ const venue=await (await req("contacts","POST",contact({
+  name:"Example Hall",kind:"venue",city:"Guimarães",emails:["hall@example.org"],
+  linked_producer_ids:[p.id]
+ }))).json();
+ assert.equal(festival.record.linked_producer_ids[0],p.id);
+ assert.equal(festival.record.people[0].role,"Booking");
+ assert.equal(venue.record.linked_producer_ids[0],p.id);
+ let contacts=(await (await req("contacts")).json()).records;
+ assert.equal(contacts.length,3);
+ const revised=await req("contacts","PATCH",contact({
+  id:venue.record.id,revision:venue.record.revision,
+  name:"Example Hall",kind:"venue",city:"Guimarães",emails:["hall@example.org"],
+  linked_producer_ids:[],people:[]
+ }));
+ assert.equal(revised.status,200);
+ contacts=(await (await req("contacts")).json()).records;
+ assert.equal(contacts.find(x=>x.id===festival.record.id).linked_producer_ids.length,1);
+ assert.equal(contacts.find(x=>x.id===venue.record.id).linked_producer_ids.length,0);
+ assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_decision_events WHERE operation='crm_contact_v1'").get().n,4);
+ assert.equal((await req("contacts","POST",contact({name:"Self Link",linked_producer_ids:["bad-id"]}))).status,422);
+});
+test("duplicate review only creates a reversible alias; event booking IDs are unaffected",async()=>{
+ const one=await (await req("contacts","POST",contact({name:"Media Sample",kind:"press",city:"Porto",emails:["a@example.org"]}))).json();
+ const two=await (await req("contacts","POST",contact({name:"Media Sample",kind:"press",city:"Lisboa",emails:["b@example.org"]}))).json();
+ const base=contact({id:two.record.id,revision:two.record.revision,name:"Media Sample",kind:"press",city:"Lisboa",
+  emails:["b@example.org"],canonical_id:one.record.id,duplicate_decision:"secondary"});
+ const tagged=await req("contacts","PATCH",base);
+ assert.equal(tagged.status,200);
+ const saved=(await tagged.json()).record;
+ assert.equal(saved.canonical_id,one.record.id);
+ const book=(await (await req("booking","POST",deal({contact_id:two.record.id,contact_name:"Media Sample"}))).json()).record;
+ assert.equal(book.contact_id,two.record.id);
+ const reversed=await req("contacts","PATCH",{...base,revision:saved.revision,canonical_id:"",duplicate_decision:"distinct"});
+ assert.equal(reversed.status,200);
+ const contacts=(await (await req("contacts")).json()).records;
+ assert.equal(contacts.find(x=>x.id===two.record.id).canonical_id,"");
+ assert.equal(contacts.length,2);
+ assert.equal((await req("contacts","PATCH",{...base,revision:(await reversed.json()).record.revision,canonical_id:one.record.id,duplicate_decision:"distinct"})).status,422);
+});
+test("reject invalid cross-type, self, cyclic, and untracked producer relationships",async()=>{
+ const promoter=(await (await req("contacts","POST",contact({name:"Company",kind:"promoter",emails:["prom@example.org"]}))).json()).record;
+ const festival=(await (await req("contacts","POST",contact({name:"Event One",kind:"festival",emails:["event1@example.org"]}))).json()).record;
+ const venue=(await (await req("contacts","POST",contact({name:"Venue One",kind:"venue",emails:["venue1@example.org"]}))).json()).record;
+ const native={id:festival.id,revision:festival.revision,name:"Event One",kind:"festival",emails:["event1@example.org"]};
+ assert.equal((await req("contacts","PATCH",contact({...native,canonical_id:venue.id,duplicate_decision:"secondary"}))).status,422);
+ assert.equal((await req("contacts","PATCH",contact({...native,canonical_id:festival.id,duplicate_decision:"secondary"}))).status,422);
+ assert.equal((await req("contacts","PATCH",contact({...native,linked_producer_ids:[venue.id]}))).status,422);
+ assert.equal((await req("contacts","PATCH",contact({...native,linked_producer_ids:[promoter.id]}))).status,200);
+ const wrong=contact({id:promoter.id,revision:promoter.revision,name:"Company",kind:"promoter",emails:["prom@example.org"],linked_producer_ids:[festival.id]});
+ assert.equal((await req("contacts","PATCH",wrong)).status,422);
+});

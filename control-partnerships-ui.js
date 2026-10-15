@@ -8,7 +8,7 @@ stage:{idea:"Ideia",draft:"Proposta preparada",contact_reported:"Contacto referi
 priority:{alta:"Alta",media:"Média",baixa:"Baixa",a_definir:"Por definir"},
 scope:{agencia:"Agência",wildchains:"WILDCHAINS",devil:"Devil of a Woman",ambos:"Ambas",outro:"Outro"},
 evidence_type:{none:"Sem evidência",discussion:"Discussão anterior",user_report:"Relato do responsável",sent_message:"Mensagem enviada",received_message:"Resposta recebida",agreement:"Acordo/documento"}};
-const fields={name:["Entidade",140,"text"],category:["Área",30,"select"],scope:["Âmbito",30,"select"],stage:["Estado",40,"select"],priority:["Prioridade",30,"select"],objective:["Objetivo",350,"text"],next_step:["Próximo passo",400,"text"],contact_name:["Pessoa de contacto",110,"text"],contact_email:["Email",250,"email"],channel:["Canal",80,"text"],last_contact_iso:["Último contacto",10,"date"],next_review_iso:["Rever em",10,"date"],evidence_type:["Tipo de evidência",30,"select"],evidence_reference:["Referência da evidência",450,"text"],source_label:["Origem do registo",160,"text"],notes:["Notas",1600,"textarea"]};
+const fields={name:["Entidade",140,"text"],owner:["Responsável Caravela",110,"text"],category:["Área",30,"select"],scope:["Âmbito",30,"select"],stage:["Estado",40,"select"],priority:["Prioridade",30,"select"],objective:["Objetivo",350,"text"],next_step:["Próximo passo",400,"text"],contact_name:["Pessoa de contacto",110,"text"],contact_email:["Email",250,"email"],channel:["Canal",80,"text"],last_contact_iso:["Último contacto",10,"date"],next_review_iso:["Rever em",10,"date"],evidence_type:["Tipo de evidência",30,"select"],evidence_reference:["Referência da evidência",450,"text"],source_label:["Origem do registo",160,"text"],notes:["Notas",1600,"textarea"]};
 root.insertAdjacentHTML("beforeend",
 '<div class="cc-partners-intro"><strong>Parcerias estratégicas, separadas do booking.</strong> Proposta preparada não equivale a email enviado. Representação artística continua no Artist Pipeline.</div>'+
 '<div id="cc-partners-stats" class="cc-partners-stats"></div>'+
@@ -60,10 +60,11 @@ if(!records.length){const empty=document.createElement("p");empty.className="cc-
 for(const p of records){
 const card=document.createElement("article");card.className="cc-partners-card";
 const head=document.createElement("div");head.className="cc-partners-head";
-const h=document.createElement("h3");h.textContent=p.name;const state=document.createElement("span");state.className="cc-partner-stage";state.textContent=choices.stage[p.stage]||p.stage;head.append(h,state);card.append(head);
+const h=document.createElement("h3");h.textContent=p.name;const state=document.createElement("span");state.className="cc-partner-stage cc-partner-stage--"+p.stage;state.textContent=choices.stage[p.stage]||p.stage;head.append(h,state);card.append(head);
 line(card,"Âmbito",(choices.scope[p.scope]||p.scope)+" · "+(choices.category[p.category]||p.category)+" · Prioridade "+(choices.priority[p.priority]||p.priority));
 line(card,"Objetivo",p.objective);line(card,"Próximo passo",p.next_step);
-line(card,"Contacto",[p.contact_name,p.contact_email].filter(Boolean).join(" · "));
+line(card,"Responsável Caravela",p.owner||"Por atribuir");
+line(card,"Interlocutor externo",[p.contact_name,p.contact_email].filter(Boolean).join(" · ")||"Por identificar");
 line(card,"Origem",[p.source_label,choices.evidence_type[p.evidence_type],p.evidence_reference].filter(Boolean).join(" · "));
 if(p.notes){let details=document.createElement("details"),summary=document.createElement("summary"),body=document.createElement("p");summary.textContent="Contexto";body.textContent=p.notes;details.append(summary,body);card.append(details)}
 let foot=document.createElement("div");foot.className="cc-partners-foot";let date=document.createElement("small");date.textContent=p.next_review_iso?"Rever "+p.next_review_iso:"Sem prazo definido";let edit=document.createElement("button");edit.type="button";edit.className="cc-neutral";edit.textContent="Atualizar";edit.hidden=!canEdit();edit.onclick=()=>editPartner(p);foot.append(date,edit);card.append(foot);list.append(card)}}

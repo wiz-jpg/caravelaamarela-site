@@ -47,6 +47,7 @@ const choices={
    agreement:"Contrato / acordo verificado"}
 };
 const state={historical:[],actions:[],saved:{contacts:[],booking:[]},busy:false,shown:{contacts:40,booking:30}};
+const mergeSelection=new Set(); // Only in-memory; never auto-send or import into Zoho.
 const byId=new Map();
 const normalize=x=>String(x??"").trim();
 const lower=x=>normalize(x).toLocaleLowerCase("pt-PT");
@@ -171,6 +172,22 @@ function build(kind,heading){
     '<label>País <select id="cc-native-contact-country"><option value="all">Todos</option></select></label>'+
     '<label>Região <select id="cc-native-contact-region"><option value="all">Todas</option></select></label>';
   root.querySelector(".cc-native-tools").after(geo);
+  const basket=make("section",undefined,"cc-contact-basket");
+  basket.innerHTML='<div class="cc-basket-head"><div><strong>Seleção para mail merge</strong>'+
+    '<p>Seleciona entidades com as caixas. O CSV de envio só inclui emails de fichas autorizadas, sem bloqueios nem caixas partilhadas.</p></div>'+
+    '<strong id="cc-basket-count">0 selecionadas</strong></div>'+
+    '<div class="cc-basket-actions"><button type="button" class="cc-neutral" id="cc-basket-visible">Selecionar resultados visíveis</button>'+
+    '<button type="button" class="cc-neutral" id="cc-basket-clear">Limpar seleção</button>'+
+    '<button type="button" class="cc-primary" id="cc-basket-export">Exportar CSV elegível</button></div>'+
+    '<p id="cc-basket-summary" class="cc-lead" aria-live="polite"></p>';
+  geo.after(basket);
+  root.querySelector("#cc-basket-visible").onclick=()=>{
+    for(const contact of filtered("contacts").slice(0,state.shown.contacts))mergeSelection.add(contact.id);
+    render("contacts");
+  };
+  root.querySelector("#cc-basket-clear").onclick=()=>{mergeSelection.clear();render("contacts")};
+  root.querySelector("#cc-basket-export").onclick=()=>exportBasket();
+
   for(const [value,label] of Object.entries(choices.kind)){
     const opt=make("option",label);opt.value=value;root.querySelector("#cc-native-contact-type").append(opt);
   }
@@ -256,8 +273,60 @@ function updateGeoFilters(){
   select.value=options.includes(prior)?prior:"all";
  }
 }
+
+function mergeRows(){
+ const entries=contactCards(contactRows()).filter(x=>mergeSelection.has(x.id));
+ const seen=new Set(),eligible=[],excluded=[];
+ for(const x of entries){
+  const address=suggestedChannel(x)?.email||"";
+  const restricted=x.contact_policy!=="allowed"||x.source_suppressed||
+    x.source_shared_email||x.source_review_required||x.source_form_url&&/formul[aá]rio/i.test(x.source_channel_quality||"")||
+    x.__members?.some(member=>member.contact_policy!=="allowed"||member.source_suppressed||member.source_shared_email);
+  const elsewhere=address&&contactRows().some(c=>c.id!==x.id&&
+    (c.emails||[]).some(e=>lower(e)===address)&&
+    !(x.__members||[x]).some(m=>m.id===c.id));
+  if(restricted||!address||elsewhere||seen.has(address)){
+   excluded.push({name:x.name,reason:restricted?"Rever autorização ou canal partilhado":elsewhere?"Email associado a outra entidade":"Sem endereço de envio válido ou já selecionado"});
+   continue;
+  }
+  seen.add(address);
+  eligible.push({email:address,name:x.name,kind:choices.kind[x.kind]||x.kind,
+    city:x.city||"",region:x.region||"",country:x.country||""});
+ }
+ return {eligible,excluded,total:entries.length};
+}
+function csvValue(value){
+ let text=String(value??"");
+ // Prevent spreadsheet formula injection when CSV is imported into office suites.
+ if(/^[\s]*[=+\-@\t\r]/.test(text))text="'"+text;
+ return '"'+text.replaceAll('"','""')+'"';
+}
+function renderBasket(){
+ const summary=$("cc-basket-summary"),counter=$("cc-basket-count");
+ if(!summary||!counter)return;
+ const ids=new Set(contactCards(contactRows()).map(x=>x.id));
+ for(const id of mergeSelection)if(!ids.has(id))mergeSelection.delete(id);
+ const {eligible,excluded,total}=mergeRows();
+ counter.textContent=total+" selecionadas";
+ summary.textContent=eligible.length+" destinatários aptos para CSV · "+excluded.length+
+  " excluídos por falta de aprovação, partilha de endereço ou canal inválido. Nenhum email foi enviado.";
+ $("cc-basket-export").disabled=!eligible.length;
+}
+function exportBasket(){
+ const {eligible,excluded}=mergeRows();
+ if(!eligible.length){$("cc-basket-summary").textContent="Não existem destinatários validados para exportação.";return}
+ const headings=["Email","Nome","Entidade","Tipo","Localidade","Região","País"];
+ const csv=[headings,...eligible.map(x=>[x.email,x.name,x.name,x.kind,x.city,x.region,x.country])]
+  .map(row=>row.map(csvValue).join(";")).join("\r\n");
+ const url=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));
+ const link=make("a");link.href=url;link.download="caravela_mailmerge_"+
+  new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon"}).format(new Date())+".csv";
+ document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ $("cc-basket-summary").textContent=eligible.length+" linhas exportadas para Zoho (sem envio). "+
+  excluded.length+" fichas excluídas. Revê os destinatários e personaliza antes de enviar.";
+}
 function render(kind){
- if(kind==="contacts")renderContactTriage();
+ if(kind==="contacts"){renderContactTriage();renderBasket();}
  const all=filtered(kind),list=$("cc-native-"+kind+"-list"),limit=state.shown[kind];
  list.replaceChildren();
  let count=0;
@@ -280,6 +349,13 @@ function render(kind){
   const card=make("article",undefined,"cc-native-card");
   const title=make("strong",kind==="contacts"?r.name:r.contact_name+" · "+r.artist);
   const top=make("div",undefined,"cc-native-card-head");
+  if(kind==="contacts"){
+   const label=make("label",undefined,"cc-card-select");
+   const check=make("input");check.type="checkbox";check.checked=mergeSelection.has(r.id);
+   check.setAttribute("aria-label","Selecionar "+r.name+" para lista CSV");
+   check.onchange=()=>{if(check.checked)mergeSelection.add(r.id);else mergeSelection.delete(r.id);renderBasket()};
+   label.append(check);top.append(label);
+  }
   top.append(title,badge(kind==="contacts"?r.contact_policy:r.stage,kind));card.append(top);
   if(kind==="booking"){
    hint(card,"Proposta",r.subject);
@@ -851,6 +927,7 @@ window.addEventListener("caravela-control-contact-action",async event=>{
 });
 window.addEventListener("caravela-control-signed-out",()=>{
  archiveLoaded=false;archiveBusy=false;archivePromise=null;
+ mergeSelection.clear();
  state.saved={contacts:[],booking:[]};state.historical=[];state.actions=[];
  render("contacts");render("booking");renderDashboard();
 });

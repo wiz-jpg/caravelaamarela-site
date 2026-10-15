@@ -138,6 +138,10 @@
   communicationInfo.textContent = "Emails recebidos e enviados são observações, não prova automática de proposta entregue ou resposta comercial.";
   communication.prepend(communicationInfo);
 
+  // Keep imported-source counters outside the daily booking dashboard.
+  // They measure historical reconciliation, not current commercial pipeline.
+  if(stats)viewMap.get("sources").appendChild(stats);
+  viewMap.get("sources").appendChild(attention);
   viewMap.get("sources").appendChild(bars);
   const live = $("control-live-sheets");
   if (live) viewMap.get("sources").appendChild(live);

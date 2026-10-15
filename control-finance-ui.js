@@ -74,7 +74,19 @@ function openEditor(entry=null){
  fields.owner=addField(form,"owner","Responsável","text");
  fields.category_note=addField(form,"category_note","Nota de categoria","text");
  fields.notes=addField(form,"notes","Notas internas","text");
+ const syncCategories=()=>{
+  const appropriate=Object.entries(categories).filter(([key])=>fields.type.value==="income"
+    ?["agency_commission","creative_service","other_income"].includes(key)
+    :["travel","production","marketing","other_expense"].includes(key));
+  const selected=fields.category.value;
+  fields.category.replaceChildren();
+  for(const [key,label] of appropriate){const option=el("option",label);option.value=key;fields.category.append(option)}
+  if(appropriate.some(([key])=>key===selected))fields.category.value=selected;
+ };
+ fields.type.onchange=syncCategories;
+ syncCategories();
  for(const [key,input] of Object.entries(fields))input.value=entry?.[key]??({type:"income",category:"agency_commission",status:"planned"}[key]||"");
+ syncCategories();
  const hint=el("p","Seleciona «Liquidado» apenas quando confirmaste manualmente o pagamento. Nesse estado, data e referência são obrigatórias.","cc-lead");
  form.append(hint);
  const save=el("button","Guardar movimento","cc-primary");save.type="submit";

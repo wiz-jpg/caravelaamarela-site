@@ -82,7 +82,7 @@ test("booking evidence and status guards; no inferred send or agreement",async()
  }));
  assert.equal(amended.status,422);
  assert.equal((await amended.json()).error,"verified_contact_link_required");
- assert.equal((await amended.json()).record.stage,"sent_verified");
+ assert.equal((await (await req("booking")).json()).records[0].stage,"research");
  assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,1);
 });
 test("blocked native contact cannot be attached to verified booking",async()=>{

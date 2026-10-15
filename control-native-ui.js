@@ -10,6 +10,9 @@ const CONTACT_FIELDS=[
   ["city","Localidade","text"],["region","Região / distrito","text"],["country","País","text"],["emails","Emails (separados por vírgulas)","text"],
   ["contact_policy","Política de contacto","select",true],
   ["relationship","Relação comercial","select"],
+  ["authorization_source","Evidência da autorização operacional","select"],
+  ["authorization_email","Endereço da conversa (se comprovado)","email"],
+  ["authorization_reference","Identificador da conversa Zoho (se comprovado)","text"],
   ["next_step","Próximo passo","textarea"],["review_date","Rever em","date"],
   ["notes","Notas internas","textarea"]
 ];
@@ -34,6 +37,7 @@ const choices={
  press_status:{unknown:"Por avaliar",planned:"Divulgação planeada",completed:"Divulgação realizada (referenciada)",not_applicable:"Não aplicável"},
  contact_policy:{review:"Rever antes de contactar",allowed:"Contacto autorizado",blocked:"Não contactar"},
  relationship:{unknown:"Por classificar",partner:"Parceria existente",target:"Queremos colaborar",in_discussion:"Em conversa",former:"Parceria anterior",not_applicable:"Não aplicável"},
+ authorization_source:{none:"Sem prova confirmada",zoho_thread:"Conversa Zoho de ida e volta — verificar no servidor"},
  stage:{research:"Por avaliar",draft:"Proposta por preparar",contact_reported:"Contacto referido (não verificado)",
    sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",
    confirmed:"Confirmado",declined:"Recusado",paused:"Em pausa",closed:"Concluído"},
@@ -294,6 +298,8 @@ function render(kind){
    if(r.__members?.length)hint(card,"Fichas agrupadas",
      r.__members.length+" registos históricos/operacionais apresentados em conjunto, sem fusão");
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
+   if(r.authorization_source==="zoho_thread")
+    hint(card,"Relação comprovada","Conversa bilateral Zoho · "+r.authorization_email+" (não equivale a consentimento para campanhas)");
    const formPreferred=!!r.source_form_url&&/formul[aá]rio/i.test(r.source_channel_quality||"");
    if(formPreferred)hint(card,"Canal preferencial no arquivo","Formulário web (confirmar se continua ativo): "+r.source_form_url);
    const route=suggestedChannel(r);
@@ -320,7 +326,7 @@ function render(kind){
   }
   const actions=make("div",undefined,"cc-native-card-actions");
   const button=make("button",r.revision?"Atualizar":"Editar ficha","cc-neutral");
-  button.type="button";button.onclick=()=>edit(kind,r);actions.append(button);
+  button.type="button";button.onclick=()=>edit(kind,r.__members?.find(x=>x.id===r.id)||r);actions.append(button);
   if(kind==="contacts"&&r.__members?.length){
    const extra=make("details",undefined,"cc-contact-variants");
    extra.append(make("summary","Rever as "+r.__members.length+" fichas originais"));
@@ -664,6 +670,8 @@ function edit(kind,entry={}){
      contact_email_review_required:"O endereço surge associado a restrições históricas. Revê a identidade.",
      contact_identity_mismatch:"Nome ou email não corresponde à ficha associada.",
      historical_contact_exists:"Esta entidade já existe no arquivo. Abre a ficha original em Contactos.",
+     authorization_evidence_unverified:"Não foi possível confirmar ida e volta no mesmo fio de conversa Zoho.",
+     historical_contact_needs_review:"O contacto exige revisão de identidade, possível partilha de email ou prova Zoho.",
      self_entity_link:"Uma entidade não pode ser associada a si própria.",
      invalid_canonical_link:"A ficha principal não existe, é de outro tipo ou já é secundária.",
      invalid_producer_link:"A produtora escolhida não existe ou não é uma ficha principal de promotor.",
@@ -790,8 +798,18 @@ window.addEventListener("caravela-control-contact-action",async event=>{
  // Resolve entity IDs against the actual workspace before editing.
  await loadArchive();
  await load("contacts");
- if(action==="open"){
+ if(action==="open"||action==="approve"){
   const contact=contactRows().find(x=>x.id===event.detail?.id);
+  if(contact&&action==="approve"&&contact.contact_policy!=="blocked"){
+   const addr=String(event.detail?.email||"").toLowerCase();
+   const thread=String(event.detail?.thread_id||"");
+   if((contact.emails||[]).some(e=>lower(e)===addr)&&thread){
+    edit("contacts",{...contact,contact_policy:"allowed",
+      authorization_source:"zoho_thread",authorization_email:addr,
+      authorization_reference:thread});
+    return;
+   }
+  }
   if(contact)edit("contacts",contact);
   return;
  }

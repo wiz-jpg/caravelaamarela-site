@@ -8,7 +8,7 @@ const PRIORITIES=new Set(["alta","media","baixa","a_definir"]);
 const SCOPES=new Set(["agencia","wildchains","devil","ambos","outro"]);
 const EVIDENCES=new Set(["none","discussion","user_report","sent_message","received_message","agreement"]);
 const FIELDS={
-  name:140,objective:350,contact_name:110,contact_email:250,channel:80,
+  name:140,objective:350,owner:110,contact_name:110,contact_email:250,channel:80,
   last_contact_iso:10,next_review_iso:10,next_step:400,notes:1600,
   evidence_reference:450,source_label:160
 };

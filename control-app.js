@@ -53,7 +53,7 @@
   views.id = "cc-views";
   top.after(views);
   const viewInfo = [
-    ["dashboard", "Início", "O que tens para fazer a seguir, a partir dos registos operacionais."],
+    ["dashboard", "Início", "Prioridades do dia, follow-ups, oportunidades e estado dos artistas."],
     ["contacts", "Contactos", "Entidades, interlocutores e restrições de contacto."],
     ["booking", "Booking", "Propostas em curso, decisões e próximos passos."],
     ["artists", "Artistas", "Projetos, condições e histórico das fichas originais."],
@@ -84,7 +84,7 @@
   }
   const dashboard = viewMap.get("dashboard");
   const stats = $("stats");
-  if (stats) dashboard.appendChild(stats);
+  if (stats) viewMap.get("sources").appendChild(stats);
   const actionRow = document.createElement("div");
   actionRow.className = "cc-actions";
   actionRow.innerHTML =
@@ -110,7 +110,7 @@
     '<div><small>Associações por confirmar</small><strong id="cc-count-unverified">—</strong></div></div>' +
     '<div class="cc-attention-list" id="cc-attention-list">' +
     '<p class="muted">As próximas ações aparecem quando abrires a base guardada.</p></div>';
-  dashboard.appendChild(attention);
+  viewMap.get("sources").appendChild(attention);
   $("cc-attention-open").addEventListener("click", () => openView("booking"));
   const note = Array.from(main.children).find(el => el.classList.contains("note"));
   if (note) viewMap.get("sources").appendChild(note);

@@ -41,8 +41,18 @@ export async function triggerReadOnlySync(provider,env,fetcher=fetch){
     return {provider,outcome:"configuration_pending"};
   if(response.status===409&&body?.error==="sync_in_progress")
     return {provider,outcome:"already_running"};
-  if(!response.ok||!validResponse(body,provider))
-    throw Error(provider+"_sync_http_"+(response.status||"unknown"));
+  if(!response.ok||!validResponse(body,provider)){
+    const status=String(response.status||"unknown");
+    // Only stable, preselected diagnostic codes; never print credentials or provider payload.
+    const reason=body?.error;
+    const safeReasons=new Set(["unauthorized","invalid_origin","not_found",
+      "zoho_sync_failed","sheets_sync_failed","configuration_required",
+      "migration_required","vault_error"]);
+    if(!type.includes("application/json"))
+      throw Error(provider+"_non_json_http_"+status);
+    throw Error(provider+"_sync_http_"+status+
+      (safeReasons.has(reason)?"_"+reason:""));
+  }
   return {provider,outcome:"complete",new_records:body.new_records??body.changed_sources?.length??0};
 }
 export async function runControlAutomation(controller,env,fetcher=fetch){
@@ -55,8 +65,13 @@ export async function runControlAutomation(controller,env,fetcher=fetch){
   const providers=minute%30===0?["zoho","sheets"]:["zoho"];
   const results=await Promise.allSettled(providers.map(provider=>
     triggerReadOnlySync(provider,env,fetcher)));
-  const failed=results.map((result,index)=>result.status==="rejected"
-    ?providers[index]+":failed":null).filter(Boolean);
+  const failed=results.map((result,index)=>{
+    if(result.status!=="rejected")return null;
+    const code=String(result.reason?.message||"");
+    // Expose only a known diagnostic shape, never raw exception text.
+    const safe=/^(zoho|sheets)_(transport_failed|non_json_http_[1-5][0-9]{2}|sync_http_[1-5][0-9]{2}(?:_(?:unauthorized|invalid_origin|not_found|zoho_sync_failed|sheets_sync_failed|configuration_required|migration_required|vault_error))?)$/;
+    return providers[index]+":"+(safe.test(code)?code:"failed");
+  }).filter(Boolean);
   if(failed.length)throw Error("caravela_scheduler_sync_failed_"+failed.join("_"));
   return results.map(result=>result.value);
 }

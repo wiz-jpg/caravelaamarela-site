@@ -1043,7 +1043,7 @@ function renderDashboard(){
   if(["confirmed","declined","closed"].includes(x.stage)){confirmed.push(task);continue}
   if(x.stage==="paused"&&!x.due_date){paused.push(task);continue}
   if(["sent_verified","reply_reported","negotiating","contact_reported"].includes(x.stage))followups.push(task);
-  else if(x.stage==="paused")other.push(task);
+  else if(x.stage==="paused")leads.push({...task,note:"Retomar no prazo escolhido · "+(x.next_step||"revisão programada")});
   else leads.push(task);
  }
  for(const row of state.actions){

@@ -57,3 +57,15 @@ Arquivo suprimido/bloqueado não pode ser promovido silenciosamente a permitido.
 - Correção da expectativa de erro HTML no teste de Cron; mantém rejeição segura de respostas Access que não sejam JSON.
 - A CI testa SQLite local com simulação D1. Não prova a persistência autenticada no Cloudflare Preview; essa validação continua manual.
 - Não afirmar que o backup R2 cobre os eventos nativos: usar exportação JSON administrativa até existir backup específico.
+
+## Red-team operacional — interface diária e contas (15/10/2026)
+- A navegação privilegia Início, Booking, Contactos, Comunicações, Finanças e Parcerias; o guia explica funções profissionais, não concede permissões.
+- Os números do Início referem-se exclusivamente a negociações nativas e classificam follow-ups vencidos, fichas sem prazo e datas confirmadas. Dados antigos permanecem em arquivo recolhível.
+- Em Booking, `commission_pct` e `event_date` são opcionais para compatibilidade retroativa. A comissão mostrada é **estimativa** sobre o cachet e nunca contabilizada automaticamente como recebida.
+- Finanças é um ledger **manual** em `control_decision_events`, operação `crm_finance_v1`, persistido na D1 Preview; movimentos individuais com estado previsto/por receber-pagar/liquidado/cancelado. A liquidação exige data e referência do comprovativo.
+- Só as comissões efetivamente pertencentes à Caravela, serviços próprios e outras receitas podem entrar como rendimento da agência. Cachets de artista não são receita integral da agência. Despesas registam-se em separado.
+- Financeiro e Booking podem ser associados por ID validado; a associação não copia automaticamente montantes nem cria uma faturação. Sem integração bancária, fiscal, software de contabilidade ou faturação — os números representam apenas os lançamentos manuais da equipa.
+- As revisões financeiras são append-only, com conflito otimista; exportação nativa administrativa inclui `crm_finance_v1`. A segurança de leitura/escrita financeira é atualmente a de `manager` e `admin`; **não há papel de contabilista nem segregação de despesas confidenciais por utilizador**.
+- Uma única alteração no Preview não é prova de operação real. Antes de uso financeiro, verificar numa sessão autenticada: guardar movimento de teste, F5, editar, confirmar totais, ler o export e validar plano independente de backups D1 para decisões nativas.
+- Não copiar despesas pessoais do responsável para a contabilidade da Caravela. Candidaturas, impostos, IVA e faturação oficial continuam fora desta primeira versão.
+- Nunca efetuar envios por email, alterar Sheets históricos, criar lançamentos automáticos fictícios nem aplicar alterações em Production.

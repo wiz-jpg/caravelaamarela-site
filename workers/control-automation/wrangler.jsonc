@@ -3,6 +3,7 @@
   "name": "caravela-control-automation-preview",
   "main": "../../examples/control-cron-worker.js",
   "compatibility_date": "2026-10-13",
+  "compatibility_flags": ["global_fetch_strictly_public"],
   "workers_dev": false,
   "triggers": {
     "crons": [

@@ -168,3 +168,19 @@
 
 .cc-basket-project{display:inline-flex;align-items:center;gap:7px;font-size:12px}
 .cc-basket-project select{border:1px solid #5e6f7f;border-radius:7px;background:#122031;color:#fff;padding:8px;font-size:12px;min-height:36px}
+
+/* Daily booking overview: dedicated follow-up module. */
+.cc-followup-section{margin:14px 0 24px;padding:20px;border:1px solid #6b603e;border-radius:13px;background:#201f1c}
+.cc-followup-heading{display:flex;flex-direction:column;gap:3px;margin-bottom:16px}
+.cc-followup-heading h3{font-size:18px;margin:0}
+.cc-followup-heading p{font-size:12px;margin:3px 0}
+.cc-followup-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.cc-followup-card{background:#17222c;border:1px solid #465767;border-radius:11px;padding:15px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.cc-followup-symbol{font-size:16px;color:#eed06d}
+.cc-followup-card strong{font-size:26px;line-height:1.2;color:#fff}
+.cc-followup-card small{font-size:12px;color:#b7c4cd}
+.cc-followup-card>button{font-size:12px;padding:7px 10px;margin-top:8px}
+.cc-followup-card details{width:100%}
+.cc-followup-card details summary{font-size:11px;padding:8px 0;cursor:pointer}
+.cc-followup-card .cc-native-dash-task{width:100%;margin-top:5px;font-size:11px;line-height:1.4}
+@media(max-width:780px){.cc-followup-cards{grid-template-columns:1fr}}

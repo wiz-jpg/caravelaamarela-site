@@ -891,7 +891,7 @@ function createBookingFromTask(task,decision,formData){
   row.stage="contact_reported";row.evidence_type="user_report";
   row.evidence_reference="";row.last_contact_date=formData.when||today;
  }else if(decision==="won"){
-  row.stage="confirmed";row.evidence_type="agreement";
+  row.stage="confirmed";row.evidence_type=formData.evidence_type==="received_message"?"received_message":"agreement";
   row.evidence_reference=formData.evidence.trim();row.event_date=formData.event_date;
   row.last_contact_date=formData.when||today;row.due_date="";
  }else if(decision==="lost"){
@@ -931,7 +931,12 @@ function createFastAction(container,task,decision){
    add("next_date","Próximo follow-up / revisão","date",nextDefault,true);
  if(decision==="won") {
   add("event_date","Data do concerto","date",baseline.event_date||"",true);
-  add("evidence","Referência do acordo / email confirmado","text",baseline.evidence_reference||"",true);
+  const label=make("label","Tipo de comprovativo"),select=make("select");
+  for(const [value,name] of [["agreement","Contrato / acordo"],["received_message","Email de confirmação recebido"]]){
+   const option=make("option",name);option.value=value;select.append(option);
+  }
+  select.name="evidence_type";fields.evidence_type=select;label.append(select);body.append(label);
+  add("evidence","Referência verificável do acordo ou email","text",baseline.evidence_reference||"",true);
  }
  add("note",decision==="won"?"Nota de confirmação":
   decision==="lost"?"Motivo da recusa":"O que aconteceu / próximo passo","text","",true);

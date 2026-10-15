@@ -223,3 +223,32 @@ test("reject invalid cross-type, self, cyclic, and untracked producer relationsh
  const wrong=contact({id:promoter.id,revision:promoter.revision,name:"Company",kind:"promoter",emails:["prom@example.org"],linked_producer_ids:[festival.id]});
  assert.equal((await req("contacts","PATCH",wrong)).status,422);
 });
+
+test("remove a native test contact without erasing past events, preserving linked entities",async()=>{
+ const created=await req("contacts","POST",contact({name:"Teste",city:"Braga",review_date:"2026-10-15",emails:[]}));
+ assert.equal(created.status,201);
+ const first=(await created.json()).record;
+ const deleted=await req("contacts","DELETE",{id:first.id,revision:first.revision});
+ assert.equal(deleted.status,200);
+ assert.equal((await (await req("contacts")).json()).total,0);
+ assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_decision_events WHERE operation='crm_contact_v1'").get().n,2);
+ assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_audit WHERE operation='crm_contact_removed'").get().n,1);
+ assert.equal((await req("contacts","DELETE",{id:first.id,revision:first.revision})).status,404);
+});
+test("refuse removal of a contact referenced by a booking or a producer relationship",async()=>{
+ const saved=await (await req("contacts","POST",contact({name:"Venue Alpha"}))).json();
+ const dealResult=await req("booking","POST",deal({contact_id:saved.record.id}));
+ assert.equal(dealResult.status,201);
+ assert.equal((await req("contacts","DELETE",{id:saved.record.id,revision:saved.record.revision})).status,409);
+ const org=(await (await req("contacts","POST",contact({kind:"promoter",name:"Producer",emails:["producer@example.pt"],city:"Porto"}))).json()).record;
+ const event=await req("contacts","POST",contact({kind:"festival",name:"Festival Alpha",city:"Aveiro",emails:["alpha@example.pt"],linked_producer_ids:[org.id]}));
+ assert.equal(event.status,201);
+ assert.equal((await req("contacts","DELETE",{id:org.id,revision:org.revision})).status,409);
+});
+test("historical contact authorization fields require evidence shape",()=>{
+ assert.equal(validateNative("contacts",contact({authorization_source:"zoho_thread",
+  authorization_email:"",authorization_reference:""})),null);
+ assert.ok(validateNative("contacts",contact({authorization_source:"none"})));
+ assert.ok(validateNative("contacts",contact({authorization_source:"zoho_thread",
+  authorization_email:"contact@example.pt",authorization_reference:"thread-100"})));
+});

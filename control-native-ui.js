@@ -172,7 +172,7 @@ function build(kind,heading){
     '<label>Região <select id="cc-native-contact-region"><option value="all">Todas</option></select></label>';
   root.querySelector(".cc-native-tools").after(geo);
   for(const [value,label] of Object.entries(choices.kind)){
-    const opt=make("option",label);opt.value=value;$("cc-native-contact-type")?.append(opt);
+    const opt=make("option",label);opt.value=value;root.querySelector("#cc-native-contact-type").append(opt);
   }
   for(const id of ["cc-native-contact-type","cc-native-contact-country","cc-native-contact-region"])
     root.querySelector("#"+id).onchange=()=>render("contacts");

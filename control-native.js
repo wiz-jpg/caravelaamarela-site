@@ -1,7 +1,10 @@
 /* Caravela Control native working records — Preview only.
  * Append-only manual records. Historical snapshots, Zoho and Sheets are immutable.
  * Statuses require human-entered evidence; email observation never promotes a deal. */
-const CONTACT_OP="crm_contact_v1",BOOKING_OP="crm_booking_v1";
+const CONTACT_OP="crm_contact_v1",BOOKING_OP="crm_booking_v1",FINANCE_OP="crm_finance_v1";
+const FINANCE_TYPES=new Set(["income","expense"]);
+const FINANCE_CATEGORIES=new Set(["agency_commission","creative_service","other_income","travel","production","marketing","other_expense"]);
+const FINANCE_STATUSES=new Set(["planned","due","settled","cancelled"]);
 const KINDS=new Set(["festival","venue","promoter","press","other"]);
 const POLICIES=new Set(["review","allowed","blocked"]);
 const STATUSES=new Set(["research","draft","contact_reported","sent_verified","reply_reported","negotiating","confirmed","declined","paused","closed"]);
@@ -42,7 +45,7 @@ function booking(input){
   const row={};
   for(const [k,max] of Object.entries({
     contact_name:140,artist:110,subject:180,contact_id:80,contact_email:254,
-    fee_note:300,conditions:1000,next_step:400,due_date:10,
+    fee_note:300,conditions:1000,next_step:400,due_date:10,event_date:10,
     last_contact_date:10,evidence_reference:450,notes:1600,origin_label:160,owner:110
   })){
     row[k]=field(input[k]??"",max);
@@ -52,11 +55,15 @@ function booking(input){
   if(!STATUSES.has(input.stage)||!PRIORITIES.has(input.priority)||!EVIDENCES.has(input.evidence_type))return null;
   if(row.contact_id&&!validId(row.contact_id))return null;
   if(row.contact_email&&!EMAIL.test(row.contact_email))return null;
-  if(!day(row.due_date)||!day(row.last_contact_date))return null;
+  if(!day(row.due_date)||!day(row.last_contact_date)||!day(row.event_date))return null;
   const fee=input.fee_amount;
   if(fee!==null&&(typeof fee!=="number"||!Number.isFinite(fee)||fee<0||fee>10000000))return null;
   if(input.currency!=="EUR")return null;
   row.fee_amount=fee;row.currency=input.currency;
+  const commission=input.commission_pct??null;
+  if(commission!==null&&(typeof commission!=="number"||!Number.isFinite(commission)||
+    commission<0||commission>100))return null;
+  row.commission_pct=commission;
   row.stage=input.stage;row.priority=input.priority;row.evidence_type=input.evidence_type;
   const verified=["sent_verified","confirmed"].includes(row.stage);
   if(verified&&(!row.evidence_reference||!["sent_message","received_message","agreement"].includes(row.evidence_type)))
@@ -65,11 +72,35 @@ function booking(input){
   if(row.stage==="reply_reported"&&row.evidence_type==="none")return null;
   return row;
 }
-export function validateNative(kind,input){
-  return kind==="contacts"?contact(input):kind==="booking"?booking(input):null;
+function finance(input){
+  if(!input||typeof input!=="object"||Array.isArray(input))return null;
+  const row={};
+  for(const [key,max] of Object.entries({
+    title:180,artist:110,booking_id:80,category_note:260,owner:110,
+    due_date:10,settled_date:10,reference:450,notes:1400
+  })){
+    row[key]=field(input[key]??"",max);
+    if(row[key]===null)return null;
+  }
+  if(!row.title||!FINANCE_TYPES.has(input.type)||
+     !FINANCE_CATEGORIES.has(input.category)||!FINANCE_STATUSES.has(input.status))return null;
+  if(row.booking_id&&!UUID.test(row.booking_id))return null;
+  if(!day(row.due_date)||!day(row.settled_date))return null;
+  const amount=input.amount;
+  if(typeof amount!=="number"||!Number.isFinite(amount)||amount<=0||amount>10000000||
+     Math.round(amount*100)/100!==amount||input.currency!=="EUR")return null;
+  if(input.type==="income"&&!["agency_commission","creative_service","other_income"].includes(input.category))return null;
+  if(input.type==="expense"&&!["travel","production","marketing","other_expense"].includes(input.category))return null;
+  if(input.status==="settled"&&(!row.settled_date||!row.reference))return null;
+  if(input.status!=="settled"&&row.settled_date)return null;
+  return {...row,type:input.type,category:input.category,status:input.status,
+    amount,currency:"EUR"};
 }
-const operation=kind=>kind==="contacts"?CONTACT_OP:kind==="booking"?BOOKING_OP:null;
-const prefix=kind=>kind==="contacts"?"crm-contact:":"crm-booking:";
+export function validateNative(kind,input){
+  return kind==="contacts"?contact(input):kind==="booking"?booking(input):kind==="finance"?finance(input):null;
+}
+const operation=kind=>kind==="contacts"?CONTACT_OP:kind==="booking"?BOOKING_OP:kind==="finance"?FINANCE_OP:null;
+const prefix=kind=>kind==="contacts"?"crm-contact:":kind==="booking"?"crm-booking:":"crm-finance:";
 async function listAll(db,kind){
   const op=operation(kind);
   if(!op)return [];
@@ -145,13 +176,13 @@ export async function nativeExport(env){
  if(!env.ZOHO_DB)return fail("not_found",404);
  try{
   const count=await env.ZOHO_DB.prepare(
-    "SELECT COUNT(*) AS n FROM control_decision_events WHERE operation IN (?,?)"
-  ).bind(CONTACT_OP,BOOKING_OP).first();
+    "SELECT COUNT(*) AS n FROM control_decision_events WHERE operation IN (?,?,?)"
+  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP).first();
   if((count?.n||0)>15000)return fail("export_event_limit",409);
   const result=await env.ZOHO_DB.prepare(
     "SELECT id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms "+
-    "FROM control_decision_events WHERE operation IN (?,?) ORDER BY created_ms ASC,rowid ASC LIMIT 15001"
-  ).bind(CONTACT_OP,BOOKING_OP).all();
+    "FROM control_decision_events WHERE operation IN (?,?,?) ORDER BY created_ms ASC,rowid ASC LIMIT 15001"
+  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP).all();
   const events=result.results||[];
   if(events.length!==(count?.n||0))return fail("export_incomplete",503);
   return out({schema:"caravela.crm.native-backup.v1",exported_at:new Date().toISOString(),
@@ -172,8 +203,8 @@ function appendRevision(db,kind,id,record,actor,revision){
       ?"(SELECT id FROM control_decision_events WHERE entity_id=? AND operation=? ORDER BY created_ms DESC,rowid DESC LIMIT 1)=?"
       :"NOT EXISTS(SELECT 1 FROM control_decision_events WHERE entity_id=? AND operation=?)");
   const query=db.prepare(changeSql).bind(eventId,entity,
-    kind==="booking"?record.artist:null,op,
-    kind==="booking"?record.stage:record.contact_policy,
+    kind==="booking"||kind==="finance"?record.artist:null,op,
+    kind==="contacts"?record.contact_policy:record.stage||record.status,
     record.next_step||"Atualização manual",JSON.stringify(record),now,
     entity,op,...(revision?[revision]:[]));
   const audit=db.prepare("INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) "+
@@ -269,6 +300,13 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
           legacyPolicy(x)!=="allowed"))
           return fail("contact_email_review_required",422);
       }
+    }
+    if(kind==="finance"&&record.booking_id){
+      const linked=(await listAll(env.ZOHO_DB,"booking")).find(x=>x.id===record.booking_id);
+      if(!linked)return fail("finance_booking_not_found",422);
+      if(record.type==="income"&&record.category==="agency_commission"&&
+         record.artist&&linked.artist.trim().toLocaleLowerCase("pt-PT")!==record.artist.toLocaleLowerCase("pt-PT"))
+        return fail("finance_artist_mismatch",422);
     }
     // Atomic compare-and-append: two tabs cannot silently overwrite each other.
     // The audit row is inserted only if the guarded event was inserted.

@@ -238,6 +238,8 @@ export async function nativeArchive(env){
       next_action_iso:String(x.next_action_iso||"").slice(0,10),
       last_contact_iso:String(x.last_contact_iso||"").slice(0,10),
       contact_policy:String(x.contact_policy||"review").slice(0,20),
+      no_outreach:/(?:não enviar|nao enviar|não contactar|nao contactar|não avançar|nao avancar|bloquead)/i.test(String(x.notes||""))||
+        x.contact_policy==="blocked",
       matched_entity_id:String(x.matched_entity_id||"").slice(0,80),
       link_status:String(x.link_status||"").slice(0,60),
       origin:{row:x.origin?.row||null}

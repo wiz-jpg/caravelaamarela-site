@@ -141,7 +141,7 @@ export async function handleControl(request,env,url,zohoReader) {
   // Raw snapshots, Sheets, backups, audit and configuration require admin.
   const nativeArchiveRoute=route==="native/archive";
   const nativeExportRoute=route==="native/export";
-  const nativeRoute=route==="native/contacts"||route==="native/booking";
+  const nativeRoute=route==="native/contacts"||route==="native/booking"||route==="native/finance";
   const limitedReads=new Set(["ops/overview"]);
   const syncRoutes=new Set(["zoho/sync","sheets/sync"]);
   const partnershipRoute=route==="partnerships"&&

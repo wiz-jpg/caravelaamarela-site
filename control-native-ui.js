@@ -1007,8 +1007,8 @@ function renderDashboard(){
    " negociações atuais · "+belonging.filter(x=>x.stage==="confirmed").length+
    " confirmadas · "+old.length+" ações no arquivo (a revalidar)"));
   box.append(make("p",label==="WILDCHAINS"?
-   "Heavy / Alternative Rock · Festivais de dimensão relevante, Espanha/França e Japão 2027. Booking Caravela: 15%.":
-   "Blues Rock · Festivais rock/blues e circuito PT/ES. Double bills apenas com encaixe artístico e logístico. Booking Caravela: 15%.","cc-lead"));
+   "Heavy / Alternative Rock · 50+ concertos, Lugo/Madrid e Festas d’Amares. Prioridade: festivais estratégicos, Espanha/França e Japão 2027. Booking: 15%.":
+   "Blues Rock · Concurso António Barge / Vilar 2026 e Tomate Blues (Espanha). Prioridade: circuito PT/ES e double bills seletivos. Booking: 15%.","cc-lead"));
   const btn=make("button","Abrir booking","cc-neutral");btn.type="button";btn.onclick=()=>window.CaravelaControlApp?.openView("booking");
   box.append(btn);artistSection.append(box);
  }

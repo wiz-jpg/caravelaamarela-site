@@ -183,7 +183,21 @@
     currentFile=window.CaravelaControlCurrentImportFile||$("source-file").files?.[0]||null;
     $("vault-save").disabled=busy||!currentFile;
   });
-  $("vault-status").addEventListener("click",()=>action(info));
+  let autoRestoreStarted=false;
+  async function autoRestore(){
+    if(autoRestoreStarted)return;
+    autoRestoreStarted=true;
+    try{
+      const data=await info();
+      if(data?.active_snapshot)await restore(false);
+    }catch(e){
+      autoRestoreStarted=false;
+      say("Não foi possível abrir automaticamente a base: "+(e?.message||"erro"),true);
+    }
+  }
+  window.addEventListener("caravela-control-token-ready",()=>{void action(autoRestore)});
+  window.addEventListener("caravela-control-authenticated",()=>{void action(autoRestore)});
+    $("vault-status").addEventListener("click",()=>action(info));
   $("vault-save").addEventListener("click",()=>action(save));
   $("vault-load").addEventListener("click",()=>action(()=>restore(false)));
   $("vault-backup").addEventListener("click",()=>action(()=>restore(true)));

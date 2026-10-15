@@ -18,8 +18,8 @@
     '<div class="cc-logo"><span class="cc-mark">C</span><div><strong>CARAVELA<br>CONTROL</strong><small>Workspace privado</small></div></div>' +
     '<nav class="cc-nav" aria-label="Navegação principal"><div class="cc-nav-label">Plataforma</div>' +
     '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Visão geral</span></button>' +
-    '<button type="button" data-view="contacts" data-min-role="admin"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
-    '<button type="button" data-view="booking" data-min-role="admin"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking e ações</span></button>' +
+    '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
+    '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking e ações</span></button>' +
     '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
     '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
     '<button type="button" data-view="communications" data-min-role="manager"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações</span></button>' +

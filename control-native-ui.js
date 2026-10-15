@@ -13,7 +13,7 @@ const CONTACT_FIELDS=[
   ["authorization_source","Evidência da autorização operacional","select"],
   ["authorization_email","Endereço da conversa (se comprovado)","email"],
   ["authorization_reference","Identificador da conversa Zoho (se comprovado)","text"],
-  ["next_step","Próximo passo","textarea"],["review_date","Rever em","date"],
+  ["owner","Responsável Caravela","text"],["next_step","Próximo passo","textarea"],["review_date","Rever em","date"],
   ["notes","Notas internas","textarea"]
 ];
 const BOOKING_FIELDS=[
@@ -81,7 +81,7 @@ function historicalContact(x){
    source_review_required:!!x.review_required,source_shared_email:!!x.shared_email,
    source_suppressed:!!x.suppressed,source_duplicate_name_city:!!x.duplicate_name_city,
    source_priority:x.priority||"",source_recommendation:x.recommendation||"",
-   source_status:x.status_2027||""};
+   source_status:x.status_2027||"",owner:x.owner||""};
 }
 function contactRows(){
  const map=new Map(state.historical.map(x=>[x.id,historicalContact(x)]));
@@ -396,11 +396,12 @@ function render(kind){
    hint(card,"Data do concerto",r.event_date);
    hint(card,"Comunicação / imprensa",choices.press_status[r.press_status||"unknown"]);
    hint(card,"Preparação técnica",choices.advance_status[r.advance_status||"unknown"]);
-   hint(card,"Responsável",r.owner);
+   hint(card,"Responsável Caravela",r.owner||"Por atribuir");
    hint(card,"Evidência",(choices.evidence_type[r.evidence_type]||"")+" · "+(r.evidence_reference||"não referenciada"));
    hint(card,"Origem",r.origin_label);
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
+   hint(card,"Responsável Caravela",r.owner||"Por atribuir");
    if(r.__members?.length)hint(card,"Fichas agrupadas",
      r.__members.length+" registos históricos/operacionais apresentados em conjunto, sem fusão");
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");

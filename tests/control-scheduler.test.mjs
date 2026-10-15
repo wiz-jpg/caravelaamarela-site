@@ -53,3 +53,26 @@ test("scheduler refuses missing secrets, unrecognized crons and HTTP public oper
   const mod=await import("../examples/control-cron-worker.js");
   assert.equal((await mod.default.fetch()).status,404);
 });
+
+test("scheduler reports safe HTTP error categories without leaking upstream responses",async()=>{
+  const forbidden=async()=>new Response("<html>Access denied</html>",{
+    status:403,headers:{"Content-Type":"text/html"}
+  });
+  await assert.rejects(
+    ()=>runControlAutomation({cron:"*/15 * * * *",
+      scheduledTime:Date.parse("2026-10-13T10:15:00Z")},creds,forbidden),
+    /caravela_scheduler_sync_failed_zoho:zoho_non_json_http_403/
+  );
+  const unauthorized=async()=>Response.json({ok:false,error:"unauthorized"},{status:401});
+  await assert.rejects(
+    ()=>runControlAutomation({cron:"*/15 * * * *",
+      scheduledTime:Date.parse("2026-10-13T10:15:00Z")},creds,unauthorized),
+    /caravela_scheduler_sync_failed_zoho:zoho_sync_http_401_unauthorized/
+  );
+  const privateBody=async()=>Response.json({ok:false,error:"secret-do-not-echo"},{status:503});
+  await assert.rejects(
+    ()=>runControlAutomation({cron:"*/15 * * * *",
+      scheduledTime:Date.parse("2026-10-13T10:15:00Z")},creds,privateBody),
+    error=>error.message==="caravela_scheduler_sync_failed_zoho:zoho_sync_http_503"
+  );
+});

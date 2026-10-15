@@ -2,7 +2,7 @@
  * All names come from the live private API, never from embedded source code.
  * A task is a review suggestion, NEVER permission to contact. */
 (() => {"use strict";
-  const target=document.getElementById("cc-view-dashboard");
+  const target=document.getElementById("cc-view-sources");
   if(!target)return;
   const $=id=>document.getElementById(id);
   const card=document.createElement("section");
@@ -118,7 +118,7 @@
   }
   $("cc-ops-refresh").onclick=()=>load(true);
   window.addEventListener("caravela-control-view-opened",event=>{
-    if(event.detail?.view==="dashboard")load(true);
+    if(event.detail?.view==="sources")load(true);
   });
   window.addEventListener("caravela-control-token-ready",()=>load(true));
   window.addEventListener("caravela-control-authenticated",()=>load(true));

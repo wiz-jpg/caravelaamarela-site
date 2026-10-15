@@ -46,3 +46,14 @@ Arquivo suprimido/bloqueado não pode ser promovido silenciosamente a permitido.
   contratos, gestão completa de artistas nem associação automática de threads Zoho.
   As cópias R2 existentes protegem snapshots históricos; as novas decisões CRM
   necessitam de exportação manual até configurar backup periódico próprio.
+
+## Revisão de segurança e usabilidade — 15/10/2026
+- CI reativada para push na branch de desenvolvimento, sem deploy de produção.
+- Uma proposta marcada como envio verificado ou confirmação requer contacto existente, explicitamente autorizado, com nome/email coincidentes e referência de evidência humana.
+- Contactos importados ambíguos, bloqueados ou suprimidos não são aprovados automaticamente; a associação por email partilhado exige revisão.
+- O servidor recusa criar outra ficha quando encontra a mesma entidade e cidade no arquivo V3; para continuar, usar a ficha histórica.
+- Gestores autenticados podem consultar a projeção mínima do arquivo para retomar contactos; exportação bruta, configuração e auditoria continuam restritas a administradores.
+- O painel principal distingue os novos registos operacionais das estatísticas antigas, transferidas para Dados e backups.
+- Correção da expectativa de erro HTML no teste de Cron; mantém rejeição segura de respostas Access que não sejam JSON.
+- A CI testa SQLite local com simulação D1. Não prova a persistência autenticada no Cloudflare Preview; essa validação continua manual.
+- Não afirmar que o backup R2 cobre os eventos nativos: usar exportação JSON administrativa até existir backup específico.

@@ -8,6 +8,7 @@ const FINANCE_STATUSES=new Set(["planned","due","settled","cancelled"]);
 const KINDS=new Set(["festival","venue","promoter","press","partnership","other"]);
 const POLICIES=new Set(["review","allowed","blocked"]);
 const RELATIONS=new Set(["unknown","partner","target","in_discussion","former","not_applicable"]);
+const DUPLICATE_DECISIONS=new Set(["unreviewed","distinct","secondary"]);
 const STATUSES=new Set(["research","draft","contact_reported","sent_verified","reply_reported","negotiating","confirmed","declined","paused","closed"]);
 const PRIORITIES=new Set(["high","medium","low"]);
 const EVIDENCES=new Set(["none","user_report","sent_message","received_message","agreement"]);
@@ -41,7 +42,30 @@ function contact(input){
   if(!RELATIONS.has(row.relationship))return null;
   const origin=input.origin_id??"";
   if(origin!==""&&!LEGACY_ID.test(origin))return null;
-  row.origin_id=origin;return row;
+  row.origin_id=origin;
+  if(!Array.isArray(input.people??[])||(input.people??[]).length>15)return null;
+  row.people=[];
+  for(const person of input.people??[]){
+    if(!person||typeof person!=="object"||Array.isArray(person))return null;
+    const name=field(person.name??"",110),role=field(person.role??"",110),
+      email=field(person.email??"",254)?.toLowerCase(),phone=field(person.phone??"",65);
+    if(name===null||role===null||email===null||phone===null||
+       !name||(email&&!EMAIL.test(email)))return null;
+    if(row.people.some(x=>x.name.toLocaleLowerCase("pt-PT")===name.toLocaleLowerCase("pt-PT")&&x.email===email))
+      return null;
+    row.people.push({name,role,email,phone});
+  }
+  row.linked_producer_ids=input.linked_producer_ids??[];
+  if(!Array.isArray(row.linked_producer_ids)||row.linked_producer_ids.length>8||
+     row.linked_producer_ids.some(x=>!validId(x))||
+     new Set(row.linked_producer_ids).size!==row.linked_producer_ids.length)return null;
+  if(row.linked_producer_ids.length&&!["festival","venue"].includes(row.kind))return null;
+  row.canonical_id=input.canonical_id??"";
+  if(row.canonical_id!==""&&!validId(row.canonical_id))return null;
+  row.duplicate_decision=input.duplicate_decision??"unreviewed";
+  if(!DUPLICATE_DECISIONS.has(row.duplicate_decision)||
+     (row.duplicate_decision==="secondary")!==!!row.canonical_id)return null;
+  return row;
 }
 function booking(input){
   if(!input||typeof input!=="object"||Array.isArray(input))return null;
@@ -164,6 +188,12 @@ export async function nativeArchive(env){
     if(!manifest)return out({ok:true,contacts:[],actions:[],active:false});
     const contacts=manifest.entities.map(x=>({
       id:x.id,name:x.name,kind:x.kind,city:x.city||"",emails:x.emails||[],
+      region:String(x.meta?.region||"").slice(0,120),
+      country:String(x.meta?.country||(x.kind!=="press"&&
+        ["PT_Festivals.xlsm","PT_Venues.xlsx"].includes(x.origin?.file)?"Portugal":"")).slice(0,80),
+      media_type:String(x.meta?.media_type||"").slice(0,120),
+      organizer:String(x.meta?.organizer||"").slice(0,180),
+      contact_person:String(x.meta?.contact_person||"").slice(0,180),
       suppressed:!!x.suppressed,control_blocked:!!x.control_blocked,
       control_blocked_possible:!!x.control_blocked_possible,
       review_required:!!x.review_required,shared_email:!!x.shared_email
@@ -286,6 +316,28 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
     const before=await listAll(env.ZOHO_DB,kind);
     const found=before.find(x=>x.id===id);
     if(request.method==="POST"&&found)return fail("record_exists",409);
+    if(kind==="contacts"){
+      if(record.canonical_id===id||record.linked_producer_ids.includes(id))
+        return fail("self_entity_link",422);
+      if(record.canonical_id||record.linked_producer_ids.length){
+        const manifest=await readActiveArchive(env.ZOHO_DB);
+        const resolve=x=>before.find(y=>y.id===x)||manifest?.entities.find(y=>y.id===x);
+        if(record.canonical_id){
+          const main=resolve(record.canonical_id);
+          if(!main||main.kind!==record.kind||main.canonical_id||
+             (main.duplicate_decision==="secondary"))
+            return fail("invalid_canonical_link",422);
+          // A secondary record remains readable, linkable and restricted as before.
+          // Canonical links never grant send permissions, rewrite existing booking IDs,
+          // or delete source evidence.
+        }
+        for(const parent of record.linked_producer_ids){
+          const target=resolve(parent);
+          if(!target||target.kind!=="promoter"||target.canonical_id)
+            return fail("invalid_producer_link",422);
+        }
+      }
+    }
     if(request.method==="PATCH"&&!found)return fail("record_not_found",404);
     if(request.method==="PATCH"&&(!input.revision||input.revision!==found.revision))
       return fail("revision_conflict",409);
@@ -302,8 +354,11 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
         return fail("historical_contact_needs_review",422);
     }
     if(request.method==="POST"&&kind==="contacts"){
-      const normalized=x=>String(x||"").trim().toLocaleLowerCase("pt-PT");
-      const sameEntity=x=>normalized(x.name)===normalized(record.name)&&
+      const normalized=x=>String(x||"").trim().toLocaleLowerCase("pt-PT")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+      // Two different entity types or two similarly named venues in distinct
+      // municipalities are not duplicates. Do not merge shared mailboxes.
+      const sameEntity=x=>x.kind===record.kind&&normalized(x.name)===normalized(record.name)&&
         normalized(x.city)===normalized(record.city);
       if(before.some(sameEntity))return fail("possible_duplicate_contact",409);
       // Continuation must reuse the immutable V3 ID instead of making a second record.

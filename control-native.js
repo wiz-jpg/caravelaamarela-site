@@ -75,7 +75,7 @@ async function listAll(db,kind){
   if(!op)return [];
   const all=await db.prepare(
     "SELECT id,entity_id,decision,evidence_json,created_ms FROM control_decision_events "+
-    "WHERE operation=? ORDER BY created_ms ASC,id ASC LIMIT 12000"
+    "WHERE operation=? ORDER BY created_ms ASC,rowid ASC LIMIT 12000"
   ).bind(op).all();
   const map=new Map();
   for(const event of all.results||[]){
@@ -91,7 +91,7 @@ async function listAll(db,kind){
 }
 // Recheck legacy restrictions server-side against the sealed archive; never
 // rely on a browser-supplied "allowed" flag for a historical contact.
-async function historicContact(db,id){
+async function readActiveArchive(db){
   const selected=await db.prepare(
     "SELECT s.id,s.raw_sha256,s.declared_bytes FROM control_snapshots s "+
     "JOIN control_state t ON t.value=s.id "+
@@ -110,7 +110,36 @@ async function historicContact(db,id){
     .map(x=>x.toString(16).padStart(2,"0")).join("");
   if(digest!==selected.raw_sha256)throw Error("archive_checksum");
   const manifest=JSON.parse(new TextDecoder().decode(bytes));
-  return Array.isArray(manifest.entities)?manifest.entities.find(x=>x.id===id)||null:null;
+  if(manifest.schema!=="caravela.crm.import.v1"||!Array.isArray(manifest.entities))
+    throw Error("archive_schema");
+  return manifest;
+}
+async function historicContact(db,id){
+  const manifest=await readActiveArchive(db);
+  return manifest?.entities.find(x=>x.id===id)||null;
+}
+export async function nativeArchive(env){
+  if(!env.ZOHO_DB)return fail("not_found",404);
+  try{
+    const manifest=await readActiveArchive(env.ZOHO_DB);
+    if(!manifest)return out({ok:true,contacts:[],actions:[],active:false});
+    const contacts=manifest.entities.map(x=>({
+      id:x.id,name:x.name,kind:x.kind,city:x.city||"",emails:x.emails||[],
+      suppressed:!!x.suppressed,control_blocked:!!x.control_blocked,
+      control_blocked_possible:!!x.control_blocked_possible,
+      review_required:!!x.review_required,shared_email:!!x.shared_email
+    }));
+    const actions=(manifest.actions||[]).map(x=>({
+      name:String(x.name||"").slice(0,140),
+      email:String(x.email||"").slice(0,254),
+      artist:String(x.artist||"").slice(0,110),
+      status:String(x.status||"").slice(0,100),
+      next_step:String(x.next_step||"").slice(0,400),
+      origin:{row:x.origin?.row||null}
+    }));
+    return out({ok:true,contacts,actions,active:true,
+      snapshot_id:manifest.manifest_sha256});
+  }catch{return fail("archive_unavailable",503);}
 }
 function legacyPolicy(entity){
   if(!entity)return "missing";
@@ -181,9 +210,8 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
         return fail("historical_contact_needs_review",422);
     }
     if(request.method==="POST"&&kind==="contacts"){
-      const emails=new Set(record.emails);
-      if(before.some(x=>x.name.toLocaleLowerCase("pt-PT")===record.name.toLocaleLowerCase("pt-PT")||
-        x.emails.some(e=>emails.has(e))))
+      if(before.some(x=>x.name.toLocaleLowerCase("pt-PT")===record.name.toLocaleLowerCase("pt-PT")&&
+        x.city.toLocaleLowerCase("pt-PT")===record.city.toLocaleLowerCase("pt-PT")))
         return fail("possible_duplicate_contact",409);
     }
     // A blocked contact must not be linked to a verified proposal.

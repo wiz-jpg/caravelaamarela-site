@@ -3,6 +3,7 @@ import { syncGoogleSheets } from "./control-sync-sheets.js";
 import { handleControlAuth, sessionUser, roleAllows } from "./control-auth.js";
 import { handlePartnerships } from "./control-partnerships.js";
 import { operationalOverview } from "./control-operations.js";
+import { handleNative } from "./control-native.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -138,16 +139,21 @@ export async function handleControl(request,env,url,zohoReader) {
   const hasManager=hasAdmin||roleAllows(user,"manager");
   // Only aggregated operational data is visible to viewers.
   // Raw snapshots, Sheets, backups, audit and configuration require admin.
+  const nativeRoute=route==="native/contacts"||route==="native/booking";
   const limitedReads=new Set(["ops/overview"]);
   const syncRoutes=new Set(["zoho/sync","sheets/sync"]);
   const partnershipRoute=route==="partnerships"&&
     (request.method==="GET"||request.method==="POST"||request.method==="PATCH");
   if(!hasAdmin&&!cron&&!limitedReads.has(route)&&
-     !(hasManager&&(syncRoutes.has(route)||partnershipRoute)))
+     !(hasManager&&(syncRoutes.has(route)||partnershipRoute||nativeRoute)))
     return reject("forbidden",403);
   if(route==="partnerships"&&!hasManager)return reject("forbidden",403);
+  if(nativeRoute&&!hasManager)return reject("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
+  if(nativeRoute)return handleNative(request,env,url,route,{
+    canRead:hasManager,canWrite:hasManager,actor:user?.username||(admin?"legacy_admin":"")
+  });
   const db=env.ZOHO_DB;
   try{
     if(route==="ops/overview"&&request.method==="GET"){

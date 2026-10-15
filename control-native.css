@@ -165,3 +165,6 @@
 .cc-contact-variants summary{cursor:pointer;font-size:12px}
 .cc-contact-variants button{font-size:12px;margin:9px 8px 0 0;padding:7px}
 @media(max-width:670px){.cc-basket-head{flex-direction:column;align-items:flex-start}}
+
+.cc-basket-project{display:inline-flex;align-items:center;gap:7px;font-size:12px}
+.cc-basket-project select{border:1px solid #5e6f7f;border-radius:7px;background:#122031;color:#fff;padding:8px;font-size:12px;min-height:36px}

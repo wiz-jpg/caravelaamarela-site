@@ -5,7 +5,7 @@ const CONTACT_OP="crm_contact_v1",BOOKING_OP="crm_booking_v1",FINANCE_OP="crm_fi
 const FINANCE_TYPES=new Set(["income","expense"]);
 const FINANCE_CATEGORIES=new Set(["agency_commission","creative_service","other_income","travel","production","marketing","other_expense"]);
 const FINANCE_STATUSES=new Set(["planned","due","settled","cancelled"]);
-const KINDS=new Set(["festival","venue","promoter","press","other"]);
+const KINDS=new Set(["festival","venue","promoter","press","partnership","other"]);
 const POLICIES=new Set(["review","allowed","blocked"]);
 const STATUSES=new Set(["research","draft","contact_reported","sent_verified","reply_reported","negotiating","confirmed","declined","paused","closed"]);
 const PRIORITIES=new Set(["high","medium","low"]);
@@ -27,7 +27,7 @@ function day(value){
 function contact(input){
   if(!input||typeof input!=="object"||Array.isArray(input))return null;
   const row={};
-  for(const [k,max] of Object.entries({name:140,city:120,notes:1600,next_step:400,review_date:10,source_label:160})){
+  for(const [k,max] of Object.entries({name:140,city:120,country:80,region:120,notes:1600,next_step:400,review_date:10,source_label:160})){
     row[k]=field(input[k]??"",max);
     if(row[k]===null)return null;
   }
@@ -45,7 +45,7 @@ function booking(input){
   const row={};
   for(const [k,max] of Object.entries({
     contact_name:140,artist:110,subject:180,contact_id:80,contact_email:254,
-    fee_note:300,conditions:1000,next_step:400,due_date:10,event_date:10,
+    fee_note:300,conditions:1000,next_step:400,due_date:10,event_date:10,press_reference:400,
     last_contact_date:10,evidence_reference:450,notes:1600,origin_label:160,owner:110
   })){
     row[k]=field(input[k]??"",max);
@@ -56,6 +56,10 @@ function booking(input){
   if(row.contact_id&&!validId(row.contact_id))return null;
   if(row.contact_email&&!EMAIL.test(row.contact_email))return null;
   if(!day(row.due_date)||!day(row.last_contact_date)||!day(row.event_date))return null;
+  const pressStatus=input.press_status??"unknown";
+  if(!["unknown","planned","completed","not_applicable"].includes(pressStatus))return null;
+  if(pressStatus==="completed"&&!row.press_reference)return null;
+  row.press_status=pressStatus;
   const fee=input.fee_amount;
   if(fee!==null&&(typeof fee!=="number"||!Number.isFinite(fee)||fee<0||fee>10000000))return null;
   if(input.currency!=="EUR")return null;

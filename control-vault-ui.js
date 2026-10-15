@@ -62,6 +62,21 @@
     if(path!=="ops/overview")throw Error("Vista não autorizada.");
     return api(path);
   }};
+  // Native contacts/booking use the same in-memory, authenticated Preview transport.
+  // They cannot access arbitrary API routes or expose credentials to the UI.
+  window.CaravelaNativeTransport={
+    request(kind,method="GET",entry=null){
+      if(!["contacts","booking"].includes(kind)||!["GET","POST","PATCH"].includes(method))
+        throw Error("Operação CRM inválida.");
+      return api("native/"+kind,{
+        method,
+        ...(method!=="GET"?{
+          headers:{"Content-Type":"application/json","X-Caravela-Request":"1"},
+          body:JSON.stringify(entry)
+        }:{})
+      });
+    }
+  };
   window.CaravelaPartnershipTransport={
     setToken(value){
       if(typeof value!=="string"||value.length<43)return false;

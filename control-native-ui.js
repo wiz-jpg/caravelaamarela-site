@@ -204,6 +204,22 @@ function render(kind){
      contact_name:r.name,contact_id:r.id,contact_email:r.emails?.[0]||""
    });};actions.append(b);
   }
+  if(kind==="booking"&&r.revision&&r.stage!=="confirmed"){
+    const remove=make("button","Remover proposta","cc-neutral");remove.type="button";
+    remove.onclick=async()=>{
+      if(!window.confirm("Remover esta proposta do trabalho diário? O histórico de auditoria será preservado."))return;
+      if(state.busy)return;
+      state.busy=true;remove.disabled=true;
+      try{
+        const response=await api("booking","DELETE",{id:r.id,revision:r.revision});
+        const result=await response.json();
+        if(!response.ok)throw Error(({booking_has_financial_records:"Esta proposta tem movimentos financeiros associados e não pode ser removida.",revision_conflict:"Proposta alterada noutra sessão. Atualiza primeiro."})[result.error]||result.error||"Erro ao remover");
+        await load("booking");$("cc-native-booking-status").textContent="Proposta removida do trabalho diário; histórico preservado.";
+      }catch(error){$("cc-native-booking-status").textContent=error.message}
+      finally{state.busy=false;remove.disabled=false}
+    };
+    actions.append(remove);
+  }
   card.append(actions);list.append(card);count++;
  }
  const more=$("cc-native-"+kind+"-more");more.hidden=all.length<=limit;

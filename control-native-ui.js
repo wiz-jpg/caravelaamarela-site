@@ -330,21 +330,37 @@ const dashboardPanel=make("section",undefined,"cc-native-dashboard");
 dashboardPanel.innerHTML='<div class="cc-native-head"><div><h2>Trabalho diário</h2>'+
  '<p class="cc-lead">Negociações e follow-ups registados na plataforma, independentes dos Sheets.</p></div>'+
  '<button type="button" class="cc-neutral" id="cc-native-dash-open">Abrir booking</button></div>'+
+ '<div id="cc-native-dash-metrics" class="cc-native-metrics"></div>'+
  '<div id="cc-native-dash-body" class="cc-native-list"><p class="cc-lead">A consultar tarefas...</p></div>';
 dashboard.appendChild(dashboardPanel);
 $("cc-native-dash-open").onclick=()=>window.CaravelaControlApp?.openView("booking");
 function renderDashboard(){
  const root=$("cc-native-dash-body");root.replaceChildren();
- const entries=get("booking").filter(x=>!["confirmed","declined","closed"].includes(x.stage))
+ const all=get("booking"),date=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+ const metrics=$("cc-native-dash-metrics");metrics.replaceChildren();
+ const open=all.filter(x=>!["confirmed","declined","closed"].includes(x.stage));
+ const due=open.filter(x=>x.due_date&&x.due_date<=date).length;
+ const unplanned=open.filter(x=>!x.due_date).length;
+ const confirmed=all.filter(x=>x.stage==="confirmed").length;
+ const values=[["Ações vencidas",due],["Sem data de revisão",unplanned],["Em curso",open.length],["Datas confirmadas",confirmed]];
+ for(const [label,value] of values){
+  const block=make("div",undefined,"cc-native-metric");
+  block.append(make("small",label),make("strong",value));
+  metrics.append(block);
+ }
+ const entries=open
   .sort((a,b)=>{
    const ad=a.due_date||"9999-99-99",bd=b.due_date||"9999-99-99";
    return ad.localeCompare(bd)||({high:0,medium:1,low:2}[a.priority]-({high:0,medium:1,low:2}[b.priority]));
   });
  if(!entries.length){root.append(make("p","Ainda não há negociações nativas em curso. Abre Booking para criar a primeira.","cc-notice"));return;}
- for(const row of entries.slice(0,6)){
+ for(const row of entries.slice(0,8)){
   const item=make("button",undefined,"cc-native-dash-task");item.type="button";
+  const urgency=row.due_date&&row.due_date<=date?"Prazo vencido":!row.due_date?"Sem prazo":"Próximo passo";
   item.append(make("strong",row.contact_name+" · "+row.artist),
-    make("span",row.next_step+" · "+(row.due_date?"Rever "+row.due_date:"Sem prazo")));
+    make("span",urgency+" · "+row.next_step+" · "+(row.due_date||"definir data")+
+      (row.owner?" · "+row.owner:"")));
+  if(row.due_date&&row.due_date<=date)item.classList.add("cc-native-overdue");
   item.onclick=()=>{window.CaravelaControlApp?.openView("booking");edit("booking",row)};
   root.append(item);
  }

@@ -103,3 +103,26 @@ test("rejects duplicates, unsafe input and unauthorized public or Cron access",a
  env.CONTROL_CRON_TOKEN="cron-"+"y".repeat(48);
  assert.equal((await req("contacts","GET",null,{token:env.CONTROL_CRON_TOKEN})).status,401);
 });
+
+test("private export preserves immutable revisions and empty archive needs no Sheets",async()=>{
+ const initial=await req("export");
+ assert.equal(initial.status,200);
+ const snapshot=await initial.json();
+ assert.equal(snapshot.schema,"caravela.crm.native-backup.v1");
+ assert.equal(snapshot.count,0);
+ const archive=await req("archive");
+ assert.equal(archive.status,200);
+ assert.equal((await archive.json()).active,false);
+ assert.equal((await req("archive","POST",contact())).status,405);
+ await req("contacts","POST",contact());
+ const exported=await (await req("export")).json();
+ assert.equal(exported.count,1);
+ assert.equal(exported.events[0].operation,"crm_contact_v1");
+ assert.equal(exported.historical_snapshots_untouched,true);
+});
+test("legacy contact references cannot be fabricated when no active sealed snapshot exists",async()=>{
+ const origin="venue_"+"a".repeat(22);
+ const res=await req("contacts","POST",contact({id:origin,origin_id:origin}));
+ assert.equal(res.status,422);
+ assert.equal((await res.json()).error,"historical_reference_not_found");
+});

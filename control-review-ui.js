@@ -53,7 +53,8 @@
  function render(data){
   metrics.replaceChildren();content.replaceChildren();
   const labels=[
-   ["Novos endereços",data.counts.new_mail_addresses],["Entradas a rever",data.counts.incoming_to_review],
+   ["Novos endereços",data.counts.new_mail_addresses],["Conversas bilaterais",data.counts.verified_exchange_threads],
+   ["Entradas a rever",data.counts.incoming_to_review],
    ["Duplicados possíveis",data.counts.duplicate_groups],["Emails partilhados",data.counts.shared_email_groups],
    ["Ações por associar",data.counts.unresolved_actions],["Contactos em atraso",data.counts.overdue]
   ];
@@ -62,6 +63,16 @@
   if(!data.archive_active)content.append(make("p","O arquivo consolidado ainda não está ativo. As sugestões estão incompletas.","cc-notice"));
   content.append(make("p","Metadados Zoho indexados: "+data.indexed_headers+" mensagens. Última sincronização concluída: "+
     date(data.zoho_last_sync_ms)+". Os totais representam o índice disponível; não garantem cobertura integral da caixa.","cc-lead"));
+  section("Conversas bilaterais identificadas","Uma saída seguida de entrada no mesmo fio Zoho. Só propomos autorização a endereços ligados a uma única entidade sem bloqueios; confirma a finalidade da conversa.",
+    data.verified_exchanges,(place,x)=>{
+    const actions=card(place,x.contact.name+" · "+x.email,
+      "Troca observada no Zoho · última entrada "+date(x.last_in)+
+      (x.contact.contact_policy==="allowed"?" · Contacto já autorizado":" · Por validar"));
+    if(x.contact.contact_policy!=="allowed")
+      actions.append(button("Rever e autorizar",()=>action({action:"approve",
+        id:x.contact.id,email:x.email,thread_id:x.thread_id})));
+    else actions.append(button("Abrir ficha",()=>open(x.contact.id)));
+  });
   section("Endereços novos observados no Zoho","O endereço ainda não aparece nas fichas. Pode pertencer a uma entidade existente; confirma antes de criar outra.",
     data.new_addresses,(place,x)=>{
     const actions=card(place,x.email,(x.incoming?"Entradas: "+x.incoming+" · ":"")+

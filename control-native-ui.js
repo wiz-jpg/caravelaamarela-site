@@ -9,6 +9,7 @@ const CONTACT_FIELDS=[
   ["name","Nome / entidade","text",true],["kind","Tipo","select",true],
   ["city","Localidade","text"],["region","Região / distrito","text"],["country","País","text"],["emails","Emails (separados por vírgulas)","text"],
   ["contact_policy","Política de contacto","select",true],
+  ["relationship","Relação comercial","select"],
   ["next_step","Próximo passo","textarea"],["review_date","Rever em","date"],
   ["notes","Notas internas","textarea"]
 ];
@@ -32,6 +33,7 @@ const choices={
  kind:{festival:"Festival",venue:"Sala / espaço",promoter:"Promotor",press:"Imprensa",partnership:"Possível parceria",other:"Outro"},
  press_status:{unknown:"Por avaliar",planned:"Divulgação planeada",completed:"Divulgação realizada (referenciada)",not_applicable:"Não aplicável"},
  contact_policy:{review:"Rever antes de contactar",allowed:"Contacto autorizado",blocked:"Não contactar"},
+ relationship:{unknown:"Por classificar",partner:"Parceria existente",target:"Queremos colaborar",in_discussion:"Em conversa",former:"Parceria anterior",not_applicable:"Não aplicável"},
  stage:{research:"Por avaliar",draft:"Proposta por preparar",contact_reported:"Contacto referido (não verificado)",
    sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",
    confirmed:"Confirmado",declined:"Recusado",paused:"Em pausa",closed:"Concluído"},
@@ -59,7 +61,7 @@ function historicPolicy(x){
 function historicalContact(x){
  return {id:x.id,origin_id:x.id,name:x.name,kind:x.kind,city:x.city||"",
    emails:Array.isArray(x.emails)?x.emails:[],contact_policy:historicPolicy(x),
-   next_step:"",review_date:"",notes:"",source_label:"Arquivo importado (original imutável)",historical:true};
+   next_step:"",review_date:"",notes:"",relationship:"unknown",source_label:"Arquivo importado (original imutável)",historical:true};
 }
 function contactRows(){
  const map=new Map(state.historical.map(x=>[x.id,historicalContact(x)]));
@@ -187,6 +189,7 @@ function updateGeoFilters(){
  }
 }
 function render(kind){
+ if(kind==="contacts")renderContactTriage();
  const all=filtered(kind),list=$("cc-native-"+kind+"-list"),limit=state.shown[kind];
  list.replaceChildren();
  let count=0;
@@ -224,6 +227,7 @@ function render(kind){
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
+   if(r.relationship&&r.relationship!=="unknown")hint(card,"Relação",choices.relationship[r.relationship]);
    hint(card,"Próximo passo",r.next_step);
    hint(card,"Rever",r.review_date);
    if(r.historical)hint(card,"Origem","Arquivo original — registo separado de alterações");
@@ -278,6 +282,57 @@ function renderHistory(){
     notes:"Estado no arquivo: "+(item.status||"não indicado")+"; associação e envio por verificar."
   });
   row.append(content,b);area.append(row);
+ }
+}
+const triage=make("section",undefined,"cc-contact-triage");
+triage.innerHTML='<h2>Organização de contactos</h2><p class="cc-lead">Revisão assistida: nunca junta contactos nem altera dados sem aprovação.</p>'+
+ '<div id="cc-contact-triage-stats" class="cc-native-metrics"></div><div id="cc-contact-triage-list"></div>';
+contactView.querySelector("#cc-native-contacts")?.before(triage);
+function renderContactTriage(){
+ const root=$("cc-contact-triage-stats"),list=$("cc-contact-triage-list");if(!root||!list)return;
+ root.replaceChildren();list.replaceChildren();
+ const contacts=contactRows();
+ const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+ const due=contacts.filter(x=>x.review_date&&x.review_date<today);
+ const current=contacts.filter(x=>x.review_date===today);
+ const future=contacts.filter(x=>x.review_date&&x.review_date>today);
+ const partner=contacts.filter(x=>x.relationship==="partner");
+ const target=contacts.filter(x=>x.relationship==="target");
+ const normal=x=>String(x||"").trim().toLocaleLowerCase("pt-PT").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+ const duplicates=new Map();
+ for(const c of contacts){
+  const names=(c.name&&c.city?[normal(c.name)+"|"+normal(c.city)]:[]);
+  for(const email of c.emails||[])names.push("email:"+normal(email));
+  for(const key of names){const group=duplicates.get(key)||new Map();group.set(c.id,c);duplicates.set(key,group)}
+ }
+ const groups=[...duplicates.entries()].filter(([,m])=>m.size>1)
+  .sort((a,b)=>b[1].size-a[1].size);
+ const counts=[["Revisões vencidas",due.length],["Para hoje",current.length],["Mais tarde",future.length],
+  ["Parcerias existentes",partner.length],["A conquistar",target.length],["Grupos a rever",groups.length]];
+ for(const [label,value] of counts){const cell=make("div",undefined,"cc-native-metric");cell.append(make("small",label),make("strong",value));root.append(cell)}
+ const guide=make("p","As revisões só aparecem com data explícita. Contactos importados sem data não são considerados tratados nem atrasados. Correspondências por email partilhado podem ser legítimas.","cc-lead");
+ list.append(guide);
+ const sections=[["Contactos vencidos",due],["Para hoje",current],["Programados para depois",future],["Parcerias atuais",partner],["Parcerias desejadas",target]];
+ for(const [label,records] of sections){
+  if(!records.length)continue;
+  const details=make("details",undefined,"cc-contact-review-group");
+  details.append(make("summary",label+" · "+records.length));
+  const content=make("div",undefined,"cc-contact-review-items");
+  for(const c of records.slice(0,12)){
+   const button=make("button",c.name+" · "+(c.city||c.region||c.country||"local não indicado"),"cc-neutral");button.type="button";
+   button.onclick=()=>{edit("contacts",c);};content.append(button)
+  }
+  details.append(content);list.append(details);
+ }
+ if(groups.length){
+  const details=make("details",undefined,"cc-contact-review-group");
+  details.append(make("summary","Possíveis duplicados · "+groups.length+" grupos"));
+  const area=make("div",undefined,"cc-contact-review-items");
+  for(const [key,members] of groups.slice(0,25)){
+   const names=[...members.values()].map(x=>x.name+" ("+(x.city||"local desconhecido")+")");
+   area.append(make("p",(key.startsWith("email:")?"Mesmo email":"Mesmo nome e cidade")+": "+names.join(" / ")));
+  }
+  details.append(area);list.append(details);
  }
 }
 const history=make("section",undefined,"cc-native-history");

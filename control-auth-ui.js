@@ -23,7 +23,8 @@
       '<label for="cc-boot-display">Nome apresentado</label><input id="cc-boot-display" type="text" required maxlength="80">' +
       '<label for="cc-boot-password">Palavra-passe (mínimo 12 caracteres)</label>' +
       '<input id="cc-boot-password" type="password" minlength="12" maxlength="128" required autocomplete="new-password">' +
-      '<button type="submit">Criar conta de administrador</button></form>' +
+      '<button type="submit">Criar conta de administrador</button>' +
+      '<button id="cc-existing-login" type="button" class="secondary">Já tenho conta — Iniciar sessão</button></form>' +
     '<form id="cc-change-password-form" hidden>' +
       '<label for="cc-old-password">Palavra-passe atual</label>' +
       '<input id="cc-old-password" type="password" required autocomplete="current-password">' +
@@ -111,6 +112,8 @@
       if (me.authenticated && me.user) return reveal(me.user);
       const boot = await api("bootstrap-status");
       mode(boot.needs_bootstrap ? "cc-bootstrap-form" : "cc-login-form");
+      // Bootstrap is a one-time setup. Offer a direct way back to sign in if
+      // the setup status is stale after a previous successful account creation.
     } catch (error) {
       if (error.message === "not_found" && window.CaravelaControlApp?.legacyMode) {
         overlay.hidden = true;
@@ -150,7 +153,17 @@
         })
       });
       reveal(data.user);
-    } catch (error) { authMessage(error.message, true); }
+    } catch (error) {
+      if (error.message === "already_initialized") {
+        mode("cc-login-form");
+        $("cc-login-name").value = $("cc-boot-name").value.trim().toLowerCase();
+        authMessage("A conta de administrador já existe. Inicia sessão com as credenciais existentes.", true);
+      } else authMessage(error.message, true);
+    }
+  });
+  $("cc-existing-login").addEventListener("click", () => {
+    mode("cc-login-form");
+    $("cc-login-name").value = $("cc-boot-name").value.trim().toLowerCase();
   });
   $("cc-change-password-form").addEventListener("submit", async event => {
     event.preventDefault();

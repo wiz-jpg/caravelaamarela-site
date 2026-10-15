@@ -737,6 +737,25 @@ function edit(kind,entry={}){
    const h=make("p","Roster principal: referência de comissão 15% sobre o cachet artístico. Confirma o acordo antes de guardar.","cc-lead");
    grid.append(h);
   }
+  const stage=grid.querySelector('[name="stage"]'),
+    lastContact=grid.querySelector('[name="last_contact_date"]'),
+    due=grid.querySelector('[name="due_date"]');
+  if(stage&&lastContact&&due){
+   const suggestFollowup=()=>{
+    if(due.value||!/^(sent_verified|reply_reported|negotiating)$/.test(stage.value)||
+       !/^\d{4}-\d{2}-\d{2}$/.test(lastContact.value))return;
+    const date=new Date(lastContact.value+"T12:00:00Z");
+    if(Number.isNaN(date.getTime()))return;
+    date.setUTCDate(date.getUTCDate()+7);
+    const suggested=date.toISOString().slice(0,10);
+    // Suggested and editable, never counted as an actually promised deadline.
+    if(suggested>=localToday())due.value=suggested;
+   };
+   stage.addEventListener("change",suggestFollowup);
+   lastContact.addEventListener("change",suggestFollowup);
+   suggestFollowup();
+   grid.append(make("p","Com envio/resposta comprovados, sugere-se rever em 7 dias. Podes alterar a data; nunca é criada a partir de envios antigos sem prova.","cc-lead"));
+  }
  }
  form.append(title,help,grid);
  const relationshipData=kind==="contacts"?contactRelationships(form,entry):null;

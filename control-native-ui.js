@@ -69,6 +69,25 @@ function api(kind,method,data){
  if(!transport)throw Error("Ligação ao cofre indisponível. Reabre a página.");
  return transport.request(kind,method,data);
 }
+let archiveLoaded=false,archiveBusy=false;
+async function loadArchive(){
+ if(archiveLoaded||archiveBusy)return;
+ archiveBusy=true;
+ try{
+  const response=await api("archive","GET");
+  if(response.status===403)return; // Managers cannot read immutable raw source.
+  const data=await response.json();
+  if(!response.ok||!data.ok)throw Error(data.error||"Arquivo indisponível");
+  state.historical=data.contacts||[];
+  state.actions=data.actions||[];
+  archiveLoaded=true;
+  render("contacts");render("booking");renderDashboard();
+ }catch(error){
+  // Native manually authored records are still usable if the archive cannot be read.
+  if($("cc-native-contacts-status"))
+   $("cc-native-contacts-status").textContent="Registos próprios disponíveis. Arquivo: "+error.message;
+ }finally{archiveBusy=false}
+}
 async function load(kind){
  const status=$("cc-native-"+kind+"-status");
  try{
@@ -318,20 +337,22 @@ function renderDashboard(){
 function onOpened(event){
  const view=event.detail?.view;
  if(view==="contacts"||view==="booking"){
-  load(view==="contacts"?"contacts":"booking");
+  loadArchive();load(view==="contacts"?"contacts":"booking");
   if(view==="booking")renderHistory();
  } else if(view==="dashboard"){load("booking")}
 }
 window.addEventListener("caravela-control-view-opened",onOpened);
 window.addEventListener("caravela-control-token-ready",()=>{
- load("contacts");load("booking");
+ loadArchive();load("contacts");load("booking");
 });
 window.addEventListener("caravela-crm-imported",event=>{
+ archiveLoaded=true;
  state.historical=event.detail?.manifest?.entities||[];
  state.actions=event.detail?.manifest?.actions||[];
  render("contacts");render("booking");renderDashboard();
 });
 window.addEventListener("caravela-control-signed-out",()=>{
+ archiveLoaded=false;archiveBusy=false;
  state.saved={contacts:[],booking:[]};state.historical=[];state.actions=[];
  render("contacts");render("booking");renderDashboard();
 });

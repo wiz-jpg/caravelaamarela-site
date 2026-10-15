@@ -194,3 +194,57 @@
 .cc-prospect-item strong{font-size:13px}
 .cc-prospect-item span{font-size:12px;color:#b8c7d7;line-height:1.45}
 @media(max-width:700px){.cc-prospect-list{grid-template-columns:1fr}}
+
+/* Agency action board — status colors convey meaning rather than decoration */
+.cc-home-board{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:13px;align-items:start;margin:18px 0 24px}
+.cc-home-column{border:1px solid #3c4d5e;background:#17232f;border-radius:13px;padding:13px;min-width:0}
+.cc-home-column h3{font-size:14px;margin:0 0 9px;font-weight:750;color:#f6f7f8}
+.cc-home-column>.cc-lead{font-size:11px;line-height:1.5;margin:0 0 13px;min-height:50px}
+.cc-home-column-list{display:grid;gap:10px}
+.cc-home-column>button{font-size:12px;padding:8px 12px;margin-top:12px;width:100%}
+.cc-home-empty{font-size:12px;color:#adc0cf}
+.cc-home-task{padding:12px;border-radius:10px;border:1px solid #3b4f63;background:#1c2b3a;min-width:0}
+.cc-home-task--sent_verified,.cc-home-task--contact_reported{border-left:3px solid #9eabb9}
+.cc-home-task--negotiating,.cc-home-task--reply_reported{border-left:3px solid #e4bd64}
+.cc-home-task--confirmed{border-left:3px solid #69c99a}
+.cc-home-task--declined{border-left:3px solid #e08a83}
+.cc-home-task--paused{border-left:3px solid #91a0b0}
+.cc-home-task-heading{display:flex;gap:8px;align-items:start;justify-content:space-between}
+.cc-home-task-name{background:none;border:0;color:#ecf1f7;padding:0;font-weight:700;font-size:13px;cursor:pointer;text-align:left;line-height:1.45;overflow-wrap:anywhere}
+.cc-home-task-name:hover{text-decoration:underline}
+.cc-home-stage{border-radius:6px;background:#334558;color:#c4d2df;padding:3px 5px;font-size:10px;line-height:1.25;white-space:normal;text-align:right;max-width:92px;flex-shrink:0}
+.cc-home-stage--confirmed{color:#9ce5b8;background:#244335}
+.cc-home-stage--declined{color:#f6b6ab;background:#422c2b}
+.cc-home-stage--negotiating,.cc-home-stage--reply_reported{color:#e9d18c;background:#3b3625}
+.cc-home-task-info{font-size:11px;color:#c3ced9;margin:9px 0;line-height:1.5}
+.cc-home-task-meta{display:flex;gap:6px;flex-direction:column;font-size:10px;color:#9fb0c0}
+.cc-home-suggestion{display:block;color:#efcc78;font-size:10px;margin:5px 0}
+.cc-home-task-tools{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;padding-top:9px;border-top:1px solid #405366}
+.cc-home-status{border:1px solid #677789;background:#2a3744;border-radius:8px;color:#d7e2ec;min-width:34px;min-height:34px;font-weight:850;font-size:17px;cursor:pointer}
+.cc-home-status:hover,.cc-home-status:focus-visible{outline:2px solid #d5ba61;outline-offset:2px}
+.cc-home-status--won{color:#a5ebbd;border-color:#477d59;background:#203d30}
+.cc-home-status--lost{color:#ffb5ad;border-color:#a65f58;background:#422b2a}
+.cc-home-status--later{color:#f8d488;border-color:#987a44;background:#403628}
+.cc-home-status--contacted{color:#e0e7ee}
+.cc-home-fast-form{margin-top:13px;border:1px solid #c5a963;background:#1f2b36;padding:12px;border-radius:9px;display:grid;gap:9px}
+.cc-home-fast-form>strong{font-size:12px}
+.cc-home-fast-form .cc-lead{font-size:11px;line-height:1.5}
+.cc-home-fast-fields{display:grid;gap:9px}
+.cc-home-fast-fields label{display:grid;gap:4px;color:#d4dee8;font-size:11px}
+.cc-home-fast-fields input,.cc-home-fast-fields select{width:100%;border:1px solid #607287;border-radius:7px;background:#101b29;color:#fff;min-height:36px;padding:7px}
+.cc-home-fast-controls{display:flex;gap:7px;flex-wrap:wrap}
+.cc-home-fast-controls button{padding:8px 10px;font-size:11px}
+.cc-home-secondary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:18px 0}
+.cc-home-secondary-card{display:flex;flex-direction:column;gap:7px;background:#192735;border:1px solid #3c5265;border-radius:11px;padding:16px;color:#eaf1f7;text-align:left;cursor:pointer}
+.cc-home-secondary-card strong{font-size:24px}
+.cc-home-secondary-card span{font-size:12px;font-weight:700}
+.cc-home-secondary-card small{font-size:10px;color:#adbecf;line-height:1.5}
+@media(max-width:1260px){.cc-home-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:800px){.cc-home-secondary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.cc-home-board{grid-template-columns:1fr}.cc-home-secondary{grid-template-columns:1fr 1fr}}
+/* Partnership statuses distinct from deals and first messages */
+.cc-partner-stage--confirmed,.cc-partner-stage--active_reported{color:#a5eac0;background:#234031;border-color:#477b5b}
+.cc-partner-stage--collaboration_reported{color:#c2e5d0;background:#294539;border-color:#4b7563}
+.cc-partner-stage--negotiating,.cc-partner-stage--reply_reported{color:#f6d587;background:#403521;border-color:#9a8044}
+.cc-partner-stage--sent_verified,.cc-partner-stage--contact_reported{color:#d3deeb;background:#2a3747;border-color:#617589}
+.cc-partner-stage--paused,.cc-partner-stage--closed{color:#b5bfcc;background:#2d3139;border-color:#5b6571}

@@ -3,7 +3,7 @@ import { syncGoogleSheets } from "./control-sync-sheets.js";
 import { handleControlAuth, sessionUser, roleAllows } from "./control-auth.js";
 import { handlePartnerships } from "./control-partnerships.js";
 import { operationalOverview } from "./control-operations.js";
-import { handleNative, nativeArchive } from "./control-native.js";
+import { handleNative, nativeArchive, nativeExport } from "./control-native.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -140,6 +140,7 @@ export async function handleControl(request,env,url,zohoReader) {
   // Only aggregated operational data is visible to viewers.
   // Raw snapshots, Sheets, backups, audit and configuration require admin.
   const nativeArchiveRoute=route==="native/archive";
+  const nativeExportRoute=route==="native/export";
   const nativeRoute=route==="native/contacts"||route==="native/booking";
   const limitedReads=new Set(["ops/overview"]);
   const syncRoutes=new Set(["zoho/sync","sheets/sync"]);
@@ -151,11 +152,16 @@ export async function handleControl(request,env,url,zohoReader) {
   if(route==="partnerships"&&!hasManager)return reject("forbidden",403);
   if(nativeRoute&&!hasManager)return reject("forbidden",403);
   if(nativeArchiveRoute&&!hasAdmin)return reject("forbidden",403);
+  if(nativeExportRoute&&!hasAdmin)return reject("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
   if(nativeArchiveRoute){
     if(request.method!=="GET")return reject("method_not_allowed",405);
     return nativeArchive(env);
+  }
+  if(nativeExportRoute){
+    if(request.method!=="GET")return reject("method_not_allowed",405);
+    return nativeExport(env);
   }
   if(nativeRoute)return handleNative(request,env,url,route,{
     canRead:hasManager,canWrite:hasManager,actor:user?.username||(admin?"legacy_admin":"")

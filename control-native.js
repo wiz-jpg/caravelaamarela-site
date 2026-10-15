@@ -227,11 +227,17 @@ export async function nativeArchive(env){
       review_required:!!x.review_required,shared_email:!!x.shared_email
     }));
     const actions=(manifest.actions||[]).map(x=>({
+      id:String(x.id||"").slice(0,90),
       name:String(x.name||"").slice(0,140),
       email:String(x.email||"").slice(0,254),
       artist:String(x.artist||"").slice(0,110),
       status:String(x.status||"").slice(0,100),
+      priority:String(x.priority||"").slice(0,35),
       next_step:String(x.next_step||"").slice(0,400),
+      next_followup_iso:String(x.next_followup_iso||"").slice(0,10),
+      next_action_iso:String(x.next_action_iso||"").slice(0,10),
+      last_contact_iso:String(x.last_contact_iso||"").slice(0,10),
+      contact_policy:String(x.contact_policy||"review").slice(0,20),
       matched_entity_id:String(x.matched_entity_id||"").slice(0,80),
       link_status:String(x.link_status||"").slice(0,60),
       origin:{row:x.origin?.row||null}

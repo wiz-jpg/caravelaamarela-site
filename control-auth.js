@@ -44,11 +44,29 @@ async function body(request) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("invalid_request");
   return value;
 }
+// Workers currently cap each PBKDF2 deriveBits call at 100,000 iterations.
+// A domain-separated, versioned chain preserves the declared total work without
+// calling the unsupported primitive with more than its runtime limit.
+const CHUNK_ITERATIONS = 100000;
+const HASH_SCHEME = "pbkdf2-chain-v2$";
 async function pbkdf2(password, salt, rounds = ITERATIONS) {
-  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  return hex(new Uint8Array(await crypto.subtle.deriveBits({
-    name: "PBKDF2", hash: "SHA-256", salt, iterations: rounds
-  }, key, 256)));
+  if (!Number.isSafeInteger(rounds) || rounds < 200000 || rounds > 1000000)
+    throw Error("invalid_password_rounds");
+  let secret = encoder.encode(password);
+  for (let completed = 0, step = 0; completed < rounds; step++) {
+    const count = Math.min(CHUNK_ITERATIONS, rounds - completed);
+    const context = new Uint8Array(salt.length + 8);
+    context.set(salt);
+    const view = new DataView(context.buffer);
+    view.setUint32(salt.length, step);
+    view.setUint32(salt.length + 4, rounds);
+    const key = await crypto.subtle.importKey("raw", secret, "PBKDF2", false, ["deriveBits"]);
+    secret = new Uint8Array(await crypto.subtle.deriveBits({
+      name: "PBKDF2", hash: "SHA-256", salt: context, iterations: count
+    }, key, 256));
+    completed += count;
+  }
+  return HASH_SCHEME + hex(secret);
 }
 function constantHex(a, b) {
   if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;

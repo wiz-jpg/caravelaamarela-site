@@ -188,6 +188,28 @@
     '<div id="cc-team-list" class="cc-team-list"></div></div>';
   team.appendChild(teamPanel);
 
+  // Help describes agency responsibilities, not authorization grants.
+  const guide=viewMap.get("guide");
+  const guideText=[
+    ["Booking","Pesquisa a entidade em Contactos, cria uma proposta e guarda o estado real. Regista a próxima ação e o prazo. Só marca envio ou confirmação com evidência verificada.","contacts"],
+    ["Comunicação e imprensa","Consulta as comunicações e prepara respostas ou conteúdos fora da plataforma. A leitura do Zoho não envia emails nem prova automaticamente um acordo.","communications"],
+    ["Parcerias e imagem","Regista contactos e oportunidades de parceria, com responsável e próximo passo. Os serviços criativos não são tratados como booking confirmado.","partnerships"],
+    ["Coordenação","Revê o trabalho pendente no Início. Usa Artistas para consultar dados de projetos; em Administração, gere acessos e cópias de segurança.","dashboard"]
+  ];
+  const guideWrap=document.createElement("div");
+  guideWrap.className="cc-guide-grid";
+  for(const [name,description,destination] of guideText){
+    const card=document.createElement("section");card.className="cc-guide-card";
+    const h=document.createElement("h3");h.textContent=name;
+    const p=document.createElement("p");p.textContent=description;
+    const action=document.createElement("button");action.type="button";action.className="cc-neutral";
+    action.textContent="Abrir área";action.addEventListener("click",()=>openView(destination));
+    card.append(h,p,action);guideWrap.append(card);
+  }
+  guide.append(guideWrap);
+  const usage=document.createElement("p");usage.className="cc-guide-foot";
+  usage.textContent="As áreas visíveis dependem das permissões da conta (admin, gestor ou consulta). A função desempenhada na agência não altera automaticamente essas permissões. O CRM não envia emails.";
+  guide.append(usage);
   const labels = Object.fromEntries(viewInfo.map(entry => [entry[0], entry[1]]));
   let active = "dashboard", currentUser = null;
   const rank = { viewer: 1, manager: 2, admin: 3 };

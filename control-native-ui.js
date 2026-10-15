@@ -75,7 +75,7 @@ async function loadArchive(){
  archiveBusy=true;
  try{
   const response=await api("archive","GET");
-  if(response.status===403)return; // Managers cannot read immutable raw source.
+  if(response.status===403)return; // No permission to read even the safe archive projection.
   const data=await response.json();
   if(!response.ok||!data.ok)throw Error(data.error||"Arquivo indisponível");
   state.historical=data.contacts||[];
@@ -144,7 +144,7 @@ function filtered(kind){
   if(kind==="contacts"&&filter!=="all"&&r.contact_policy!==filter)return false;
   if(kind==="booking"){
    if(filter==="due"){
-    const today=new Date().toISOString().slice(0,10);
+    const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
     if(!r.due_date||r.due_date>today||["confirmed","declined","closed"].includes(r.stage))return false;
    } else if(filter!=="all"&&r.stage!==filter)return false;
   }
@@ -162,7 +162,7 @@ function render(kind){
   $("cc-native-contacts-summary").textContent=rows.length+" contactos disponíveis · "+
    saved+" fichas operacionais guardadas · restantes do arquivo imutável.";
  }else{
-  const due=get(kind).filter(x=>x.due_date&&x.due_date<=new Date().toISOString().slice(0,10)&&
+  const due=get(kind).filter(x=>x.due_date&&x.due_date<=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())&&
     !["confirmed","declined","closed"].includes(x.stage)).length;
   $("cc-native-booking-summary").textContent=get(kind).length+
     " negociações operacionais · "+due+" revisões vencidas · "+state.actions.length+
@@ -301,6 +301,12 @@ function edit(kind,entry={}){
      revision_conflict:"Ficha alterada noutra sessão. Recarrega antes de guardar.",
      possible_duplicate_contact:"Possível contacto duplicado. Pesquisa a ficha existente.",
      contact_blocked:"Contacto bloqueado: não é possível confirmar esta proposta.",
+     verified_contact_link_required:"Associa um contacto validado antes de marcar envio ou confirmação.",
+     contact_reference_not_found:"A associação não existe na base. Seleciona um contacto válido.",
+     contact_review_required:"A ficha tem de estar autorizada antes de verificares o envio.",
+     contact_email_review_required:"O endereço surge associado a restrições históricas. Revê a identidade.",
+     contact_identity_mismatch:"Nome ou email não corresponde à ficha associada.",
+     historical_contact_exists:"Esta entidade já existe no arquivo. Abre a ficha original em Contactos.",
      invalid_origin_reference:"Referência do arquivo inválida."
    })[result.error]||result.error||"Erro "+response.status);
    root.hidden=true;root.replaceChildren();

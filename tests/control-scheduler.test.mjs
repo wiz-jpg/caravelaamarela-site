@@ -20,7 +20,7 @@ test("15-minute Cron polls only Zoho, headers use Access service token",async()=
   assert.equal(calls[0].options.headers["CF-Access-Client-Id"],creds.CF_ACCESS_CLIENT_ID);
   assert.equal(calls[0].options.headers["CF-Access-Client-Secret"],creds.CF_ACCESS_CLIENT_SECRET);
   assert.equal(calls[0].options.headers.Origin,expectedOrigin);
-  assert.equal(calls[0].options.redirect,"error");
+  assert.equal(calls[0].options.redirect,"manual");
 });
 test("on the half-hour both Zoho and Sheets run without one blocking the other",async()=>{
   const calls=[];

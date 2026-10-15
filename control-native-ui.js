@@ -103,25 +103,28 @@ function api(kind,method,data){
  if(!transport)throw Error("Ligação ao cofre indisponível. Reabre a página.");
  return transport.request(kind,method,data);
 }
-let archiveLoaded=false,archiveBusy=false;
-async function loadArchive(){
- if(archiveLoaded||archiveBusy)return;
+let archiveLoaded=false,archiveBusy=false,archivePromise=null;
+function loadArchive(){
+ if(archiveLoaded)return Promise.resolve();
+ if(archivePromise)return archivePromise;
  archiveBusy=true;
- try{
-  const response=await api("archive","GET");
-  if(response.status===403)return; // No permission to read even the safe archive projection.
-  const data=await response.json();
-  if(!response.ok||!data.ok)throw Error(data.error||"Arquivo indisponível");
-  state.historical=data.contacts||[];
-  state.actions=data.actions||[];
-  archiveLoaded=true;
-  updateGeoFilters();
-  render("contacts");render("booking");renderDashboard();
- }catch(error){
-  // Native manually authored records are still usable if the archive cannot be read.
-  if($("cc-native-contacts-status"))
-   $("cc-native-contacts-status").textContent="Registos próprios disponíveis. Arquivo: "+error.message;
- }finally{archiveBusy=false}
+ archivePromise=(async()=>{
+  try{
+   const response=await api("archive","GET");
+   if(response.status===403)return;
+   const data=await response.json();
+   if(!response.ok||!data.ok)throw Error(data.error||"Arquivo indisponível");
+   state.historical=data.contacts||[];
+   state.actions=data.actions||[];
+   archiveLoaded=true;
+   updateGeoFilters();
+   render("contacts");render("booking");renderDashboard();
+  }catch(error){
+   if($("cc-native-contacts-status"))
+    $("cc-native-contacts-status").textContent="Registos próprios disponíveis. Arquivo: "+error.message;
+  }finally{archiveBusy=false;archivePromise=null}
+ })();
+ return archivePromise;
 }
 async function load(kind){
  const status=$("cc-native-"+kind+"-status");
@@ -757,7 +760,7 @@ window.addEventListener("caravela-control-contact-action",async event=>{
  panel.scrollIntoView({behavior:"smooth",block:"start"});search.focus();
 });
 window.addEventListener("caravela-control-signed-out",()=>{
- archiveLoaded=false;archiveBusy=false;
+ archiveLoaded=false;archiveBusy=false;archivePromise=null;
  state.saved={contacts:[],booking:[]};state.historical=[];state.actions=[];
  render("contacts");render("booking");renderDashboard();
 });

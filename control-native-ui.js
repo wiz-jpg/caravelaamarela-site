@@ -397,6 +397,110 @@ function editorField(parent,kind,def,current){
  }[key]||"");
  box.append(field);parent.append(box);return field;
 }
+function contactRelationships(form,entry){
+ const rows=contactRows();
+ const normalizeName=value=>lower(value).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+ const details=make("section",undefined,"cc-entity-links");
+ details.append(make("h3","Identidade e relações"));
+ details.append(make("p","Os vínculos só são gravados quando guardares esta ficha. Não alteram outras entidades nem autorizam envios.","cc-lead"));
+ if(entry.source_contact_person&&!entry.people?.length)
+  details.append(make("p","Interlocutor indicado no arquivo (por confirmar): "+entry.source_contact_person,"cc-entity-source-note"));
+ const people=make("div",undefined,"cc-entity-people");
+ const peopleTitle=make("strong","Interlocutores desta entidade");
+ const addPerson=make("button","+ Interlocutor","cc-neutral");addPerson.type="button";
+ const nameRow=make("div",undefined,"cc-entity-heading");nameRow.append(peopleTitle,addPerson);
+ details.append(nameRow,people);
+ function personRow(values={}){
+  if(people.children.length>=15)return;
+  const row=make("div",undefined,"cc-entity-person");
+  const fields={};
+  for(const [key,label,type] of [["name","Nome","text"],["role","Função","text"],["email","Email","email"],["phone","Telefone","tel"]]){
+   const wrapper=make("label",label);
+   const input=make("input");input.type=type;input.value=values[key]||"";
+   input.maxLength={name:110,role:110,email:254,phone:65}[key];
+   if(key==="name")input.required=true;
+   fields[key]=input;wrapper.append(input);row.append(wrapper);
+  }
+  const remove=make("button","Retirar","cc-neutral");remove.type="button";remove.onclick=()=>row.remove();
+  row.append(remove);row._personFields=fields;people.append(row);
+ }
+ for(const person of entry.people||[])personRow(person);
+ addPerson.onclick=()=>personRow();
+ const duplicates=make("div",undefined,"cc-entity-duplicates");
+ duplicates.append(make("strong","Fichas com o mesmo nome ou contacto"));
+ const decisionLabel=make("label","Resultado da revisão");
+ const decision=make("select");
+ for(const [value,label] of Object.entries({
+  unreviewed:"Por rever",distinct:"Entidades distintas — não juntar",secondary:"Ficha secundária de outra entidade"
+ })){const option=make("option",label);option.value=value;decision.append(option)}
+ decision.value=entry.duplicate_decision||"unreviewed";decisionLabel.append(decision);duplicates.append(decisionLabel);
+ const candidates=rows.filter(x=>x.id!==entry.id&&x.kind===entry.kind&&
+  (normalizeName(x.name)===normalizeName(entry.name)||
+   (x.emails||[]).some(email=>(entry.emails||[]).includes(email))));
+ const canonicalLabel=make("label","Ficha principal (não altera referências antigas)");
+ const canonical=make("select");
+ const absent=make("option","Escolher ficha principal");absent.value="";canonical.append(absent);
+ for(const item of candidates){
+  if(item.canonical_id)continue;
+  const option=make("option",item.name+(item.city?" · "+item.city:"")+" · "+item.id.slice(0,9));option.value=item.id;canonical.append(option);
+ }
+ canonical.value=entry.canonical_id||"";
+ if(entry.canonical_id&&!candidates.some(x=>x.id===entry.canonical_id)){
+  const option=make("option",byId.get(entry.canonical_id)?.name||"Ficha associada");option.value=entry.canonical_id;canonical.append(option);
+  canonical.value=entry.canonical_id;
+ }
+ const refresh=()=>{canonicalLabel.hidden=decision.value!=="secondary"};
+ decision.onchange=refresh;canonicalLabel.append(canonical);duplicates.append(canonicalLabel);
+ refresh();
+ if(!candidates.length){
+  duplicates.append(make("p","Não foram encontradas fichas candidatas com o mesmo nome ou email. Nada será associado automaticamente.","cc-lead"));
+ }
+ details.append(duplicates);
+ const producers=make("div",undefined,"cc-entity-producers");
+ producers.append(make("strong","Produtoras / promotores associados"));
+ const selected=new Set(entry.linked_producer_ids||[]);
+ const list=make("div",undefined,"cc-entity-selected");
+ const allPromoters=rows.filter(x=>x.kind==="promoter");
+ const selector=make("select");
+ const placeholder=make("option","Selecionar uma entidade promotora");placeholder.value="";selector.append(placeholder);
+ for(const item of allPromoters){
+  const option=make("option",item.name+(item.city?" · "+item.city:""));option.value=item.id;selector.append(option);
+ }
+ const add=make("button","Associar produtora","cc-neutral");add.type="button";
+ const actions=make("div",undefined,"cc-entity-add");actions.append(selector,add);
+ function drawLinks(){
+  list.replaceChildren();
+  for(const id of selected){
+   const item=make("div",undefined,"cc-entity-linked");
+   item.append(make("span",byId.get(id)?.name||"Produtora do arquivo"));
+   const remove=make("button","Desassociar","cc-neutral");remove.type="button";
+   remove.onclick=()=>{selected.delete(id);drawLinks()};
+   item.append(remove);list.append(item);
+  }
+ }
+ add.onclick=()=>{if(selector.value&&selected.size<8&&selector.value!==entry.id){
+  selected.add(selector.value);selector.value="";drawLinks()
+ }};
+ drawLinks();
+ producers.append(actions,list);
+ if(!["festival","venue"].includes(entry.kind)){
+  producers.hidden=true;
+ }else{
+  producers.append(make("p","Um festival ou venue pode ter várias produtoras. Não elimina nenhuma das fichas e não cria um acordo comercial.","cc-lead"));
+ }
+ details.append(producers);form.append(details);
+ return ()=>{
+  const collected=[];
+  for(const row of people.children){
+   const obj=Object.fromEntries(Object.entries(row._personFields).map(([key,input])=>[key,input.value.trim()]));
+   if(obj.name||obj.role||obj.email||obj.phone)collected.push(obj);
+  }
+  if(decision.value==="secondary"&&!canonical.value)throw Error("Seleciona a ficha principal antes de guardar.");
+  return {people:collected,linked_producer_ids:["festival","venue"].includes(entry.kind)?[...selected]:[],
+   canonical_id:decision.value==="secondary"?canonical.value:"",
+   duplicate_decision:decision.value};
+ };
+}
 function edit(kind,entry={}){
  const root=$("cc-native-"+kind+"-editor"),form=make("form",undefined,"cc-native-form");
  root.hidden=false;root.replaceChildren();
@@ -408,6 +512,7 @@ function edit(kind,entry={}){
  const grid=make("div",undefined,"cc-field-grid");
  for(const def of fields)editorField(grid,kind,def,entry);
  form.append(title,help,grid);
+ const relationshipData=kind==="contacts"?contactRelationships(form,entry):null;
  const actions=make("div",undefined,"cc-actions");
  const save=make("button","Guardar registo","cc-primary");save.type="submit";
  const cancel=make("button","Cancelar","cc-neutral");cancel.type="button";
@@ -422,6 +527,8 @@ function edit(kind,entry={}){
    record.emails=record.emails?record.emails.split(",").map(x=>x.trim()).filter(Boolean):[];
    record.origin_id=entry.origin_id||"";
    record.source_label=entry.source_label||"Registo manual";
+   try{Object.assign(record,relationshipData())}
+   catch(error){notice.textContent=error.message;return}
   }else{
    const money=record.fee_amount;record.fee_amount=money===""?null:Number(money);
    record.commission_pct=record.commission_pct===""?null:Number(record.commission_pct);
@@ -452,6 +559,9 @@ function edit(kind,entry={}){
      contact_email_review_required:"O endereço surge associado a restrições históricas. Revê a identidade.",
      contact_identity_mismatch:"Nome ou email não corresponde à ficha associada.",
      historical_contact_exists:"Esta entidade já existe no arquivo. Abre a ficha original em Contactos.",
+     self_entity_link:"Uma entidade não pode ser associada a si própria.",
+     invalid_canonical_link:"A ficha principal não existe, é de outro tipo ou já é secundária.",
+     invalid_producer_link:"A produtora escolhida não existe ou não é uma ficha principal de promotor.",
      invalid_origin_reference:"Referência do arquivo inválida."
    })[result.error]||result.error||"Erro "+response.status);
    root.hidden=true;root.replaceChildren();

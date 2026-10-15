@@ -62,3 +62,37 @@ test("shared address never creates a duplicate of different venue cities",()=>{
  assert.equal(out.counts.duplicate_groups,0);
  assert.equal(out.counts.shared_email_groups,1);
 });
+
+
+test("review endpoint is private, read-only and never mutates the archive",async()=>{
+ const {DatabaseSync}=await import("node:sqlite");
+ const {readFileSync}=await import("node:fs");
+ const {handleControl}=await import("../control-vault.js");
+ const db=new DatabaseSync(":memory:");
+ db.exec(readFileSync(new URL("../migrations/0003_control_vault.sql",import.meta.url),"utf8"));
+ const stmt=(sql,args=[])=>({
+   async first(){return db.prepare(sql).get(...args)||null},
+   async all(){return {results:db.prepare(sql).all(...args)}},
+   async run(){return db.prepare(sql).run(...args)}
+ });
+ const d1={prepare(sql){return {bind(...args){return stmt(sql,args)},...stmt(sql)}},
+  async batch(statements){const result=[];for(const statement of statements)result.push(await statement.run());return result}};
+ const token="test-key-"+"a".repeat(52);
+ const host="https://feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
+ const env={ZOHO_DB:d1,ZOHO_ENABLED:"true",CONTROL_VAULT_ENABLED:"true",ZOHO_ADMIN_TOKEN:token};
+ const visit=(auth,method="GET")=>{
+  const url=new URL(host+"/api/control/contacts/review");
+  return handleControl(new Request(url,{method,headers:{
+   Authorization:auth?"Bearer "+token:"",Origin:host,
+   "X-Caravela-Request":"1"}}),env,url);
+ };
+ try{
+  assert.equal((await visit(false)).status,401);
+  assert.equal((await visit(true,"POST")).status,405);
+  const res=await visit(true);assert.equal(res.status,200);
+  const result=await res.json();
+  assert.equal(result.kind,"suggestions_only");assert.equal(result.counts.contacts,0);
+  assert.equal(result.zoho_last_sync_ms,null);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM control_decision_events").get().n,0);
+ }finally{db.close()}
+});

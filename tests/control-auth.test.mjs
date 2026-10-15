@@ -166,3 +166,25 @@ test("authentication is strictly Preview-only and fails closed without migration
   sqlite.exec("DROP TABLE control_users");
   assert.equal((await auth("me")).status, 503);
 });
+
+test("password derivation stays within the Workers 100000-iteration primitive ceiling", async () => {
+  const original = crypto.subtle.deriveBits.bind(crypto.subtle);
+  let maximum = 0;
+  crypto.subtle.deriveBits = async (algorithm, key, length) => {
+    maximum = Math.max(maximum, algorithm.iterations || 0);
+    assert.ok(algorithm.iterations <= 100000, "Workers primitive ceiling exceeded");
+    return original(algorithm, key, length);
+  };
+  try {
+    const cookie = await owner();
+    const me = await auth("me", { cookie });
+    assert.equal(me.status, 200);
+    const login = await auth("login", { method: "POST", data: {
+      username: "sergio", password: "initial-very-long-password"
+    } });
+    assert.equal(login.status, 200);
+    assert.equal(maximum, 100000);
+  } finally {
+    crypto.subtle.deriveBits = original;
+  }
+});

@@ -87,6 +87,7 @@ function openEditor(entry=null){
  syncCategories();
  for(const [key,input] of Object.entries(fields))input.value=entry?.[key]??({type:"income",category:"agency_commission",status:"planned"}[key]||"");
  syncCategories();
+ if(entry?.category&&categories[entry.category])fields.category.value=entry.category;
  const hint=el("p","Seleciona «Liquidado» apenas quando confirmaste manualmente o pagamento. Nesse estado, data e referência são obrigatórias.","cc-lead");
  form.append(hint);
  const save=el("button","Guardar movimento","cc-primary");save.type="submit";

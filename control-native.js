@@ -141,6 +141,23 @@ export async function nativeArchive(env){
       snapshot_id:manifest.manifest_sha256});
   }catch{return fail("archive_unavailable",503);}
 }
+export async function nativeExport(env){
+ if(!env.ZOHO_DB)return fail("not_found",404);
+ try{
+  const count=await env.ZOHO_DB.prepare(
+    "SELECT COUNT(*) AS n FROM control_decision_events WHERE operation IN (?,?)"
+  ).bind(CONTACT_OP,BOOKING_OP).first();
+  if((count?.n||0)>15000)return fail("export_event_limit",409);
+  const result=await env.ZOHO_DB.prepare(
+    "SELECT id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms "+
+    "FROM control_decision_events WHERE operation IN (?,?) ORDER BY created_ms ASC,rowid ASC LIMIT 15001"
+  ).bind(CONTACT_OP,BOOKING_OP).all();
+  const events=result.results||[];
+  if(events.length!==(count?.n||0))return fail("export_incomplete",503);
+  return out({schema:"caravela.crm.native-backup.v1",exported_at:new Date().toISOString(),
+    events,historical_snapshots_untouched:true,count:events.length});
+ }catch{return fail("native_export_failed",503);}
+}
 function legacyPolicy(entity){
   if(!entity)return "missing";
   if(entity.suppressed||entity.control_blocked||entity.control_blocked_possible)return "blocked";

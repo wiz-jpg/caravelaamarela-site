@@ -60,8 +60,8 @@
   for(const [label,num] of labels){const cell=make("div",undefined,"cc-review-metric");
    cell.append(make("small",label),make("strong",num));metrics.append(cell)}
   if(!data.archive_active)content.append(make("p","O arquivo consolidado ainda não está ativo. As sugestões estão incompletas.","cc-notice"));
-  content.append(make("p","Mensagens indexadas: "+data.indexed_headers+
-    ". Sugestões visíveis abaixo são amostras ordenadas; os totais contam todos os casos analisados. Não são tarefas automaticamente vencidas.","cc-lead"));
+  content.append(make("p","Metadados Zoho indexados: "+data.indexed_headers+" mensagens. Última sincronização concluída: "+
+    date(data.zoho_last_sync_ms)+". Os totais representam o índice disponível; não garantem cobertura integral da caixa.","cc-lead"));
   section("Endereços novos observados no Zoho","O endereço ainda não aparece nas fichas. Pode pertencer a uma entidade existente; confirma antes de criar outra.",
     data.new_addresses,(place,x)=>{
     const actions=card(place,x.email,(x.incoming?"Entradas: "+x.incoming+" · ":"")+

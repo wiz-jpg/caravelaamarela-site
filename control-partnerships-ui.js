@@ -36,7 +36,13 @@ function syncEditControls(){
   if(!canEdit())$("cc-partners-form").hidden=true;
 }
 function message(s,bad=false){$("cc-partners-status").textContent=s;$("cc-partners-status").classList.toggle("error",bad)}
-async function api(method,entry){if(!window.CaravelaPartnershipTransport)throw Error("O cofre ainda não carregou.");return (await window.CaravelaPartnershipTransport.request(method,entry)).json()}
+async function api(method,entry){
+ if(!window.CaravelaPartnershipTransport)throw Error("O cofre ainda não carregou.");
+ const response=await window.CaravelaPartnershipTransport.request(method,entry);
+ const payload=await response.json();
+ if(!response.ok||!payload.ok)throw Error(payload.error||"Falha ao consultar ou guardar parceria");
+ return payload;
+}
 function line(card,key,value){if(!value)return;const p=document.createElement("p"),label=document.createElement("strong"),v=document.createElement("span");label.textContent=key+": ";v.textContent=value;p.append(label,v);card.append(p)}
 function render(){
 let stats=$("cc-partners-stats");stats.replaceChildren();
@@ -81,10 +87,12 @@ const file=e.target.files?.[0];if(!file||busy)return;
 try{if(file.size>80000)throw Error("O ficheiro deve ter menos de 80 KB.");
 const data=JSON.parse(await file.text());if(data.schema!=="caravela.partnerships.review.v1"||!Array.isArray(data.partners)||data.partners.length<1||data.partners.length>40)throw Error("Levantamento inválido.");
 if(!confirm("Importar "+data.partners.length+" oportunidades para revisão? Não serão apagados registos anteriores."))return;
-busy=true;let added=0,skipped=0;const seen=new Set(partners.map(p=>p.name.toLocaleLowerCase("pt-PT")));
+busy=true;let added=0,skipped=0;const normalized=name=>String(name||"").trim().normalize("NFD")
+  .replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-PT");
+const seen=new Set(partners.map(p=>normalized(p.name)));
 for(let i=0;i<data.partners.length;i++){let row=data.partners[i];message("A importar "+(i+1)+"/"+data.partners.length);
-if(seen.has(String(row.name||"").toLocaleLowerCase("pt-PT"))){skipped++;continue}
-try{await api("POST",row);added++;seen.add(row.name.toLocaleLowerCase("pt-PT"))}
+if(seen.has(normalized(row.name))){skipped++;continue}
+try{await api("POST",row);added++;seen.add(normalized(row.name))}
 catch(error){if(/partnership_already_exists/.test(error.message))skipped++;else throw Error("Ficha "+(i+1)+": "+error.message)}}
 busy=false;await load();message("Importação concluída: "+added+" novas; "+skipped+" existentes. Estados referidos permanecem por validar.")}
 catch(error){busy=false;message(error.message,true)}finally{e.target.value=""}};

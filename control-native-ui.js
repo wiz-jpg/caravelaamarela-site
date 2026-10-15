@@ -499,7 +499,7 @@ function editorField(parent,kind,def,current){
  if(key==="emails")field.value=(current.emails||[]).join(", ");
  else if(key==="fee_amount"||key==="commission_pct")field.value=current[key]===null||current[key]===undefined?"":current[key];
  else field.value=current[key]??({
-   kind:"venue",contact_policy:"review",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
+   kind:"venue",contact_policy:"review",authorization_source:"none",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
  }[key]||"");
  box.append(field);parent.append(box);return field;
 }

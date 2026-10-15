@@ -36,7 +36,7 @@ test("on the half-hour both Zoho and Sheets run without one blocking the other",
 });
 test("redirect / HTML Access login never counts as a successful cron run",async()=>{
   const html=async()=>new Response("<html>Log in</html>",{status:200,headers:{"Content-Type":"text/html"}});
-  await assert.rejects(()=>triggerReadOnlySync("zoho",creds,html),/zoho_sync_http_200/);
+  await assert.rejects(()=>triggerReadOnlySync("zoho",creds,html),/zoho_non_json_http_200/);
 });
 test("only an explicit Sheets configuration error is skipped",async()=>{
   const missing=async()=>Response.json({ok:false,error:"sheets_credentials_required"},{status:409});

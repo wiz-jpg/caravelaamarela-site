@@ -4,6 +4,7 @@ import { handleControlAuth, sessionUser, roleAllows } from "./control-auth.js";
 import { handlePartnerships } from "./control-partnerships.js";
 import { operationalOverview } from "./control-operations.js";
 import { handleNative, nativeArchive, nativeExport } from "./control-native.js";
+import { contactReviewHandler } from "./control-contact-review.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
 const CONTROL_HOST="feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const CONTROL_MAILBOX="booking@caravelaamarela.com";
@@ -139,6 +140,7 @@ export async function handleControl(request,env,url,zohoReader) {
   const hasManager=hasAdmin||roleAllows(user,"manager");
   // Only aggregated operational data is visible to viewers.
   // Raw snapshots, Sheets, backups, audit and configuration require admin.
+  const contactReviewRoute=route==="contacts/review";
   const nativeArchiveRoute=route==="native/archive";
   const nativeExportRoute=route==="native/export";
   const nativeRoute=route==="native/contacts"||route==="native/booking"||route==="native/finance";
@@ -147,14 +149,16 @@ export async function handleControl(request,env,url,zohoReader) {
   const partnershipRoute=route==="partnerships"&&
     (request.method==="GET"||request.method==="POST"||request.method==="PATCH");
   if(!hasAdmin&&!cron&&!limitedReads.has(route)&&
-     !(hasManager&&(syncRoutes.has(route)||partnershipRoute||nativeRoute||nativeArchiveRoute)))
+     !(hasManager&&(syncRoutes.has(route)||partnershipRoute||nativeRoute||nativeArchiveRoute||contactReviewRoute)))
     return reject("forbidden",403);
   if(route==="partnerships"&&!hasManager)return reject("forbidden",403);
   if(nativeRoute&&!hasManager)return reject("forbidden",403);
+  if(contactReviewRoute&&!hasManager)return reject("forbidden",403);
   if(nativeArchiveRoute&&!hasManager)return reject("forbidden",403);
   if(nativeExportRoute&&!hasAdmin)return reject("forbidden",403);
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
+  if(contactReviewRoute)return contactReviewHandler(request,env,url);
   if(nativeArchiveRoute){
     if(request.method!=="GET")return reject("method_not_allowed",405);
     return nativeArchive(env);

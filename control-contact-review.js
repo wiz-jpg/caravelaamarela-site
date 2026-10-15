@@ -98,18 +98,21 @@ export async function contactReviewHandler(request,env,url){
   if(!env.ZOHO_DB)return Response.json({ok:false,error:"storage_unavailable"},{status:503});
   try{
     const nativeUrl=new URL("/api/control/native/contacts",url);
-    const [archived,native,mails]=await Promise.all([
+    const [archived,native,mails,lastZoho]=await Promise.all([
       nativeArchive(env),
       handleNative(new Request(nativeUrl,{method:"GET"}),env,nativeUrl,"native/contacts",{canRead:true}),
       env.ZOHO_DB.prepare(
         "SELECT folder_kind,from_email,to_json,received_ms,first_seen_ms "+
-        "FROM control_mail_headers ORDER BY first_seen_ms DESC LIMIT 12000").all()
+        "FROM control_mail_headers ORDER BY first_seen_ms DESC LIMIT 12000").all(),
+      env.ZOHO_DB.prepare("SELECT completed_ms FROM control_sync_runs "+
+        "WHERE provider='zoho' AND status='complete' ORDER BY completed_ms DESC LIMIT 1").first()
     ]);
     if(!archived.ok||!native.ok)throw Error("contact_sources_failed");
     const [archive,updates]=await Promise.all([archived.json(),native.json()]);
     const response=reviewContacts({archive:archive.contacts||[],working:updates.records||[],
       headers:mails.results||[],actions:archive.actions||[]});
     response.archive_active=!!archive.active;
+    response.zoho_last_sync_ms=lastZoho?.completed_ms||null;
     return Response.json(response,{headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
   }catch{
     return Response.json({ok:false,error:"contact_review_unavailable"},{status:503,headers:{"Cache-Control":"no-store"}});

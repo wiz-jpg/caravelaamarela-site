@@ -138,3 +138,27 @@ test("verified proposal enforces approved matching native contact and email",asy
  assert.equal((await req("booking","POST",deal({...verified,contact_email:"another@example.pt"}))).status,422);
  assert.equal((await req("booking","POST",verified)).status,201);
 });
+
+test("agency finance ledger keeps artist cachets out of revenue and requires payment proof",async()=>{
+ const base={title:"Comissão de concerto",type:"income",category:"agency_commission",amount:90,currency:"EUR",
+  artist:"WILDCHAINS",booking_id:"",category_note:"Comissão negociada",owner:"Booking",status:"due",
+  due_date:"2026-11-20",settled_date:"",reference:"",notes:"Valor da agência"};
+ assert.ok(validateNative("finance",base));
+ assert.equal(validateNative("finance",{...base,status:"settled"}),null);
+ assert.equal(validateNative("finance",{...base,amount:-15}),null);
+ assert.equal(validateNative("finance",{...base,type:"expense"}),null);
+ const created=await req("finance","POST",base);
+ assert.equal(created.status,201);
+ const first=(await created.json()).record;
+ assert.equal(first.amount,90);assert.equal(first.status,"due");
+ const marked=await req("finance","PATCH",{...base,id:first.id,revision:first.revision,
+  status:"settled",settled_date:"2026-11-25",reference:"Pagamento validado em extrato"});
+ assert.equal(marked.status,200);
+ const all=await (await req("finance")).json();
+ assert.equal(all.records.length,1);assert.equal(all.records[0].status,"settled");
+ assert.equal((await req("finance","PATCH",{...base,id:first.id,revision:first.revision})).status,409);
+ const exported=await (await req("export")).json();
+ assert.ok(exported.events.some(x=>x.operation==="crm_finance_v1"));
+ assert.equal((await req("finance","POST",{...base,booking_id:crypto.randomUUID()})).status,422);
+ assert.equal((await req("finance","GET",null,{token:"bad"})).status,401);
+});

@@ -204,6 +204,8 @@ export async function nativeArchive(env){
       artist:String(x.artist||"").slice(0,110),
       status:String(x.status||"").slice(0,100),
       next_step:String(x.next_step||"").slice(0,400),
+      matched_entity_id:String(x.matched_entity_id||"").slice(0,80),
+      link_status:String(x.link_status||"").slice(0,60),
       origin:{row:x.origin?.row||null}
     }));
     return out({ok:true,contacts,actions,active:true,

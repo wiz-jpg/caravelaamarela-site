@@ -62,8 +62,10 @@ function historicalContact(x){
  const meta=x.meta||{},source=x.origin?.file||"";
  const isPortugal=/^PT_[A-Za-z]+\./i.test(source);
  return {id:x.id,origin_id:x.id,name:x.name,kind:x.kind,city:x.city||"",
-   region:meta.region||"",country:meta.country||(isPortugal?"Portugal":""),
-   media_type:meta.media_type||"",
+   region:x.region||meta.region||"",country:x.country||meta.country||(isPortugal?"Portugal":""),
+   media_type:x.media_type||meta.media_type||"",organizer:x.organizer||meta.organizer||"",
+   source_contact_person:x.contact_person||meta.contact_person||"",
+   people:[],linked_producer_ids:[],canonical_id:"",duplicate_decision:"unreviewed",
    emails:Array.isArray(x.emails)?x.emails:[],contact_policy:historicPolicy(x),
    next_step:"",review_date:"",notes:"",relationship:"unknown",
    source_label:"Arquivo importado (original imutável)",historical:true,
@@ -237,6 +239,12 @@ function render(kind){
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
    if(r.media_type)hint(card,"Meio de comunicação",r.media_type);
+   if(r.people?.length)hint(card,"Interlocutores",r.people.map(p=>p.name+(p.role?" · "+p.role:"")).join("; "));
+   if(r.source_contact_person&&!r.people?.length)hint(card,"Interlocutor histórico (por rever)",r.source_contact_person);
+   if(r.canonical_id)hint(card,"Ficha associada a",byId.get(r.canonical_id)?.name||"entidade existente");
+   if(r.linked_producer_ids?.length)hint(card,"Produtora(s)",
+     r.linked_producer_ids.map(id=>byId.get(id)?.name||"entidade associada").join("; "));
+   if(r.organizer)hint(card,"Organização histórica",r.organizer);
    if(r.source_recommendation)hint(card,"Encaixe histórico",r.source_recommendation);
    if(r.source_suppressed)hint(card,"Restrição","Suprimido no arquivo: não contactar");
    if(r.source_shared_email)hint(card,"Contacto partilhado","Endereço usado por várias entidades: validar interlocutor");
@@ -323,7 +331,9 @@ function renderContactTriage(){
  const groups=[...duplicates.entries()].filter(([,m])=>m.size>1)
   .sort((a,b)=>b[1].size-a[1].size);
  const counts=[["Revisões vencidas",due.length],["Para hoje",current.length],["Mais tarde",future.length],
-  ["Parcerias existentes",partner.length],["A conquistar",target.length],["Grupos a rever",groups.length]];
+  ["Parcerias existentes",partner.length],["A conquistar",target.length],["Grupos a rever",groups.length],
+  ["Fichas secundárias",contacts.filter(c=>c.canonical_id).length],
+  ["Eventos com produtora",contacts.filter(c=>c.linked_producer_ids?.length).length]];
  for(const [label,value] of counts){const cell=make("div",undefined,"cc-native-metric");cell.append(make("small",label),make("strong",value));root.append(cell)}
  const guide=make("p","As revisões só aparecem com data explícita. Contactos importados sem data não são considerados tratados nem atrasados. Correspondências por email partilhado podem ser legítimas.","cc-lead");
  list.append(guide);
@@ -343,9 +353,16 @@ function renderContactTriage(){
   const details=make("details",undefined,"cc-contact-review-group");
   details.append(make("summary","Possíveis duplicados · "+groups.length+" grupos"));
   const area=make("div",undefined,"cc-contact-review-items");
-  for(const [key,members] of groups.slice(0,25)){
-   const names=[...members.values()].map(x=>x.name+" ("+(x.city||"local desconhecido")+")");
-   area.append(make("p",(key.startsWith("email:")?"Mesmo email":"Mesmo nome e cidade")+": "+names.join(" / ")));
+  for(const [key,members] of groups.slice(0,40)){
+   const records=[...members.values()];
+   const item=make("div",undefined,"cc-contact-duplicate-item");
+   item.append(make("p",(key.startsWith("email:")?"Email partilhado (não implica duplicação)":"Nome e local semelhantes")+
+     " · "+records.map(x=>x.name+(x.city?" ("+x.city+")":"")).join(" / ")));
+   for(const record of records){
+    const button=make("button","Rever "+record.name,"cc-neutral");button.type="button";
+    button.onclick=()=>edit("contacts",record);item.append(button);
+   }
+   area.append(item);
   }
   details.append(area);list.append(details);
  }

@@ -399,7 +399,7 @@ function editorField(parent,kind,def,current){
 }
 function contactRelationships(form,entry){
  const rows=contactRows();
- const normalizeName=value=>lower(value).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+ const normalizeName=value=>lower(value).normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9]+/g," ").trim();
  const details=make("section",undefined,"cc-entity-links");
  details.append(make("h3","Identidade e relações"));
  details.append(make("p","Os vínculos só são gravados quando guardares esta ficha. Não alteram outras entidades nem autorizam envios.","cc-lead"));
@@ -434,7 +434,7 @@ function contactRelationships(form,entry){
   unreviewed:"Por rever",distinct:"Entidades distintas — não juntar",secondary:"Ficha secundária de outra entidade"
  })){const option=make("option",label);option.value=value;decision.append(option)}
  decision.value=entry.duplicate_decision||"unreviewed";decisionLabel.append(decision);duplicates.append(decisionLabel);
- const candidates=rows.filter(x=>x.id!==entry.id&&x.kind===entry.kind&&
+ const candidates=rows.filter(x=>x.id!==entry.id&&x.kind===(entry.kind||form.elements.namedItem("kind")?.value)&&
   (normalizeName(x.name)===normalizeName(entry.name)||
    (x.emails||[]).some(email=>(entry.emails||[]).includes(email))));
  const canonicalLabel=make("label","Ficha principal (não altera referências antigas)");
@@ -483,11 +483,11 @@ function contactRelationships(form,entry){
  }};
  drawLinks();
  producers.append(actions,list);
- if(!["festival","venue"].includes(entry.kind)){
-  producers.hidden=true;
- }else{
-  producers.append(make("p","Um festival ou venue pode ter várias produtoras. Não elimina nenhuma das fichas e não cria um acordo comercial.","cc-lead"));
- }
+ producers.append(make("p","Um festival ou venue pode ter várias produtoras. Não elimina nenhuma das fichas e não cria um acordo comercial.","cc-lead"));
+ const typeInput=form.elements.namedItem("kind");
+ const setVisibility=()=>{producers.hidden=!["festival","venue"].includes(typeInput?.value||entry.kind)};
+ if(typeInput)typeInput.addEventListener("change",setVisibility);
+ setVisibility();
  details.append(producers);form.append(details);
  return ()=>{
   const collected=[];
@@ -496,7 +496,7 @@ function contactRelationships(form,entry){
    if(obj.name||obj.role||obj.email||obj.phone)collected.push(obj);
   }
   if(decision.value==="secondary"&&!canonical.value)throw Error("Seleciona a ficha principal antes de guardar.");
-  return {people:collected,linked_producer_ids:["festival","venue"].includes(entry.kind)?[...selected]:[],
+  return {people:collected,linked_producer_ids:["festival","venue"].includes(typeInput?.value)?[...selected]:[],
    canonical_id:decision.value==="secondary"?canonical.value:"",
    duplicate_decision:decision.value};
  };

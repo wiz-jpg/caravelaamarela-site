@@ -184,7 +184,9 @@
   scanButton.addEventListener("click",async()=>{
     if(!manifest||scanButton.disabled)return;
     const signed=!!window.CaravelaControlSession?.authenticated;
-    const token=tokenField.value.trim();tokenField.value="";
+    const token=tokenField.value.trim();
+    if(token)window.CaravelaPartnershipTransport?.setToken(token);
+    tokenField.value="";
     if(!token&&!signed)return status("mail-status","Inicia sessão para consultar o Zoho.",true);
     scanButton.disabled=true;
     const limit=Number($("mail-limit").value)||200;

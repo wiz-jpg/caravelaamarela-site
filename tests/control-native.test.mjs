@@ -252,3 +252,28 @@ test("historical contact authorization fields require evidence shape",()=>{
  assert.ok(validateNative("contacts",contact({authorization_source:"zoho_thread",
   authorization_email:"contact@example.pt",authorization_reference:"thread-100"})));
 });
+
+test("a manual contacted state schedules a follow-up and keeps evidence as a user report",async()=>{
+ const person=await req("contacts","POST",contact({name:"Sample Festival",owner:"João Abreu",kind:"festival"}));
+ assert.equal(person.status,201);
+ assert.equal((await person.json()).record.owner,"João Abreu");
+ const created=await req("booking","POST",deal({
+  contact_name:"Sample Festival",contact_id:"",contact_email:"venue@example.pt",
+  owner:"João Abreu",stage:"contact_reported",evidence_type:"user_report",
+  evidence_reference:"",last_contact_date:"2026-10-15",due_date:"2026-10-22",
+  next_step:"Confirmar se obtivemos resposta"
+ }));
+ assert.equal(created.status,201);
+ const rec=(await created.json()).record;
+ assert.equal(rec.stage,"contact_reported");
+ assert.equal(rec.due_date,"2026-10-22");
+ const rejected=await req("booking","PATCH",deal({...rec,id:rec.id,revision:rec.revision,
+  stage:"declined",owner:"João Abreu",evidence_type:"user_report",
+  next_step:"Recusado, manter no histórico",due_date:"",notes:"Recusa relatada por quem falou com a entidade"}));
+ assert.equal(rejected.status,200);
+ const list=(await (await req("booking")).json()).records;
+ assert.equal(list.length,1);
+ assert.equal(list[0].stage,"declined");
+ assert.equal(list[0].due_date,"");
+ assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,2);
+});

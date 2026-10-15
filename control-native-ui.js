@@ -328,8 +328,11 @@ function renderContactTriage(){
   for(const email of c.emails||[])names.push("email:"+normal(email));
   for(const key of names){const group=duplicates.get(key)||new Map();group.set(c.id,c);duplicates.set(key,group)}
  }
- const groups=[...duplicates.entries()].filter(([,m])=>m.size>1)
-  .sort((a,b)=>b[1].size-a[1].size);
+ // Reviewed distinct entities and manually linked secondary records stop
+ // resurfacing as unresolved duplicates. Source entities are never deleted.
+ const groups=[...duplicates.entries()].map(([key,m])=>[key,new Map([...m.entries()].filter(
+  ([,contact])=>contact.duplicate_decision!=="distinct"&&!contact.canonical_id))])
+  .filter(([,m])=>m.size>1).sort((a,b)=>b[1].size-a[1].size);
  const counts=[["Revisões vencidas",due.length],["Para hoje",current.length],["Mais tarde",future.length],
   ["Parcerias existentes",partner.length],["A conquistar",target.length],["Grupos a rever",groups.length],
   ["Fichas secundárias",contacts.filter(c=>c.canonical_id).length],
@@ -466,6 +469,11 @@ function contactRelationships(form,entry){
  for(const item of allPromoters){
   const option=make("option",item.name+(item.city?" · "+item.city:""));option.value=item.id;selector.append(option);
  }
+ const historicOrganizer=(entry.organizer||"").trim().toLocaleLowerCase("pt-PT");
+ const suggested=allPromoters.filter(x=>historicOrganizer&&x.name.toLocaleLowerCase("pt-PT")===historicOrganizer);
+ if(suggested.length)producers.append(make("p",
+  "A organização histórica coincide com "+suggested.map(x=>x.name).join(", ")+
+  ". Confirma esta associação antes de guardar.","cc-entity-source-note"));
  const add=make("button","Associar produtora","cc-neutral");add.type="button";
  const actions=make("div",undefined,"cc-entity-add");actions.append(selector,add);
  function drawLinks(){

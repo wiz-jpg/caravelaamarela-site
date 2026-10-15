@@ -12,7 +12,8 @@ const fields={name:["Entidade",140,"text"],category:["Área",30,"select"],scope:
 root.insertAdjacentHTML("beforeend",
 '<div class="cc-partners-intro"><strong>Parcerias estratégicas, separadas do booking.</strong> Proposta preparada não equivale a email enviado. Representação artística continua no Artist Pipeline.</div>'+
 '<div id="cc-partners-stats" class="cc-partners-stats"></div>'+
-'<div class="cc-partners-toolbar"><div><label for="cc-partners-search">Pesquisar</label><input type="search" id="cc-partners-search" placeholder="Marca, proposta..."></div><div><label for="cc-partners-filter">Estado</label><select id="cc-partners-filter"></select></div><button type="button" id="cc-partners-refresh" class="cc-neutral">Atualizar</button></div>'+
+'<div class="cc-partners-toolbar"><div><label for="cc-partners-search">Pesquisar</label><input type="search" id="cc-partners-search" placeholder="Marca, proposta..."></div><div><label for="cc-partners-filter">Estado</label><select id="cc-partners-filter"></select></div>'+
+'<div><label for="cc-partners-scope">Projeto</label><select id="cc-partners-scope"></select></div><button type="button" id="cc-partners-refresh" class="cc-neutral">Atualizar</button></div>'+
 '<p id="cc-partners-status" class="status" role="status"></p>'+
 '<div id="cc-partners-auth" class="cc-partners-auth" hidden><label for="cc-partners-token">Token do Preview (apenas se ainda não autorizaste esta sessão)</label><div><input type="password" id="cc-partners-token" autocomplete="off"><button type="button" id="cc-partners-connect" class="cc-neutral">Autorizar</button></div><small>O token fica apenas na memória da página.</small></div>'+
 '<div id="cc-partners-list" class="cc-partners-list"></div>'+
@@ -22,6 +23,7 @@ let partners=[],editing="",busy=false;
 function populate(select,options,all=false){if(all){let x=document.createElement("option");x.value="all";x.textContent="Todos";select.append(x)}
 for(const [value,label] of Object.entries(options)){let x=document.createElement("option");x.value=value;x.textContent=label;select.append(x)}}
 populate($("cc-partners-filter"),choices.stage,true);
+populate($("cc-partners-scope"),choices.scope,true);
 for(const [key,[label,max,type]] of Object.entries(fields)){
 const wrap=document.createElement("div");if(["objective","next_step","notes","evidence_reference"].includes(key))wrap.className="wide";
 const l=document.createElement("label");l.textContent=label;l.htmlFor="cc-p-"+key;
@@ -50,7 +52,10 @@ for(const [name,n] of [["Oportunidades",partners.length],["Contacto / negociaç�
 const div=document.createElement("div"),label=document.createElement("small"),num=document.createElement("strong");label.textContent=name;num.textContent=n;div.append(label,num);stats.append(div)}
 const query=$("cc-partners-search").value.toLocaleLowerCase("pt-PT").trim(),state=$("cc-partners-filter").value;
 const list=$("cc-partners-list");list.replaceChildren();
-const records=partners.filter(p=>(state==="all"||p.stage===state)&&(!query||[p.name,p.objective,p.notes,p.next_step].join(" ").toLocaleLowerCase("pt-PT").includes(query)));
+const scope=$("cc-partners-scope").value;
+const records=partners.filter(p=>(state==="all"||p.stage===state)&&
+ (scope==="all"||p.scope===scope||(scope==="wildchains"||scope==="devil")&&p.scope==="ambos")&&
+ (!query||[p.name,p.objective,p.notes,p.next_step].join(" ").toLocaleLowerCase("pt-PT").includes(query)));
 if(!records.length){const empty=document.createElement("p");empty.className="cc-notice";empty.textContent=partners.length?"Sem resultados neste filtro.":"Ainda não existem fichas. Adiciona uma oportunidade ou importa o levantamento para revisão.";list.append(empty);return}
 for(const p of records){
 const card=document.createElement("article");card.className="cc-partners-card";
@@ -74,7 +79,7 @@ $("cc-partners-refresh").onclick=load;
 $("cc-partners-connect").onclick=()=>{const input=$("cc-partners-token");if(!window.CaravelaPartnershipTransport?.setToken(input.value))return message("Token inválido ou incompleto.",true);input.value="";load()};
 $("cc-partners-new").onclick=()=>editPartner(null);
 $("cc-partners-cancel").onclick=()=>{$("cc-partners-form").hidden=true;editing=""};
-$("cc-partners-search").oninput=render;$("cc-partners-filter").onchange=render;
+$("cc-partners-search").oninput=render;$("cc-partners-filter").onchange=render;$("cc-partners-scope").onchange=render;
 $("cc-partners-form").onsubmit=async e=>{
 e.preventDefault();if(busy)return;
 const record=Object.fromEntries(names.map(key=>[key,$("cc-p-"+key).value]));if(editing)record.id=editing;

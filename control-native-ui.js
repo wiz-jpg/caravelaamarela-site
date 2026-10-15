@@ -826,7 +826,7 @@ dashboardPanel.innerHTML='<div class="cc-native-head"><div><h2>Trabalho diário<
  '<button type="button" class="cc-neutral" id="cc-native-dash-open">Abrir booking</button></div>'+
  '<div id="cc-native-dash-metrics" class="cc-native-metrics"></div>'+
  '<div id="cc-native-dash-body" class="cc-native-list"><p class="cc-lead">A consultar tarefas...</p></div>';
-dashboard.appendChild(dashboardPanel);
+(dashboard.querySelector(".cc-panel-head")||dashboard.lastElementChild).after(dashboardPanel);
 $("cc-native-dash-open").onclick=()=>window.CaravelaControlApp?.openView("booking");
 let partnerTasks=[],financeTasks=[];
 async function loadFinanceTasks(){
@@ -967,6 +967,27 @@ function renderDashboard(){
  }
  if(!prospects.length)prospectList.append(make("p","Sem oportunidades históricas por verificar.","cc-lead"));
  prospectsBox.append(prospectList);root.append(prospectsBox);
+ const pendingPartners=partnerTasks.filter(p=>
+  ["sent_verified","contact_reported","reply_reported","negotiating","draft"].includes(p.stage));
+ if(pendingPartners.length){
+  const section=make("section",undefined,"cc-pipeline-partners");
+  section.append(make("h3","Parcerias por desbloquear · "+pendingPartners.length),
+    make("p","Propostas e conversas sem confirmação final. Datas em branco não são assumidas como atrasadas.","cc-lead"));
+  const list=make("div",undefined,"cc-prospect-list");
+  pendingPartners.sort((a,b)=>Number(b.priority==="alta")-Number(a.priority==="alta")||
+    (b.last_contact_iso||"").localeCompare(a.last_contact_iso||""));
+  for(const p of pendingPartners.slice(0,8)){
+   const btn=make("button",undefined,"cc-prospect-item");btn.type="button";
+   btn.append(make("strong",p.name+" · "+(p.scope==="devil"?"Devil of a Woman":
+    p.scope==="wildchains"?"WILDCHAINS":p.scope==="ambos"?"Ambas":p.scope==="agencia"?"Caravela":"Outro")),
+    make("span",(p.next_review_iso?"Rever "+p.next_review_iso:"Sem próximo prazo")+
+      " · "+(p.next_step||"Reavaliar oportunidade")+" · "+p.stage));
+   btn.onclick=()=>{window.CaravelaControlApp?.openView("partnerships");
+    const search=$("cc-partners-search");if(search){search.value=p.name;search.dispatchEvent(new Event("input"))}};
+   list.append(btn);
+  }
+  section.append(list);root.append(section);
+ }
  const sections=[
   {label:"Backlog em atraso · por revalidar",description:"Prazos históricos ainda sem triagem atribuída. Não pressupõem falta de resposta.",test:x=>x.date<today&&!x.suggestedWeek},
   {label:"Esta semana · prioridades sugeridas",description:"Tarefas realmente agendadas e até 12 revisões antigas selecionadas automaticamente. Não são novos envios.",test:x=>(x.date>=today&&x.date<weekEnd)||x.suggestedWeek==="this"},

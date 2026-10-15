@@ -151,3 +151,17 @@
 .cc-review-matches{display:grid;gap:8px;margin:12px 0}
 .cc-review-matches button{font-size:12px;padding:9px 11px;text-align:left}
 @media(max-width:750px){.cc-review-head{flex-direction:column}.cc-review-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* CSV selection basket: explicit recipient review, not a send action */
+.cc-contact-basket{margin:15px 0;padding:18px;background:#172533;border:1px solid #4a5f73;border-radius:12px}
+.cc-basket-head{display:flex;justify-content:space-between;align-items:center;gap:14px}
+.cc-basket-head strong{font-size:14px}
+.cc-basket-head p{font-size:12px;color:#b7c7d5;margin:6px 0 0;line-height:1.5}
+.cc-basket-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:13px 0 7px}
+.cc-basket-actions button{padding:9px 12px;font-size:12px}
+.cc-card-select{display:flex;align-items:center;justify-content:center;margin-right:6px}
+.cc-card-select input{width:19px;height:19px;accent-color:#ebc759;cursor:pointer}
+.cc-contact-variants{padding:12px 0;border-top:1px solid #445044}
+.cc-contact-variants summary{cursor:pointer;font-size:12px}
+.cc-contact-variants button{font-size:12px;margin:9px 8px 0 0;padding:7px}
+@media(max-width:670px){.cc-basket-head{flex-direction:column;align-items:flex-start}}

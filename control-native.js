@@ -29,7 +29,7 @@ function day(value){
 function contact(input){
   if(!input||typeof input!=="object"||Array.isArray(input))return null;
   const row={};
-  for(const [k,max] of Object.entries({name:140,city:120,country:80,region:120,notes:1600,next_step:400,review_date:10,source_label:160})){
+  for(const [k,max] of Object.entries({name:140,city:120,country:80,region:120,notes:1600,next_step:400,review_date:10,source_label:160,authorization_email:254,authorization_reference:100})){
     row[k]=field(input[k]??"",max);
     if(row[k]===null)return null;
   }
@@ -43,6 +43,12 @@ function contact(input){
   const origin=input.origin_id??"";
   if(origin!==""&&!LEGACY_ID.test(origin))return null;
   row.origin_id=origin;
+  row.authorization_source=input.authorization_source??"none";
+  if(!["none","zoho_thread"].includes(row.authorization_source))return null;
+  if(row.authorization_source==="zoho_thread"&&
+     (!row.authorization_reference||!row.authorization_email||!EMAIL.test(row.authorization_email)))return null;
+  if(row.authorization_source==="none"&&(row.authorization_reference||row.authorization_email))return null;
+  row.authorization_email=row.authorization_email.toLowerCase();
   if(!Array.isArray(input.people??[])||(input.people??[]).length>15)return null;
   row.people=[];
   for(const person of input.people??[]){
@@ -180,6 +186,24 @@ async function readActiveArchive(db){
 async function historicContact(db,id){
   const manifest=await readActiveArchive(db);
   return manifest?.entities.find(x=>x.id===id)||null;
+}
+async function verifiedZohoExchange(db,thread,addr){
+  const response=await db.prepare(
+    "SELECT folder_kind,from_email,to_json,received_ms FROM control_mail_headers "+
+    "WHERE thread_id=? AND received_ms IS NOT NULL ORDER BY received_ms ASC LIMIT 250"
+  ).bind(thread).all();
+  let sent=null,incoming=null;
+  for(const x of response.results||[]){
+    const time=Number(x.received_ms);
+    if(!Number.isFinite(time)||time<=0)continue;
+    if(x.folder_kind==="outgoing"){
+      let recipients=[];try{recipients=JSON.parse(x.to_json||"[]")}catch{}
+      if(Array.isArray(recipients)&&recipients.some(e=>String(e).toLowerCase()===addr))
+        sent=Math.min(sent??time,time);
+    }else if(x.folder_kind==="incoming"&&String(x.from_email||"").toLowerCase()===addr)
+      incoming=Math.max(incoming??time,time);
+  }
+  return sent!==null&&incoming!==null&&incoming>=sent;
 }
 export async function nativeArchive(env){
   if(!env.ZOHO_DB)return fail("not_found",404);
@@ -388,8 +412,20 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
       const level=legacyPolicy(source);
       if(level==="blocked"&&record.contact_policy!=="blocked")
         return fail("historical_contact_blocked",422);
-      if(level==="review"&&record.contact_policy==="allowed")
-        return fail("historical_contact_needs_review",422);
+      if(level==="review"&&record.contact_policy==="allowed"){
+        // Reclassification requires an explicit approval plus provider-thread
+        // proof. Never override opt-outs, shared identities or old restrictions.
+        if(source.shared_email||!record.authorization_email||
+           !record.authorization_reference||record.authorization_source!=="zoho_thread"||
+           !(source.emails||[]).some(x=>x.toLowerCase()===record.authorization_email))
+          return fail("historical_contact_needs_review",422);
+        const manifest=await readActiveArchive(env.ZOHO_DB);
+        const reused=(manifest?.entities||[]).some(x=>x.id!==id&&
+          (x.emails||[]).some(e=>e.toLowerCase()===record.authorization_email));
+        if(reused||!(await verifiedZohoExchange(env.ZOHO_DB,
+          record.authorization_reference,record.authorization_email)))
+          return fail("authorization_evidence_unverified",422);
+      }
     }
     if(request.method==="POST"&&kind==="contacts"){
       const normalized=x=>String(x||"").trim().toLocaleLowerCase("pt-PT")

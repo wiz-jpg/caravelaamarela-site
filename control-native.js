@@ -7,6 +7,7 @@ const FINANCE_CATEGORIES=new Set(["agency_commission","creative_service","other_
 const FINANCE_STATUSES=new Set(["planned","due","settled","cancelled"]);
 const KINDS=new Set(["festival","venue","promoter","press","partnership","other"]);
 const POLICIES=new Set(["review","allowed","blocked"]);
+const RELATIONS=new Set(["unknown","partner","target","in_discussion","former","not_applicable"]);
 const STATUSES=new Set(["research","draft","contact_reported","sent_verified","reply_reported","negotiating","confirmed","declined","paused","closed"]);
 const PRIORITIES=new Set(["high","medium","low"]);
 const EVIDENCES=new Set(["none","user_report","sent_message","received_message","agreement"]);
@@ -36,6 +37,8 @@ function contact(input){
   const emails=input.emails.map(x=>field(x,254)?.toLowerCase());
   if(emails.some(x=>!x||!EMAIL.test(x))||new Set(emails).size!==emails.length)return null;
   row.kind=input.kind;row.emails=emails;row.contact_policy=input.contact_policy;
+  row.relationship=input.relationship??"unknown";
+  if(!RELATIONS.has(row.relationship))return null;
   const origin=input.origin_id??"";
   if(origin!==""&&!LEGACY_ID.test(origin))return null;
   row.origin_id=origin;return row;

@@ -81,6 +81,23 @@ function contactRows(){
  byId.clear();rows.forEach(x=>byId.set(x.id,x));return rows;
 }
 function nativeRows(kind){return kind==="contacts"?contactRows():get("booking").slice()}
+function suggestedChannel(contact){
+ if(contact.source_suppressed||contact.contact_policy==="blocked")return null;
+ const mails=[...new Set((contact.emails||[]).map(x=>String(x).trim().toLowerCase()).filter(Boolean))];
+ const scored=mails.map(email=>{
+  const local=email.split("@")[0]||"";
+  const unsuitable=/(^|[._-])(privacy|support|legal|noreply|no-reply|admin|administracao|billing|facturas|comercial|publicidade|advertising|tickets|bilhetes|atendimento|passatempos)([._-]|$)/.test(local);
+  let priority=unsuitable?-100:5;
+  if(contact.kind==="press"){
+   if(/redaccao|redacao|cultura|editor|music|imprensa|press|reviews/.test(local))priority+=45;
+   else if(/contact|contato|geral|info|mail|jornal/.test(local))priority+=18;
+  }else if(/booking|programac|artistas|bandas|production|producao|concertos|eventos/.test(local))priority+=40;
+  else if(/geral|info|contact|contato|mail/.test(local))priority+=12;
+  return {email,priority,reason:priority>=30?"canal especializado":priority>=14?"canal geral":"contacto sem função identificada"};
+ }).filter(x=>x.priority>0).sort((a,b)=>b.priority-a.priority||a.email.localeCompare(b.email));
+ return scored[0]||null;
+}
+
 function api(kind,method,data){
  const transport=window.CaravelaNativeTransport;
  if(!transport)throw Error("Ligação ao cofre indisponível. Reabre a página.");
@@ -238,6 +255,9 @@ function render(kind){
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
+   const route=suggestedChannel(r);
+   if(route)hint(card,"Canal a validar",route.email+" · "+route.reason+" (sugestão; envio não autorizado)");
+   else if(r.emails?.length)hint(card,"Canal para proposta","Nenhum email adequado identificado; rever contacto");
    if(r.media_type)hint(card,"Meio de comunicação",r.media_type);
    if(r.people?.length)hint(card,"Interlocutores",r.people.map(p=>p.name+(p.role?" · "+p.role:"")).join("; "));
    if(r.source_contact_person&&!r.people?.length)hint(card,"Interlocutor histórico (por rever)",r.source_contact_person);
@@ -259,7 +279,9 @@ function render(kind){
   if(kind==="contacts"){
    const b=make("button","Nova proposta","cc-neutral");b.type="button";
    b.onclick=()=>{window.CaravelaControlApp?.openView("booking");edit("booking",{
-     contact_name:r.name,contact_id:r.id,contact_email:r.emails?.[0]||""
+     contact_name:r.name,contact_id:r.id,
+     contact_email:r.contact_policy==="allowed"&&!r.source_shared_email?
+       (suggestedChannel(r)?.email||""):""
    });};actions.append(b);
   }
   if(kind==="booking"&&r.revision&&r.stage!=="confirmed"){

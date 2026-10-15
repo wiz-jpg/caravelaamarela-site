@@ -13,6 +13,7 @@ const FIELDS={
   evidence_reference:450,source_label:160
 };
 const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const entityKey=value=>String(value||"").normalize("NFD").replace(/\p{M}/gu,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const dateRe=/^\d{4}-\d{2}-\d{2}$/;
 const output=(data,status=200)=>Response.json(data,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 const reject=(error,status=400)=>output({ok:false,error},status);
@@ -93,7 +94,7 @@ export async function handlePartnerships(request,env,url,allowedToWrite){
     if(request.method==="PATCH"&&(!/^[a-f0-9-]{36}$/.test(id)||!all.some(p=>p.id===id)))
       return reject("partnership_not_found",404);
     if(request.method==="POST"&&id)return reject("invalid_new_id",400);
-    if(request.method==="POST"&&all.some(p=>p.name.toLocaleLowerCase("pt-PT")===cleaned.name.toLocaleLowerCase("pt-PT")))
+    if(request.method==="POST"&&all.some(p=>entityKey(p.name)===entityKey(cleaned.name)))
       return reject("partnership_already_exists",409);
     const resolved=id||crypto.randomUUID();
     await db.batch([append(db,resolved,cleaned),audit(db,request.method==="POST"?"partnership_created":"partnership_updated",resolved)]);

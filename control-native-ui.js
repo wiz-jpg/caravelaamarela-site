@@ -854,7 +854,8 @@ function renderDashboard(){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(due||""))continue;
   if(row.contact_policy==="blocked"||row.no_outreach||
     /não avançar|nao avancar|bloquead|não contactar|nao contactar/i.test(row.status||""))continue;
-  if(!/^(Enviado|Por contactar|Em conversa|Em negociação)$/i.test(row.status||""))continue;
+  // First-contact leads have their own prospecting queue, never a follow-up.
+  if(!/^(Enviado|Em conversa|Em negociação)$/i.test(row.status||""))continue;
   if(liveKeys.has(normalized(row.name)+"|"+normalized(row.artist)))continue;
   tasks.push({date:due,title:row.name+" · "+(row.artist||"projeto a confirmar"),
    note:row.next_step||"Rever ação antiga",source:"arquivo",

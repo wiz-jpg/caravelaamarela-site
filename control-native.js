@@ -93,6 +93,9 @@ function booking(input){
   if(!["unknown","planned","completed","not_applicable"].includes(pressStatus))return null;
   if(pressStatus==="completed"&&!row.press_reference)return null;
   row.press_status=pressStatus;
+  const advance=input.advance_status??"unknown";
+  if(!["unknown","planned","ready","not_applicable"].includes(advance))return null;
+  row.advance_status=advance;
   const fee=input.fee_amount;
   if(fee!==null&&(typeof fee!=="number"||!Number.isFinite(fee)||fee<0||fee>10000000))return null;
   if(input.currency!=="EUR")return null;

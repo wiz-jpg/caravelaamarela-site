@@ -7,7 +7,7 @@ const contactView=$("cc-view-contacts"),bookingView=$("cc-view-booking"),dashboa
 if(!contactView||!bookingView||!dashboard)return;
 const CONTACT_FIELDS=[
   ["name","Nome / entidade","text",true],["kind","Tipo","select",true],
-  ["city","Localidade","text"],["emails","Emails (separados por vírgulas)","text"],
+  ["city","Localidade","text"],["region","Região / distrito","text"],["country","País","text"],["emails","Emails (separados por vírgulas)","text"],
   ["contact_policy","Política de contacto","select",true],
   ["next_step","Próximo passo","textarea"],["review_date","Rever em","date"],
   ["notes","Notas internas","textarea"]
@@ -19,6 +19,7 @@ const BOOKING_FIELDS=[
   ["contact_email","Email operacional","email"],["fee_amount","Cachet (€)","number"],
   ["commission_pct","Comissão acordada (%)","number"],
   ["event_date","Data prevista do concerto","date"],
+  ["press_status","Estado de comunicação / imprensa","select"],["press_reference","Referência de imprensa / divulgação","text"],
   ["fee_note","Notas de valor / comissão","text"],
   ["conditions","Condições / deslocação / alojamento","textarea"],
   ["last_contact_date","Último contacto comprovado","date"],
@@ -28,7 +29,8 @@ const BOOKING_FIELDS=[
   ["notes","Contexto interno","textarea"]
 ];
 const choices={
- kind:{festival:"Festival",venue:"Sala / espaço",promoter:"Promotor",press:"Imprensa",other:"Outro"},
+ kind:{festival:"Festival",venue:"Sala / espaço",promoter:"Promotor",press:"Imprensa",partnership:"Possível parceria",other:"Outro"},
+ press_status:{unknown:"Por avaliar",planned:"Divulgação planeada",completed:"Divulgação realizada (referenciada)",not_applicable:"Não aplicável"},
  contact_policy:{review:"Rever antes de contactar",allowed:"Contacto autorizado",blocked:"Não contactar"},
  stage:{research:"Por avaliar",draft:"Proposta por preparar",contact_reported:"Contacto referido (não verificado)",
    sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",
@@ -185,11 +187,12 @@ function render(kind){
    if(r.commission_pct!==null&&r.commission_pct!==undefined&&r.fee_amount!==null)
     hint(card,"Comissão estimada",Number(r.fee_amount*r.commission_pct/100).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+" ("+r.commission_pct+"%) · ainda não recebida");
    hint(card,"Data do concerto",r.event_date);
+   hint(card,"Comunicação / imprensa",choices.press_status[r.press_status||"unknown"]);
    hint(card,"Responsável",r.owner);
    hint(card,"Evidência",(choices.evidence_type[r.evidence_type]||"")+" · "+(r.evidence_reference||"não referenciada"));
    hint(card,"Origem",r.origin_label);
   } else {
-   hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+(r.city||"—")));
+   hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
    hint(card,"Próximo passo",r.next_step);
    hint(card,"Rever",r.review_date);
@@ -273,7 +276,7 @@ function editorField(parent,kind,def,current){
  if(key==="emails")field.value=(current.emails||[]).join(", ");
  else if(key==="fee_amount"||key==="commission_pct")field.value=current[key]===null||current[key]===undefined?"":current[key];
  else field.value=current[key]??({
-   kind:"venue",contact_policy:"review",stage:"research",priority:"medium",evidence_type:"none"
+   kind:"venue",contact_policy:"review",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
  }[key]||"");
  box.append(field);parent.append(box);return field;
 }

@@ -59,9 +59,18 @@ function historicPolicy(x){
  return "review"; // original history is never automatically approved for a new send
 }
 function historicalContact(x){
+ const meta=x.meta||{},source=x.origin?.file||"";
+ const isPortugal=/^PT_[A-Za-z]+\./i.test(source);
  return {id:x.id,origin_id:x.id,name:x.name,kind:x.kind,city:x.city||"",
+   region:meta.region||"",country:meta.country||(isPortugal?"Portugal":""),
+   media_type:meta.media_type||"",
    emails:Array.isArray(x.emails)?x.emails:[],contact_policy:historicPolicy(x),
-   next_step:"",review_date:"",notes:"",relationship:"unknown",source_label:"Arquivo importado (original imutável)",historical:true};
+   next_step:"",review_date:"",notes:"",relationship:"unknown",
+   source_label:"Arquivo importado (original imutável)",historical:true,
+   source_review_required:!!x.review_required,source_shared_email:!!x.shared_email,
+   source_suppressed:!!x.suppressed,source_duplicate_name_city:!!x.duplicate_name_city,
+   source_priority:x.priority||"",source_recommendation:x.recommendation||"",
+   source_status:x.status_2027||""};
 }
 function contactRows(){
  const map=new Map(state.historical.map(x=>[x.id,historicalContact(x)]));
@@ -227,6 +236,10 @@ function render(kind){
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
+   if(r.media_type)hint(card,"Meio de comunicação",r.media_type);
+   if(r.source_recommendation)hint(card,"Encaixe histórico",r.source_recommendation);
+   if(r.source_suppressed)hint(card,"Restrição","Suprimido no arquivo: não contactar");
+   if(r.source_shared_email)hint(card,"Contacto partilhado","Endereço usado por várias entidades: validar interlocutor");
    if(r.relationship&&r.relationship!=="unknown")hint(card,"Relação",choices.relationship[r.relationship]);
    hint(card,"Próximo passo",r.next_step);
    hint(card,"Rever",r.review_date);
@@ -301,7 +314,9 @@ function renderContactTriage(){
  const normal=x=>String(x||"").trim().toLocaleLowerCase("pt-PT").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
  const duplicates=new Map();
  for(const c of contacts){
-  const names=(c.name&&c.city?[normal(c.name)+"|"+normal(c.city)]:[]);
+  // The same publication is often duplicated without a city; keep the entity type in the key.
+  // A venue sharing a generic name with another city must never be silently grouped.
+  const names=c.name?[normal(c.kind)+"|"+normal(c.name)+"|"+normal(c.city)]:[];
   for(const email of c.emails||[])names.push("email:"+normal(email));
   for(const key of names){const group=duplicates.get(key)||new Map();group.set(c.id,c);duplicates.set(key,group)}
  }

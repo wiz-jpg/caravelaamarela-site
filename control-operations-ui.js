@@ -47,8 +47,8 @@
         (record.last_success_ms?" · "+fmt(record.last_success_ms):"");
       holder.append(info(labels[record.provider]||record.provider,value,record.freshness));
     }
-    const source=data.operational?.needs_source_review;
-    const mode=data.mode==="historical_only"?"Base histórica — ainda sem captura Sheets":
+    const source=data.mode!=="historical_only"&&data.operational?.needs_source_review;
+    const mode=data.mode==="historical_only"?"Arquivo histórico preservado · gestão diária no Booking nativo":
       "Fonte AÇÕES capturada em "+fmt(data.sheet_last_capture_ms);
     $("cc-ops-message").textContent=(source?"Atenção: informação operacional por atualizar. ":"")+mode+
       ". Emails indexados: "+(data.mail_indexed?.incoming||0)+" recebidos e "+
@@ -59,9 +59,9 @@
     const area=$("cc-ops-tasks");area.replaceChildren();
     const caption=$("cc-ops-tasks-caption");
     if(data.mode==="historical_only"){
-      caption.textContent="A aguardar a primeira sincronização dos Sheets";
+      caption.textContent="Ações históricas consultáveis · gestão de tarefas no CRM nativo";
       const el=document.createElement("p");el.className="cc-notice";
-      el.textContent="A base histórica continua disponível em Booking. As prioridades datadas aparecerão aqui depois de sincronizarmos a folha AÇÕES.";area.append(el);return;
+      el.textContent="A fonte Sheets é opcional. Regista e acompanha os novos follow-ups em Booking e ações; as próximas tarefas aparecem no bloco Trabalho diário.";area.append(el);return;
     }
     if(data.operational?.due_count===undefined){
       caption.textContent="Resumo disponível — sem permissões para consultar tarefas individuais";

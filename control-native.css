@@ -96,3 +96,13 @@
 .cc-agenda-artist button{font-size:12px;padding:8px 12px}
 .cc-agenda-artists>details{grid-column:1/-1}
 @media(max-width:720px){.cc-native-geo,.cc-agenda-artists{grid-template-columns:1fr}}
+
+.cc-contact-triage{background:#151f2a;border:1px solid #354658;border-radius:14px;padding:19px;margin:15px 0}
+.cc-contact-triage h2{font-size:18px;margin:0 0 7px}
+.cc-contact-triage .cc-native-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cc-contact-review-group{border-top:1px solid #344556;padding:11px 0}
+.cc-contact-review-group>summary{cursor:pointer;font-size:13px;font-weight:700;color:#e2eaf3}
+.cc-contact-review-items{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.cc-contact-review-items button{font-size:12px;padding:8px 10px}
+.cc-contact-review-items p{font-size:12px;padding:8px;border:1px solid #344556;border-radius:8px;width:100%;overflow-wrap:anywhere}
+@media(max-width:700px){.cc-contact-triage .cc-native-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

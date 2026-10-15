@@ -178,6 +178,9 @@ function build(kind,heading){
     '<strong id="cc-basket-count">0 selecionadas</strong></div>'+
     '<div class="cc-basket-actions"><button type="button" class="cc-neutral" id="cc-basket-visible">Selecionar resultados visíveis</button>'+
     '<button type="button" class="cc-neutral" id="cc-basket-clear">Limpar seleção</button>'+
+    '<label class="cc-basket-project">Projeto <select id="cc-basket-project"><option value="WILDCHAINS">WILDCHAINS</option>'+
+    '<option value="Devil of a Woman">Devil of a Woman</option><option value="WILDCHAINS + Devil of a Woman">Ambos</option>'+
+    '<option value="Caravela Amarela">Caravela Amarela</option></select></label>'+
     '<button type="button" class="cc-primary" id="cc-basket-export">Exportar CSV elegível</button></div>'+
     '<p id="cc-basket-summary" class="cc-lead" aria-live="polite"></p>';
   geo.after(basket);
@@ -315,9 +318,10 @@ function renderBasket(){
 function exportBasket(){
  const {eligible,excluded}=mergeRows();
  if(!eligible.length){$("cc-basket-summary").textContent="Não existem destinatários validados para exportação.";return}
- const headings=["Email","Nome","Entidade","Tipo","Localidade","Região","País"];
- const csv=[headings,...eligible.map(x=>[x.email,x.name,x.name,x.kind,x.city,x.region,x.country])]
-  .map(row=>row.map(csvValue).join(";")).join("\r\n");
+ const artist=$("cc-basket-project").value;
+ const headings=["Email","Nome","Entidade","Tipo","Localidade","Região","País","Artista"];
+ const csv=[headings,...eligible.map(x=>[x.email,x.name,x.name,x.kind,x.city,x.region,x.country,artist])]
+  .map(row=>row.map(csvValue).join(",")).join("\r\n");
  const url=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));
  const link=make("a");link.href=url;link.download="caravela_mailmerge_"+
   new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon"}).format(new Date())+".csv";

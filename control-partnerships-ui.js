@@ -4,7 +4,7 @@ const root=document.getElementById("cc-view-partnerships");if(!root)return;
 const $=id=>document.getElementById(id);
 const choices={
 category:{marca:"Marca",institucional:"Institucional",mobilidade:"Mobilidade",equipamento:"Equipamento",producao:"Produção",comunicacao:"Comunicação",circuito:"Circuito",outra:"Outra"},
-stage:{idea:"Ideia",draft:"Proposta preparada",contact_reported:"Contacto referido · por verificar",sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",collaboration_reported:"Colaboração realizada · reportada",active_reported:"Parceria ativa · documentada publicamente",confirmed:"Parceria confirmada por acordo",paused:"Em pausa",closed:"Fechada"},
+stage:{idea:"Ideia",draft:"Proposta preparada",contact_reported:"Contacto referido · por verificar",sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",collaboration_reported:"Colaboração realizada · reportada",active_reported:"Parceria ativa · documentada publicamente",confirmed:"Parceria confirmada por acordo",declined:"Proposta recusada",paused:"Em pausa",closed:"Fechada"},
 priority:{alta:"Alta",media:"Média",baixa:"Baixa",a_definir:"Por definir"},
 scope:{agencia:"Agência",wildchains:"WILDCHAINS",devil:"Devil of a Woman",ambos:"Ambas",outro:"Outro"},
 evidence_type:{none:"Sem evidência",discussion:"Discussão anterior",user_report:"Relato do responsável",sent_message:"Mensagem enviada",received_message:"Resposta recebida",agreement:"Acordo/documento"}};

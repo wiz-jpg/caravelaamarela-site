@@ -194,6 +194,10 @@ export async function nativeArchive(env){
       media_type:String(x.meta?.media_type||"").slice(0,120),
       organizer:String(x.meta?.organizer||"").slice(0,180),
       contact_person:String(x.meta?.contact_person||"").slice(0,180),
+      source_primary_email:String(x.channels?.primary_email||"").slice(0,254),
+      source_channel_quality:String(x.meta?.contact_quality||"").slice(0,180),
+      source_form_url:(x.channels?.phone_or_web?.urls_mentioned||[]).find(
+        link=>typeof link==="string"&&link.startsWith("https://")&&link.length<=300)||"",
       suppressed:!!x.suppressed,control_blocked:!!x.control_blocked,
       control_blocked_possible:!!x.control_blocked_possible,
       review_required:!!x.review_required,shared_email:!!x.shared_email

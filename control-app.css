@@ -263,3 +263,32 @@ body{background:var(--cc-bg);color:var(--cc-text);font-family:Inter,system-ui,-a
  #control-app .cc-nav-admin[open]{display:flex}
  #control-app .cc-archive-toggle>summary{padding:13px}
 }
+
+/* Finance workspace: distinct agency cash position, not total artist fees. */
+#control-app .cc-finance{margin:16px 0 24px}
+#control-app .cc-finance-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:8px 0 22px}
+#control-app .cc-finance-head h2{font-size:19px;margin:0 0 6px}
+#control-app .cc-finance-head button{font-size:12px;flex-shrink:0}
+#control-app .cc-finance-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+#control-app .cc-finance-metric{background:#18222e;border:1px solid #354658;border-radius:13px;padding:18px}
+#control-app .cc-finance-metric small{display:block;color:#a7b8c8;font-size:11px}
+#control-app .cc-finance-metric strong{display:block;margin-top:10px;font-size:clamp(18px,2.4vw,25px)}
+#control-app .cc-finance-tools{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin:22px 0}
+#control-app .cc-finance-tools label{font-size:12px}
+#control-app .cc-finance-tools input,#control-app .cc-finance-tools select,#control-app .cc-finance-form input,#control-app .cc-finance-form select{width:100%;min-height:40px;background:#111923;border:1px solid #48596c;border-radius:8px;color:#f2f6fa;padding:9px}
+#control-app #cc-finance-list{display:grid;gap:10px}
+#control-app .cc-finance-card{background:#18222d;border:1px solid #344557;border-radius:12px;padding:18px}
+#control-app .cc-finance-item-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#control-app .cc-finance-item-head strong{font-size:15px}
+#control-app .cc-finance-detail{font-size:12px;color:#a9b9c9;margin:8px 0}
+#control-app .cc-finance-positive,#control-app .cc-finance-negative{font-weight:800;font-size:21px;margin-bottom:10px}
+#control-app .cc-finance-positive{color:#87dcaf}
+#control-app .cc-finance-negative{color:#efb1a6}
+#control-app .cc-finance-card button{display:block;margin-top:13px;padding:7px 11px;font-size:12px}
+#control-app #cc-finance-editor{background:#172331;border:1px solid #786742;border-radius:13px;padding:22px;margin:18px 0}
+#control-app .cc-finance-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#control-app .cc-finance-form h3,#control-app .cc-finance-form .cc-lead,#control-app .cc-finance-form .cc-actions,#control-app .cc-finance-form .status{grid-column:1/-1}
+#control-app .cc-finance-form label{font-size:12px;margin:0}
+#control-app .cc-finance-help{padding:0 18px 18px;font-size:12px;line-height:1.6;color:#a8b8c7}
+@media(max-width:900px){#control-app .cc-finance-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){#control-app .cc-finance-head{flex-direction:column}#control-app .cc-finance-tools,#control-app .cc-finance-form{grid-template-columns:1fr}}

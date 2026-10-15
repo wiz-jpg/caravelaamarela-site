@@ -1132,6 +1132,44 @@ function renderDashboard(){
   btn.onclick=()=>window.CaravelaControlApp?.openView(item.view);secondary.append(btn);
  }
  root.append(secondary);
+ const preparation=[];
+ for(const item of live.filter(x=>x.stage==="confirmed"&&/^\d{4}-\d{2}-\d{2}$/.test(x.event_date||""))){
+  const dueFor=offset=>nextBusinessDay(item.event_date,-offset);
+  const base={title:item.contact_name+" · "+item.artist,owner:item.owner||"Por atribuir",
+   open:()=>{window.CaravelaControlApp?.openView("booking");edit("booking",item)}};
+  if(!item.press_status||item.press_status==="unknown")
+    preparation.push({...base,date:dueFor(21),name:"Plano de divulgação e imprensa"});
+  if(!item.advance_status||["unknown","planned"].includes(item.advance_status))
+    preparation.push({...base,date:dueFor(10),name:"Rider, horários, técnicos e logística"});
+ }
+ if(preparation.length){
+  preparation.sort((a,b)=>a.date.localeCompare(b.date));
+  const box=make("details",undefined,"cc-archive-toggle");
+  const overdue=preparation.filter(x=>x.date<today).length;
+  box.append(make("summary","Preparação de concertos · "+preparation.length+
+    (overdue?" · "+overdue+" revisões vencidas":"")));
+  box.append(make("p","Tarefas indicativas calculadas das datas confirmadas. Não equivalem a compromissos aceites pelo promotor.","cc-lead"));
+  for(const item of preparation.slice(0,20)){
+   const btn=make("button",item.date+" · "+item.name+" · "+item.title+
+     " · "+item.owner,"cc-native-dash-task");
+   btn.type="button";btn.onclick=item.open;box.append(btn);
+  }
+  root.append(box);
+ }
+ const partnershipPending=partnerTasks.filter(x=>["sent_verified","contact_reported","reply_reported","negotiating","draft"].includes(x.stage));
+ if(partnershipPending.length){
+  const box=make("details",undefined,"cc-archive-toggle");
+  box.append(make("summary","Parcerias a acompanhar · "+partnershipPending.length));
+  for(const p of partnershipPending.slice(0,15)){
+   const btn=make("button",p.name+" · "+(p.next_step||"Confirmar próximo passo")+
+     " · "+(p.owner||"Por atribuir"),"cc-native-dash-task");
+   btn.type="button";btn.onclick=()=>{
+    window.CaravelaControlApp?.openView("partnerships");
+    const search=$("cc-partners-search");if(search){search.value=p.name;search.dispatchEvent(new Event("input"))}
+   };box.append(btn);
+  }
+  root.append(box);
+ }
  const extra=[{label:"Revisões de contactos",rows:other,route:"contacts"},
   {label:"Negociações suspensas",rows:paused,route:"booking"}];
  for(const group of extra){

@@ -4,7 +4,7 @@ const root=document.getElementById("cc-view-partnerships");if(!root)return;
 const $=id=>document.getElementById(id);
 const choices={
 category:{marca:"Marca",institucional:"Institucional",mobilidade:"Mobilidade",equipamento:"Equipamento",producao:"Produção",comunicacao:"Comunicação",circuito:"Circuito",outra:"Outra"},
-stage:{idea:"Ideia",draft:"Proposta preparada",contact_reported:"Contacto referido · por verificar",sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",collaboration_reported:"Colaboração realizada · reportada",confirmed:"Parceria confirmada",paused:"Em pausa",closed:"Fechada"},
+stage:{idea:"Ideia",draft:"Proposta preparada",contact_reported:"Contacto referido · por verificar",sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",collaboration_reported:"Colaboração realizada · reportada",active_reported:"Parceria ativa · documentada publicamente",confirmed:"Parceria confirmada por acordo",paused:"Em pausa",closed:"Fechada"},
 priority:{alta:"Alta",media:"Média",baixa:"Baixa",a_definir:"Por definir"},
 scope:{agencia:"Agência",wildchains:"WILDCHAINS",devil:"Devil of a Woman",ambos:"Ambas",outro:"Outro"},
 evidence_type:{none:"Sem evidência",discussion:"Discussão anterior",user_report:"Relato do responsável",sent_message:"Mensagem enviada",received_message:"Resposta recebida",agreement:"Acordo/documento"}};
@@ -48,7 +48,7 @@ async function api(method,entry){
 function line(card,key,value){if(!value)return;const p=document.createElement("p"),label=document.createElement("strong"),v=document.createElement("span");label.textContent=key+": ";v.textContent=value;p.append(label,v);card.append(p)}
 function render(){
 let stats=$("cc-partners-stats");stats.replaceChildren();
-for(const [name,n] of [["Oportunidades",partners.length],["Contacto / negociação",partners.filter(p=>["contact_reported","sent_verified","reply_reported","negotiating"].includes(p.stage)).length],["Colaborações",partners.filter(p=>["confirmed","collaboration_reported"].includes(p.stage)).length],["Ideias / propostas",partners.filter(p=>["idea","draft"].includes(p.stage)).length]]){
+for(const [name,n] of [["Oportunidades",partners.length],["Contacto / negociação",partners.filter(p=>["contact_reported","sent_verified","reply_reported","negotiating"].includes(p.stage)).length],["Colaborações / ativas",partners.filter(p=>["confirmed","active_reported","collaboration_reported"].includes(p.stage)).length],["Ideias / propostas",partners.filter(p=>["idea","draft"].includes(p.stage)).length]]){
 const div=document.createElement("div"),label=document.createElement("small"),num=document.createElement("strong");label.textContent=name;num.textContent=n;div.append(label,num);stats.append(div)}
 const query=$("cc-partners-search").value.toLocaleLowerCase("pt-PT").trim(),state=$("cc-partners-filter").value;
 const list=$("cc-partners-list");list.replaceChildren();
@@ -83,7 +83,7 @@ $("cc-partners-search").oninput=render;$("cc-partners-filter").onchange=render;$
 $("cc-partners-form").onsubmit=async e=>{
 e.preventDefault();if(busy)return;
 const record=Object.fromEntries(names.map(key=>[key,$("cc-p-"+key).value]));if(editing)record.id=editing;
-if(["sent_verified","confirmed"].includes(record.stage)&&(!record.evidence_reference||!["sent_message","received_message","agreement"].includes(record.evidence_type))){$("cc-partners-form-status").textContent="Para validar envio/parceria, identifica a prova e referência.";return}
+if(["sent_verified","confirmed","active_reported"].includes(record.stage)&&(!record.evidence_reference||!(record.stage==="active_reported"?["user_report","agreement"]:["sent_message","received_message","agreement"]).includes(record.evidence_type))){$("cc-partners-form-status").textContent="Para validar envio/parceria, identifica a prova e referência.";return}
 busy=true;$("cc-partners-form-status").textContent="A guardar...";
 try{await api(editing?"PATCH":"POST",record);busy=false;$("cc-partners-form").hidden=true;editing="";await load()}
 catch(error){busy=false;$("cc-partners-form-status").textContent=error.message}};

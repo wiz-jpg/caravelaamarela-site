@@ -1449,6 +1449,7 @@ window.addEventListener("caravela-control-view-opened",onOpened);
 window.addEventListener("caravela-control-token-ready",()=>{
  loadArchive();load("contacts");load("booking");void loadPartnerTasks();void loadFinanceTasks();
 });
+window.addEventListener("caravela-control-booking-updated",()=>{void load("booking")});
 window.addEventListener("caravela-crm-imported",event=>{
  archiveLoaded=true;
  state.historical=event.detail?.manifest?.entities||[];

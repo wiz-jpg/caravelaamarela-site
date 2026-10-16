@@ -1,5 +1,6 @@
 /* Preview-only Zoho metadata sync. Exact-address observations, not commercial decisions. */
 import {interpretIndexedMessages} from "./control-mail-intelligence.js";
+import {materializeMailReviewTasks} from "./control-review-tasks.js";
 const MAILBOX="booking@caravelaamarela.com";
 const EMAIL=/[a-z0-9.!#$%&'*+/=?^_{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 function emailList(data){
@@ -131,13 +132,23 @@ export async function syncZohoMail(request,env,url,zohoReader,{trigger="manual"}
         analysis={enabled:false,reason:"analysis_error",examined:0,new_signals:0,failures:0};
       }
     }
+    // Materialize independent review tasks, including signals from earlier cycles.
+    // Failure here never suppresses the successful read-only mail sync.
+    let reviewTasks={enabled:false,reason:"analysis_disabled",created:0};
+    if(env.CONTROL_MAIL_ANALYSIS_ENABLED==="true"){
+      try{reviewTasks=await materializeMailReviewTasks(db)}
+      catch{reviewTasks={enabled:false,reason:"task_storage_error",created:0}}
+    }
     await db.prepare("UPDATE control_sync_runs SET meta_json=? WHERE id=?")
       .bind(JSON.stringify({trigger:trigger==="cron"?"cron":"manual",
         analysis_enabled:analysis.enabled===true,
         analysis_failures:analysis.failures||0,
-        analysis_reason:analysis.reason||null}),id).run().catch(()=>{});
+        analysis_reason:analysis.reason||null,
+        review_tasks_enabled:reviewTasks.enabled===true,
+        review_tasks_created:reviewTasks.created||0,
+        review_tasks_reason:reviewTasks.reason||null}),id).run().catch(()=>{});
     return {ok:true,provider:"zoho",scanned,new_records:newRows,
-      total_indexed:current?.n||0,read_only:true,analysis,
+      total_indexed:current?.n||0,read_only:true,analysis,review_tasks:reviewTasks,
       note:"Metadados guardados; se a interpretação estiver ativa, só guarda sinais para revisão. Nunca altera automaticamente negócios."};
   }catch{
     await db.prepare("INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,new_records,examined_records,reason,meta_json) VALUES(?,'zoho',? ,?,'failed',0,?,'provider_or_storage_error',?)")

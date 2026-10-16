@@ -111,3 +111,42 @@ test("same-origin, roles, CSRF, Preview host and missing encryption fail closed"
  assert.equal((await missing.json()).error,"drafts_migration_required");
  assert.equal(db.prepare("SELECT COUNT(*) n FROM control_decision_events").get().n,0);
 });
+
+test("encrypted offsite R2 copies are verified before storing draft revisions",async()=>{
+ const objects=new Map();
+ env.CONTROL_R2_BACKUP_ENABLED="true";
+ env.CONTROL_BACKUP_BUCKET={
+  async head(key){
+   const value=objects.get(key);
+   return value?{customMetadata:{sha256:value.hash}}:null;
+  },
+  async put(key,data,options){
+   const bytes=new Uint8Array(data);
+   objects.set(key,{bytes,hash:options.customMetadata.sha256});
+  },
+  async get(key){
+   const value=objects.get(key);
+   return value?{async arrayBuffer(){return value.bytes.slice().buffer}}:null;
+  }
+ };
+ const result=await (await call("POST",input())).json();
+ assert.equal(result.ok,true);
+ assert.equal(result.independent_backup_verified,true);
+ const copy=objects.get("mail-drafts/v1/"+result.id+"/1.json");
+ assert.ok(copy);
+ assert.ok(!new TextDecoder().decode(copy.bytes).includes(input().body));
+ const amended=await (await call("PATCH",{
+  ...input({body:"Body newer"}),id:result.id,revision:1,status:"draft"
+ })).json();
+ assert.equal(amended.independent_backup_verified,true);
+ assert.equal(objects.size,2);
+ // Failing external backup does not alter existing content or increment a revision.
+ env.CONTROL_BACKUP_BUCKET.put=async()=>{throw Error("r2_unavailable")};
+ assert.equal((await call("PATCH",{
+  ...input({body:"Unsaved changed text"}),id:result.id,revision:2,status:"draft"
+ })).status,503);
+ const latest=(await (await call("GET",null,{qs:"?id="+result.id})).json()).draft;
+ assert.equal(latest.body,"Body newer");
+ assert.equal(latest.revision,2);
+ assert.equal(db.prepare("SELECT COUNT(*) n FROM control_mail_draft_versions WHERE draft_id=?").get(result.id).n,2);
+});

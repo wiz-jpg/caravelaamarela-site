@@ -29,12 +29,18 @@
  const compactHeader=make("div",undefined,"cc-review-tasks-home-header");
  const homeCount=make("span","A verificar…");
  const homeOpen=btn("Abrir fila de revisão",()=>window.CaravelaControlApp?.openView("contacts"));
- compactHeader.append(make("strong","Tarefas por validar · Zoho"),homeCount,homeOpen);
+ compactHeader.append(make("strong","Respostas que precisam de revisão"),homeCount,homeOpen);
  const homePreviews=make("div",undefined,"cc-review-tasks-home-preview");
  compact.append(compactHeader,homePreviews);
+ // Show actionable mail review first; keep transport health accessible
+ // but out of the daily decision path.
+ home.querySelector(".cc-panel-head")?.after(compact);
  const homeStatus=home.querySelector(".cc-mail-automation-status");
- if(homeStatus)homeStatus.after(compact);
- else home.querySelector(".cc-panel-head")?.after(compact);
+ if(homeStatus){
+  const technical=make("details",undefined,"cc-zoho-health-drawer");
+  technical.append(make("summary","Estado técnico da sincronização"),homeStatus);
+  compact.append(technical);
+ }
  const panel=make("section",undefined,"cc-review-tasks-panel");
  const heading=make("div",undefined,"cc-review-tasks-heading");
  const left=make("div");
@@ -308,7 +314,7 @@
     button.title="Abrir esta tarefa na fila de revisão; não altera estados comerciais";
     homePreviews.append(button);
   }
-  if(count>preview.length)homePreviews.append(make("small","+"+(count-preview.length)+" tarefas na fila"));
+  if(count>preview.length)homePreviews.append(make("small","+"+(count-preview.length)+" mensagens por rever; classificações automáticas, não confirmações"));
  }
  function render(data){lastData=data;renderHome(data);drawQueue()}
  async function load(){

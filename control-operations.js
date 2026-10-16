@@ -92,13 +92,16 @@ export async function operationalOverview(env,{showDetails=false,now=Date.now()}
     db.prepare("SELECT raw_json,captured_ms,row_count FROM control_source_revisions WHERE source_key='control_actions' ORDER BY captured_ms DESC LIMIT 1").first(),
     db.prepare("SELECT s.entity_count,s.action_count,s.artist_count FROM control_snapshots s JOIN control_state t ON t.value=s.id WHERE t.key='active_snapshot' AND s.state='sealed'").first()
   ]);
+  const signalTable=await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='control_mail_signals'").first();
+  const signalStats=signalTable?await db.prepare(
+    "SELECT COUNT(*) AS n, MAX(observed_ms) AS last_ms FROM control_mail_signals").first():null;
   const settings={
     zoho:env.ZOHO_ENABLED==="true"&&!!env.ZOHO_DB,
     sheets:!!(env.CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON&&env.CONTROL_ACTIONS_SHEET_ID&&env.CONTROL_ARTISTS_SHEET_ID)
   };
   const statuses=[zoho,sheets].map(run=>({
     ...run,configured:settings[run.provider],
-    freshness:freshness(run,now,run.provider==="zoho"?45*60000:90*60000,settings[run.provider])
+    freshness:freshness(run,now,run.provider==="zoho"?25*60000:90*60000,settings[run.provider])
   }));
   const latest=source?JSON.parse(source.raw_json):null;
   const actions=latest?.sheets?.find(sheet=>
@@ -112,6 +115,10 @@ export async function operationalOverview(env,{showDetails=false,now=Date.now()}
       contacts:snapshot.entity_count,actions:snapshot.action_count,artists:snapshot.artist_count
     }:null,
     mail_indexed:{incoming:msgCount.incoming||0,outgoing:msgCount.outgoing||0},
+    mail_intelligence:{enabled:env.CONTROL_MAIL_ANALYSIS_ENABLED==="true",
+      schema_ready:!!signalTable,classified:signalStats?.n||0,
+      pending_inbox:Math.max(0,(msgCount.incoming||0)-(signalStats?.n||0)),
+      last_review_signal_ms:signalStats?.last_ms||null},
     sync:statuses,
     automation:{
       configured:typeof env.CONTROL_CRON_TOKEN==="string"&&env.CONTROL_CRON_TOKEN.length>=43,

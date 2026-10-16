@@ -5,6 +5,16 @@
   const target=document.getElementById("cc-view-sources");
   if(!target)return;
   const $=id=>document.getElementById(id);
+  const dashboard=document.getElementById("cc-view-dashboard");
+  const homeSync=document.createElement("section");
+  homeSync.className="cc-mail-automation-status";
+  homeSync.setAttribute("aria-label","Estado da automatização Zoho");
+  homeSync.innerHTML='<div><strong>Zoho Mail</strong><p id="cc-home-zoho-status">A verificar sincronização…</p>'+
+    '<small id="cc-home-zoho-analysis">Análise de mensagens: por verificar</small></div>'+
+    '<button type="button" class="cc-neutral" id="cc-home-zoho-review">Rever mensagens</button>';
+  dashboard?.querySelector(".cc-panel-head")?.after(homeSync);
+  homeSync.querySelector("#cc-home-zoho-review").onclick=()=>
+    window.CaravelaControlApp?.openView("contacts");
   const card=document.createElement("section");
   card.className="cc-live-ops";card.id="cc-live-ops";
   card.innerHTML=
@@ -34,6 +44,28 @@
     item.append(title,strong);return item;
   }
   function render(data){
+    const health=data.sync?.find(x=>x.provider==="zoho");
+    const analysis=data.mail_intelligence||{};
+    const time=Date.now(),isRecent=ms=>Number(ms)>0&&time-ms<=25*60000&&time-ms>=-60000;
+    const running=health&&isRecent(health.last_automatic_success_ms);
+    const interpreting=analysis.enabled&&analysis.schema_ready&&
+      health&&isRecent(health.last_automatic_analysis_success_ms);
+    const status=$("cc-home-zoho-status"),detail=$("cc-home-zoho-analysis");
+    if(status){
+      status.textContent=running?
+        "Atualização automática confirmada · "+fmt(health.last_automatic_success_ms):
+        health?.last_success_ms?
+          "Última leitura "+fmt(health.last_success_ms)+" · agendamento por confirmar ou desatualizado":
+          "Sem sincronização Zoho comprovada";
+      status.classList.toggle("cc-zoho-current",!!running);
+    }
+    if(detail){
+      detail.textContent=interpreting?
+        "Conteúdo analisado automaticamente · "+analysis.classified+" mensagens classificadas para revisão":
+        !analysis.enabled?"Conteúdo: por ativar (só metadados)":
+        !analysis.schema_ready?"Conteúdo: migração 0005 pendente":
+        "Conteúdo: execução automática ainda não confirmada";
+    }
     const holder=$("cc-ops-health");holder.replaceChildren();
     const sync=data.sync||[];
     const cron=data.automation||{};
@@ -118,7 +150,7 @@
   }
   $("cc-ops-refresh").onclick=()=>load(true);
   window.addEventListener("caravela-control-view-opened",event=>{
-    if(event.detail?.view==="sources")load(true);
+    if(["sources","dashboard"].includes(event.detail?.view))load(true);
   });
   window.addEventListener("caravela-control-token-ready",()=>load(true));
   window.addEventListener("caravela-control-authenticated",()=>load(true));
@@ -126,6 +158,8 @@
     loadedAt=0;$("cc-ops-health").replaceChildren();
     $("cc-ops-tasks").replaceChildren();
     $("cc-ops-message").textContent="Sessão terminada.";
+    if($("cc-home-zoho-status"))$("cc-home-zoho-status").textContent="Sessão terminada";
+    if($("cc-home-zoho-analysis"))$("cc-home-zoho-analysis").textContent="Análise: por verificar";
   });
   // Reload current server snapshot while the user is actively viewing the page.
   document.addEventListener("visibilitychange",()=>{

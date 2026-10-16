@@ -4,7 +4,7 @@
  * No public HTTP actions, no emails sent. */
 const PREVIEW="https://feature-zoho-mail-readonly-o.caravelaamarela-site.pages.dev";
 const ENDPOINT=PREVIEW+"/api/control/";
-const CRON="*/15 * * * *";
+const CRON="*/10 * * * *";
 function assertConfigured(env){
   if(typeof env.CONTROL_CRON_TOKEN!=="string"||env.CONTROL_CRON_TOKEN.length<43||
     typeof env.CF_ACCESS_CLIENT_ID!=="string"||!env.CF_ACCESS_CLIENT_ID||
@@ -71,7 +71,7 @@ export async function runControlAutomation(controller,env,fetcher=fetch){
   const expected=Number.isFinite(controller?.scheduledTime)
     ?controller.scheduledTime:Date.now();
   if(controller?.cron&&controller.cron!==CRON)throw Error("unexpected_cron");
-  // Every 15 minutes: Zoho. Every other invocation: Google Sheets.
+  // Every 10 minutes: Zoho. Every 30 minutes: Google Sheets.
   const minute=new Date(expected).getUTCMinutes();
   const providers=minute%30===0?["zoho","sheets"]:["zoho"];
   const results=await Promise.allSettled(providers.map(provider=>

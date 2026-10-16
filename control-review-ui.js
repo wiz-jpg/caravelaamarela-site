@@ -15,7 +15,7 @@
  const status=make("p",undefined,"cc-lead");status.setAttribute("role","status");status.setAttribute("aria-live","polite");
  const metrics=make("div",undefined,"cc-review-metrics");
  const content=make("div",undefined,"cc-review-sections");
- const caveats=make("p","A sincronização do Zoho atualiza somente remetentes, destinatários e datas: assuntos e texto dos emails ainda não são interpretados. Uma mensagem recebida não significa interesse confirmado.","cc-lead");
+ const caveats=make("p","Os sinais das conversas são classificações automáticas para revisão. O texto integral não fica guardado no CRM. Nenhuma resposta confirma, por si só, um concerto ou uma autorização de envio.","cc-lead");
  box.append(head,status,metrics,content,caveats);
  const native=document.getElementById("cc-native-contacts");
  const originalReview=container.querySelector(".cc-contact-triage");
@@ -63,6 +63,27 @@
   if(!data.archive_active)content.append(make("p","O arquivo consolidado ainda não está ativo. As sugestões estão incompletas.","cc-notice"));
   content.append(make("p","Metadados Zoho indexados: "+data.indexed_headers+" mensagens. Última sincronização concluída: "+
     date(data.zoho_last_sync_ms)+". Os totais representam o índice disponível; não garantem cobertura integral da caixa.","cc-lead"));
+  const intelligence=data.mail_intelligence||{};
+  if(!intelligence.enabled){
+    content.append(make("p","A interpretação de conteúdo Zoho ainda não foi ativada na infraestrutura. A revisão por metadados continua disponível.","cc-lead"));
+  }else if(!intelligence.schema_ready){
+    content.append(make("p","A análise de conteúdo necessita da migração privada 0005 na base de dados Preview.","cc-notice"));
+  }
+  const topics={booking:"Booking",partnership:"Parceria",press:"Imprensa",other:"Outro",unclear:"Não classificado"};
+  const signals={interest:"Possível interesse",decline:"Possível recusa",
+    possible_confirmation:"Possível confirmação — rever comprovativo",
+    needs_reply:"Pergunta comercial a rever",ambiguous:"Sem conclusão segura",none:"Sem sinal"};
+  section("Sinais detetados no conteúdo · validar","Classificação por regras simples, sem acesso automático à decisão comercial. Abre a ficha e confirma o email na caixa Zoho antes de alterar qualquer estado.",
+    intelligence.signals||[],(place,x)=>{
+      const title=(x.external_email||"Remetente por identificar")+" · "+(topics[x.topic]||"Outro");
+      const desc=(signals[x.signal]||"Sinal por confirmar")+" · "+
+        (x.message_ms?date(x.message_ms):"Data não disponível")+
+        " · "+(x.matched_contacts?.length?x.matched_contacts.map(y=>y.name).join(" / "):"Sem ficha associada");
+      const actions=card(place,title,desc);
+      for(const c of (x.matched_contacts||[]).slice(0,3))actions.append(button("Rever "+c.name,()=>open(c.id)));
+      if(!x.matched_contacts?.length&&x.external_email)
+        actions.append(button("Associar à entidade",()=>action({action:"attach",email:x.external_email})));
+    });
   section("Conversas bilaterais identificadas","Uma saída seguida de entrada no mesmo fio Zoho. Só propomos autorização a endereços ligados a uma única entidade sem bloqueios; confirma a finalidade da conversa.",
     data.verified_exchanges,(place,x)=>{
     const actions=card(place,x.contact.name+" · "+x.email,

@@ -9,7 +9,7 @@
 - `control-operations-ui.js`: mostra estado Zoho/Sheets e alertas de atualização no dashboard. Não interpreta emails como aceitação/recusa.
 - `control-sync-sheets.js`: atualização incremental, só de leitura; bloqueio contra sobreposição; log de sucesso/falha e origem cron/manual.
 - `control-sync-zoho.js`: indexação de metadados somente; log de origem cron/manual.
-- `examples/control-cron-worker.js`: Worker independente e sem endpoints HTTP públicos; Cron a cada 15 minutos. Zoho em todas as execuções, Google Sheets a cada meia hora. Exige três segredos e verifica se o destino respondeu JSON corretamente.
+- `examples/control-cron-worker.js`: Worker independente e sem endpoints HTTP públicos; Cron a cada 10 minutos. Zoho em todas as execuções, Google Sheets a cada meia hora. Exige três segredos e verifica se o destino respondeu JSON corretamente.
 - `workers/control-automation/wrangler.jsonc`: configuração do Worker independente e Cron.
 - `control-vault.js`: acesso separado a resumos operacionais; exportações completas da D1 e origens Sheets exigem perfil administrativo.
 - Testes em `tests/control-operations.test.mjs` e `tests/control-scheduler.test.mjs`.
@@ -23,7 +23,7 @@
 3. Criar um novo secret `CONTROL_CRON_TOKEN` com valor aleatório forte (43+ caracteres) em **Pages > caravelaamarela-site > Variables and secrets > Preview**. Não reutilizar `ZOHO_ADMIN_TOKEN`. Nunca criar em Production.
 4. Criar o Worker independente `caravela-control-automation-preview` com o código `examples/control-cron-worker.js` (ou Wrangler com `workers/control-automation/wrangler.jsonc`). **Não** substituir `_worker.js` da Pages por este código.
 5. No Worker independente guardar exclusivamente como **secrets** `CONTROL_CRON_TOKEN` (exatamente o mesmo valor Preview), `CF_ACCESS_CLIENT_ID` e `CF_ACCESS_CLIENT_SECRET`.
-6. Configurar Cron Trigger `*/15 * * * *`, em UTC. Não habilitar rotas públicas. Para uma prova mais conservadora, começar com execução manual do trigger de teste através do Cloudflare dashboard e observar os logs.
+6. Configurar Cron Trigger `*/10 * * * *`, em UTC. Não habilitar rotas públicas. Para uma prova mais conservadora, começar com execução manual do trigger de teste através do Cloudflare dashboard e observar os logs.
 7. Confirmar 200 e JSON do endpoint Zoho através do Worker. Em `control_sync_runs` da D1 Preview deve existir `provider='zoho'`, `status='complete'` e `meta_json` com `{"trigger":"cron"}`. Não assumir que a conta Zoho está conectada antes desta confirmação.
 8. Para a fonte Sheets: criar uma conta de serviço Google com scope de leitura Sheets API, partilhar apenas os dois documentos como **Leitor** com o email da conta e definir no **Preview** as três variáveis/segredos:
    - `CONTROL_GOOGLE_SERVICE_ACCOUNT_JSON` (secret, JSON integral com private_key)

@@ -16,6 +16,15 @@ const LEGACY_ID=/^(festival|venue|promoter|press)_[a-f0-9]{22}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DAY=/^\d{4}-\d{2}-\d{2}$/;
+const MMDD=/^(\d{2})-(\d{2})$/;
+const WINDOW_BASIS=new Set(["unknown","official","direct","history","hypothesis"]);
+function validWindowDate(value){
+  const parts=MMDD.exec(value);
+  if(!parts)return false;
+  const month=Number(parts[1]),day=Number(parts[2]);
+  const date=new Date(Date.UTC(2001,month-1,day));
+  return date.getUTCMonth()===month-1&&date.getUTCDate()===day;
+}
 const out=(value,status=200)=>Response.json(value,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 const fail=(error,status=400)=>out({ok:false,error},status);
 const validId=x=>typeof x==="string"&&(UUID.test(x)||LEGACY_ID.test(x));
@@ -29,11 +38,23 @@ function day(value){
 function contact(input){
   if(!input||typeof input!=="object"||Array.isArray(input))return null;
   const row={};
-  for(const [k,max] of Object.entries({name:140,city:120,country:80,region:120,owner:110,notes:1600,next_step:400,review_date:10,source_label:160,authorization_email:254,authorization_reference:100})){
+  for(const [k,max] of Object.entries({name:140,city:120,country:80,region:120,owner:110,notes:1600,next_step:400,review_date:10,source_label:160,authorization_email:254,authorization_reference:100,
+    contact_window_start:5,contact_window_end:5,contact_window_reason:360,
+    contact_window_reference:450})){
     row[k]=field(input[k]??"",max);
     if(row[k]===null)return null;
   }
   if(!row.name||!day(row.review_date)||!KINDS.has(input.kind)||!POLICIES.has(input.contact_policy))return null;
+  row.contact_window_basis=input.contact_window_basis??"unknown";
+  if(!WINDOW_BASIS.has(row.contact_window_basis))return null;
+  const setWindow=!!(row.contact_window_start||row.contact_window_end);
+  if(setWindow&&(!validWindowDate(row.contact_window_start)||!validWindowDate(row.contact_window_end) ||
+      row.contact_window_basis==="unknown"||!row.contact_window_reason))return null;
+  if(!setWindow&&(row.contact_window_start||row.contact_window_end||
+      row.contact_window_basis!=="unknown"||row.contact_window_reason||row.contact_window_reference))return null;
+  // An "official" or directly confirmed window must have an inspectable evidence reference.
+  if(setWindow&&["official","direct"].includes(row.contact_window_basis)&&
+     !row.contact_window_reference)return null;
   if(!Array.isArray(input.emails)||input.emails.length>15)return null;
   const emails=input.emails.map(x=>field(x,254)?.toLowerCase());
   if(emails.some(x=>!x||!EMAIL.test(x))||new Set(emails).size!==emails.length)return null;

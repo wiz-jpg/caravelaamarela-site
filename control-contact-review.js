@@ -146,6 +146,27 @@ export async function contactReviewHandler(request,env,url){
       headers:mails.results||[],actions:archive.actions||[]});
     response.archive_active=!!archive.active;
     response.zoho_last_sync_ms=lastZoho?.completed_ms||null;
+    const table=await env.ZOHO_DB.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='control_mail_signals'").first();
+    const signals=table?await env.ZOHO_DB.prepare(
+      "SELECT folder_kind,message_id,thread_id,external_email,message_ms,topic,signal,confidence,reason_code "+
+      "FROM control_mail_signals WHERE folder_kind='incoming' "+
+      "ORDER BY COALESCE(message_ms,observed_ms) DESC LIMIT 80").all():{results:[]};
+    const contacts=[...(archive.contacts||[]),...(updates.records||[])];
+    const matchedEmail=addr=>{
+      if(!addr)return [];
+      const found=new Map();
+      for(const contact of contacts)if((contact.emails||[]).some(e=>
+        String(e).trim().toLowerCase()===addr))found.set(contact.id,{id:contact.id,name:contact.name});
+      return [...found.values()].slice(0,4);
+    };
+    response.mail_intelligence={
+      enabled:env.CONTROL_MAIL_ANALYSIS_ENABLED==="true",
+      schema_ready:!!table,
+      // These are candidate signals, not commercial decisions or consent.
+      signals:(signals.results||[]).filter(x=>x.signal!=="none").slice(0,60)
+        .map(x=>({...x,matched_contacts:matchedEmail(x.external_email)}))
+    };
     return Response.json(response,{headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
   }catch{
     return Response.json({ok:false,error:"contact_review_unavailable"},{status:503,headers:{"Cache-Control":"no-store"}});

@@ -71,3 +71,72 @@ devem ser administrados por IDs de conta e escopos explícitos, com revogação.
 - Ordenar por ação necessária e prazo explícito, não por conjeturas.
 - Evitar o «0 concertos» enganoso: distinguir registos operacionais do histórico.
 - Validar com utilizador em Preview antes de considerar UI final.
+
+
+## Implementação efetiva — outubro de 2026 (Preview, não produção)
+
+### Janelas por entidade
+
+- Campos persistidos **nas revisões nativas append-only**, sem migração D1:
+  `contact_window_start` e `contact_window_end` (`MM-DD` internamente,
+  introduzidos como **DD/MM**), `contact_window_basis`, `contact_window_reason`,
+  `contact_window_reference`.
+- Fontes: `official` (fonte declarada como oficial), `direct` (resposta direta),
+  `history` (padrão histórico), `hypothesis` (hipótese). São **declarações
+  do operador**, não verificações independentes pelo software.
+  Fonte oficial ou direta exige referência; qualquer janela exige motivo.
+- Nenhuma data pré-preenchida para entidades sem evidência. Feb. 29 inválido
+  em recorrência anual para evitar anos impossíveis. Intervalos que cruzam
+  dezembro/janeiro são suportados.
+- Contactos permite «Definir janela ideal» sem abrir a ficha completa;
+  também filtra «Janela aberta agora», «Abre nos próximos 30 dias» e
+  «Janela por pesquisar». Início destaca apenas janelas com fonte diferente
+  de hipótese, sem bloqueios históricos conhecidos.
+- Contactos não autorizados continuam sujeitos a validação manual e não
+  aparecem como emails prontos a enviar.
+- No exemplo «Rock in Rio», **não há semana de submissões de opening acts
+  comprovada pela pesquisa pública efetuada**; não inserir uma semana arbitrária.
+- História preservada, IDs preservados, nenhum envio, nenhuma alteração
+  comercial automática. Não inferir janelas só pela data pública do festival.
+
+### Navegação e cartões
+
+- Menu diário: Início, Booking e Contactos. Finanças, Parcerias, Artistas e Ajuda
+  em «Outras áreas»; Administração mantém-se separada.
+- Contactos: identidade, local e altura preferível visíveis. Outros campos
+  em «Detalhes e histórico», triagem/CSV em painéis fechados por defeito.
+- Booking: cartões integrais coloridos, campos úteis expostos e resto recolhido.
+  Legenda próxima. Estado comercial e urgência separados.
+- O roster mostra apenas a contagem comprovada pelos registos operacionais,
+  não toda a atividade histórica das bandas.
+
+### Mensagens Zoho numa única janela
+
+- Na fila Zoho de Contactos, o botão «Resolver numa janela» é apresentado
+  em sinais com tópico de booking. Lista apenas oportunidades candidatas por
+  ligação de ficha e/ou email observado; seleção explicitamente humana.
+- A equipa confirma que leu a mensagem, escolhe nova/existente oportunidade,
+  preenche artista, evento, estado, responsável, próximo passo e prazo (opcional).
+  Não oferece nova confirmação comercial automática. O servidor mantém as
+  restrições originais de `handleNative`.
+- Operação é **sequencial**: guardar booking e, quando guardado, fechar tarefa.
+  **Ainda não é transação atómica entre as duas tabelas**. Se fechar a tarefa
+  falhar após guardar o booking, a interface informa que o booking já foi
+  guardado e bloqueia a repetição de gravação na janela atual; a tarefa pode
+  ser concluída manualmente. Um eventual refresh exige rever a oportunidade
+  antes de tentar novamente, para não criar duplicados.
+- Conserva referência à mensagem no histórico manual da oportunidade. O texto
+  do email não é guardado no booking.
+- Finanças e permissões particulares de Ana/João continuam por implementar
+  no servidor; não ativar acesso alargado provisório para simular funções.
+
+### Aceitação no Preview
+
+1. Rever Início: prioridades Zoho, janelas de contactos e quatro filas de booking.
+2. Abrir Contactos, verificar pesquisa, filtros e cartões recolhidos.
+3. Editar **uma ficha de teste aprovada** com janela anual e referência; recarregar
+   para confirmar persistência e data futura correta.
+4. Em mensagem Zoho cujo conteúdo foi revisto, testar «Resolver numa janela»
+   com uma oportunidade de ensaio não confirmada. Não marcar acordos reais.
+5. Confirmar que Cloudflare Pages e Node 22 / SQLite safety tests passam,
+   sem merge de PR nem alteração do hostname de produção.

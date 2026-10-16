@@ -1190,12 +1190,13 @@ function renderDashboard(){
   root.append(details);
  }
  const artist=make("section",undefined,"cc-agenda-artists");
- artist.append(make("h3","Roster principal"));
+ artist.append(make("h3","Roster principal"),
+  make("small","Apenas registos de booking criados na plataforma; o histórico das bandas não está incluído nestes totais.","cc-agenda-roster-note"));
  for(const [name,rx] of [["WILDCHAINS",/wildchains/i],["Devil of a Woman",/devil\s*(of a woman)?/i]]){
   const relevant=live.filter(x=>rx.test(x.artist||"")),card=make("article",undefined,"cc-agenda-artist");
   card.append(make("strong",name),make("p",
     relevant.filter(x=>!["confirmed","declined","closed"].includes(x.stage)).length+" negociações em acompanhamento · "+
-    relevant.filter(x=>x.stage==="confirmed").length+" concertos confirmados · "+
+    relevant.filter(x=>x.stage==="confirmed").length+" concertos confirmados registados · "+
     relevant.filter(x=>!x.owner).length+" sem responsável"));
   const b=make("button","Ver booking","cc-neutral");b.type="button";
   b.onclick=()=>window.CaravelaControlApp?.openView("booking");card.append(b);artist.append(card);

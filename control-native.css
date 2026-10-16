@@ -350,3 +350,42 @@
 .cc-status-legend-item.cc-tone-paused{background:#2c3239;border-color:#636e79;color:#e7ecf2}
 .cc-status-legend>.cc-lead{font-size:11px;margin:0}
 @media(max-width:760px){.cc-status-legend-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Compact contact identity, contact-specific timing and restrained advanced tools. */
+#control-app #cc-view-contacts .cc-native{background:#161f2a;border-color:#33485b}
+#control-app #cc-view-contacts .cc-native-card{
+ background:#1c2a38;border-color:#42566a;padding:12px 14px}
+#control-app #cc-view-contacts .cc-native-card-head{margin-bottom:6px}
+#control-app #cc-view-contacts .cc-native-card-head strong{font-size:14px}
+#control-app #cc-view-contacts .cc-native-row{font-size:12px;padding:2px 0}
+.cc-contact-more,.cc-mail-merge-toggle{border-top:1px solid #526173;margin-top:9px;padding-top:9px}
+.cc-contact-more>summary{font-weight:700;font-size:12px;color:#dae9f6;cursor:pointer;margin-bottom:6px}
+.cc-contact-more[open]{margin-bottom:10px}
+.cc-mail-merge-toggle{margin:14px 0!important}
+.cc-mail-merge-toggle>summary,.cc-contact-admin-toggle>summary,.cc-suggestions-drawer>summary{
+ padding:9px 12px;font-size:12px;font-weight:750;color:#d6e7f3}
+.cc-mail-merge-toggle>.cc-contact-basket{margin:10px 0 3px}
+.cc-contact-timing{margin:16px 0 19px;padding:15px 17px;
+ background:#192733;border:1px solid #445c70;border-radius:12px}
+.cc-contact-timing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cc-contact-timing-head h3{margin:0 0 4px;font-size:16px}
+.cc-contact-timing-head .cc-lead{font-size:11px;line-height:1.5;margin:0 0 10px}
+.cc-contact-timing-head button{font-size:11px;padding:8px 11px;flex-shrink:0}
+.cc-contact-timing-summary{display:flex;gap:9px;margin:9px 0 11px}
+.cc-contact-timing-summary>span{display:flex;align-items:baseline;gap:7px;
+ background:#263847;border:1px solid #52687b;padding:7px 10px;border-radius:8px}
+.cc-contact-timing-summary strong{font-size:19px;font-weight:850}
+.cc-contact-timing-summary small{font-size:11px;color:#c5d3e0}
+.cc-contact-timing-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:9px}
+.cc-contact-window-card{display:grid;gap:5px;padding:11px 12px;
+ border:1px solid #516d87;border-radius:9px;background:#23384e;min-width:0}
+.cc-contact-window-card.cc-contact-window-open{border-color:#987d40;background:#463b26}
+.cc-contact-window-card>small{color:#dde4ec;font-size:11px}
+.cc-contact-window-name{background:none!important;border:0!important;padding:0!important;
+ text-align:left;color:#f3f7fc!important;font-weight:850;font-size:13px;cursor:pointer}
+.cc-contact-window-name:hover{text-decoration:underline}
+.cc-contact-window-label{font-size:11px;font-weight:750;color:#f1d595}
+.cc-contact-window-reason{font-size:11px;line-height:1.45;margin:3px 0;color:#e1e8ec}
+#control-app .cc-suggestions-drawer>.cc-contact-assistant{margin:8px 0 4px}
+@media(max-width:730px){.cc-contact-timing-head{flex-direction:column}
+ .cc-contact-timing-summary{flex-wrap:wrap}.cc-contact-timing-head button{width:100%}}

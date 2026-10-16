@@ -38,7 +38,7 @@ export function interpretMailContent({content="",subject="",direction="incoming"
   return {topic,signal:"ambiguous",confidence:"insufficient",reason_code:topic==="other"?"unrelated_or_unclear":"context_needs_review"};
 }
 const isId=x=>typeof x==="string"&&/^\d{1,35}$/.test(x);
-export async function interpretIndexedMessages(db,mailbox,readContent,{limit=12}={}){
+export async function interpretIndexedMessages(db,mailbox,readContent,{limit=6}={}){
   const enabled=typeof readContent==="function";
   if(!enabled)return {enabled:false,reason:"content_reader_unavailable",examined:0,new_signals:0,failures:0};
   const table=await db.prepare(
@@ -57,7 +57,9 @@ export async function interpretIndexedMessages(db,mailbox,readContent,{limit=12}
     examined++;
     try{
       const result=await readContent({folderId:msg.folder_id,messageId:msg.message_id});
-      const content=typeof result?.content==="string"?result.content:"";
+      // A provider failure/shape change must not be marked as reviewed.
+      if(typeof result?.content!=="string")throw Error("zoho_invalid_content_shape");
+      const content=result.content;
       const finding=interpretMailContent({content,direction:"incoming"});
       const address=String(msg.from_email||"").toLowerCase();
       // Keep only the exact source address. Never persist internal mailbox aliases as a lead.

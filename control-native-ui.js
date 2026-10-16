@@ -1015,20 +1015,20 @@ function edit(kind,entry={}){
     lastContact=grid.querySelector('[name="last_contact_date"]'),
     due=grid.querySelector('[name="due_date"]');
   if(stage&&lastContact&&due){
-   const suggestFollowup=()=>{
+   // A recommendation must never become a persisted deadline without a click.
+   const suggest=make("button","Escolher revisão em 7 dias","cc-neutral");
+   suggest.type="button";
+   suggest.onclick=()=>{
     if(due.value||!/^(sent_verified|reply_reported|negotiating)$/.test(stage.value)||
        !/^\d{4}-\d{2}-\d{2}$/.test(lastContact.value))return;
     const date=new Date(lastContact.value+"T12:00:00Z");
     if(Number.isNaN(date.getTime()))return;
     date.setUTCDate(date.getUTCDate()+7);
-    const suggested=date.toISOString().slice(0,10);
-    // Suggested and editable, never counted as an actually promised deadline.
-    if(suggested>=localToday())due.value=suggested;
+    const chosen=date.toISOString().slice(0,10);
+    if(chosen>=localToday())due.value=chosen;
    };
-   stage.addEventListener("change",suggestFollowup);
-   lastContact.addEventListener("change",suggestFollowup);
-   suggestFollowup();
-   grid.append(make("p","Com envio/resposta comprovados, sugere-se rever em 7 dias. Podes alterar a data; nunca é criada a partir de envios antigos sem prova.","cc-lead"));
+   grid.append(suggest);
+   grid.append(make("p","Opcional: podes escolher explicitamente uma revisão em 7 dias após contacto comprovado. Não inventamos prazos ao abrir a ficha.","cc-lead"));
   }
  }
  form.append(title,help,grid);

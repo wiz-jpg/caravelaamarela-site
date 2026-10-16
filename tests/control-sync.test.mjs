@@ -35,6 +35,7 @@ async function reader(request){
   if(url.pathname.endsWith("/folders"))return Response.json({ok:true,data:[
     {folderId:"11",folderName:"Inbox"},{folderId:"22",folderName:"Sent"}
   ]});
+  if(url.pathname.endsWith("/content"))return Response.json({ok:true,data:{content:"Temos interesse em avançar para um concerto no festival."}});
   if(url.pathname.endsWith("/messages")){
     const start=Number(url.searchParams.get("start"));
     if(start>1)return Response.json({ok:true,data:[]});
@@ -86,4 +87,27 @@ test("Zoho sync cannot run when Preview cofre is disabled",async()=>{
   env.CONTROL_VAULT_ENABLED="false";
   assert.equal((await request()).status,404);
   assert.equal(calls.length,0);
+});
+
+
+test("enabled mail-body analysis stores only review signals and never changes booking",async()=>{
+ db.exec(readFileSync(new URL("../migrations/0005_control_mail_signals.sql",import.meta.url),"utf8"));
+ env.CONTROL_MAIL_ANALYSIS_ENABLED="true";
+ const first=await (await request()).json();
+ assert.equal(first.ok,true);
+ assert.equal(first.analysis.enabled,true);
+ assert.equal(first.analysis.new_signals,1);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM control_mail_signals").get().n,1);
+ assert.equal(db.prepare("SELECT signal FROM control_mail_signals").get().signal,"interest");
+ const saved=JSON.stringify(db.prepare("SELECT * FROM control_mail_signals").all());
+ assert.ok(!saved.includes("Temos interesse"));
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM control_decision_events").get().n,0);
+ assert.equal((await (await request()).json()).analysis.new_signals,0);
+});
+test("content feature gate and migration requirement are visible without breaking metadata sync",async()=>{
+ env.CONTROL_MAIL_ANALYSIS_ENABLED="true";
+ const out=(await (await request()).json());
+ assert.equal(out.ok,true);
+ assert.equal(out.analysis.reason,"migration_required");
+ assert.equal(out.total_indexed,2);
 });

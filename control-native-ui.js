@@ -17,6 +17,7 @@ const CONTACT_FIELDS=[
   ["contact_window_start","Janela anual · início (MM-DD)","text"],
   ["contact_window_end","Janela anual · fim (MM-DD)","text"],
   ["contact_window_basis","Fundamento da janela","select"],
+  ["contact_window_target","Ano de aplicação da janela","select"],
   ["contact_window_reason","Porquê esta altura?","textarea"],
   ["contact_window_reference","Fonte / email / link de prova","text"],
   ["notes","Notas internas","textarea"]
@@ -24,6 +25,7 @@ const CONTACT_FIELDS=[
 const BOOKING_FIELDS=[
   ["contact_name","Entidade / promotor","text",true],["contact_id","Associar a contacto","select"],
   ["artist","Artista","text",true],["subject","Proposta / evento","text",true],
+  ["booking_year","Ano do concerto","select"],["booking_category","Tipo de oportunidade","select"],
   ["stage","Estado","select",true],["priority","Prioridade","select",true],
   ["contact_email","Email operacional","email"],
   ["fee_basis","Base do cachet","select"],
@@ -64,11 +66,15 @@ const choices={
  fit_level:{unreviewed:"Por avaliar",strong:"Bom encaixe (avaliado)",possible:"Possível encaixe",weak:"Baixa adequação"},
  strategic_reason:{none:"Ainda não definido",prestige:"Prestígio",new_territory:"Novo território",territory_consolidation:"Consolidar território",industry_contacts:"Contactos profissionais",event_relevance:"Relevância do evento"},
  contact_window_basis:{unknown:"Ainda por investigar",official:"Calendário / candidatura oficial",direct:"Informação recebida do organizador",history:"Padrão histórico registado",hypothesis:"Hipótese a confirmar"},
+ contact_window_target:{unknown:"Por confirmar · não determina urgência",same_year:"No ano do concerto",prior_year:"No ano anterior ao concerto"},
+ booking_year:{"":"Ano por classificar","2026":"2026","2027":"2027","2028":"2028","2029":"2029","2030":"2030","2031":"2031"},
+ booking_category:{unknown:"Por classificar",festival:"Festival",venue:"Venue / sala",other:"Outro evento"},
  evidence_type:{none:"Sem comprovativo",user_report:"Registo manual / relato",
    sent_message:"Email enviado — verificado",received_message:"Email recebido — verificado",
    agreement:"Contrato / acordo verificado"}
 };
 const state={historical:[],actions:[],saved:{contacts:[],booking:[]},busy:false,shown:{contacts:40,booking:30}};
+let boardYear=2027;
 const mergeSelection=new Set(); // Only in-memory; never auto-send or import into Zoho.
 const byId=new Map();
 const normalize=x=>String(x??"").trim();
@@ -294,7 +300,10 @@ function build(kind,heading){
  return root;
 }
 contactView.querySelector(".cc-panel-head")?.after(build("contacts","Fichas operacionais"));
-bookingView.querySelector(".cc-panel-head")?.after(build("booking","Negociações e follow-ups"));
+const bookingLegacy=build("booking","Registos e edição detalhada");
+const bookingAdvanced=make("details",undefined,"cc-booking-advanced");
+bookingAdvanced.append(make("summary","Base completa, pesquisa e edição detalhada"),bookingLegacy);
+bookingView.querySelector(".cc-panel-head")?.after(bookingAdvanced);
 function hint(holder,label,value){
  if(!value)return;
  const line=make("div",undefined,"cc-native-row");
@@ -526,6 +535,7 @@ function render(kind){
    hint(contactMore,"Responsável Caravela",r.owner||"Por atribuir");
    if(r.contact_window_start&&r.contact_window_reason)
      hint(contactMore,"Motivo da janela",r.contact_window_reason);
+   if(r.contact_window_start)hint(contactMore,"Ano da janela",choices.contact_window_target[r.contact_window_target||"unknown"]);
    if(r.__members?.length)hint(contactMore,"Fichas agrupadas",
      r.__members.length+" registos históricos/operacionais apresentados em conjunto, sem fusão");
    hint(contactMore,"Emails",r.emails?.join(", ")||"Sem endereço");
@@ -592,7 +602,8 @@ function render(kind){
    actions.append(contactDraft);
    const b=make("button","Nova proposta","cc-neutral");b.type="button";
    b.onclick=()=>{window.CaravelaControlApp?.openView("booking");edit("booking",{
-     contact_name:r.name,contact_id:r.id,
+     contact_name:r.name,contact_id:r.id,booking_year:String(boardYear),
+     booking_category:["festival","venue"].includes(r.kind)?r.kind:"unknown",
      contact_email:r.contact_policy==="allowed"&&!r.source_shared_email&&
        !((r.source_form_url||"")&&/formul[aá]rio/i.test(r.source_channel_quality||""))?
        (suggestedChannel(r)?.email||""):""
@@ -901,13 +912,18 @@ function editContactWindow(entry){
  why.maxLength=360;why.rows=2;
  const ref=input("Fonte / resposta / referência","input",source.contact_window_reference);
  ref.type="text";ref.maxLength=450;ref.placeholder="URL, conversa Zoho ou nota de pesquisa";
+ const target=input("Quando se abre esta janela relativamente ao concerto?","select","");
+ for(const [key,label] of Object.entries(choices.contact_window_target)){
+  const opt=make("option",label);opt.value=key;target.append(opt);
+ }
+ target.value=source.contact_window_target||"unknown";
  panel.append(fields);
  const actions=make("div",undefined,"cc-actions");
  const submit=make("button","Guardar janela","cc-primary");submit.type="submit";
  const clear=make("button","Sem janela comprovada","cc-neutral");clear.type="button";
  const cancel=make("button","Cancelar","cc-neutral");cancel.type="button";
  cancel.onclick=()=>{root.hidden=true;root.replaceChildren()};
- clear.onclick=()=>{start.value="";end.value="";basis.value="unknown";why.value="";ref.value=""};
+ clear.onclick=()=>{start.value="";end.value="";basis.value="unknown";target.value="unknown";why.value="";ref.value=""};
  actions.append(submit,clear,cancel);panel.append(actions);
  const notice=make("p","","status");notice.setAttribute("role","status");panel.append(notice);
  panel.onsubmit=async event=>{
@@ -925,7 +941,7 @@ function editContactWindow(entry){
   }
   const record={...source,contact_window_start:left,contact_window_end:right,
    contact_window_basis:basis.value,contact_window_reason:why.value.trim(),
-   contact_window_reference:ref.value.trim()};
+   contact_window_reference:ref.value.trim(),contact_window_target:left&&right?target.value:"unknown"};
   state.busy=true;submit.disabled=true;notice.textContent="A guardar no histórico...";
   try{
    const result=await api("contacts",source.revision?"PATCH":"POST",record);
@@ -944,6 +960,7 @@ function editContactWindow(entry){
  root.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function edit(kind,entry={}){
+ if(kind==="booking")bookingAdvanced.open=true;
  const root=$("cc-native-"+kind+"-editor"),form=make("form",undefined,"cc-native-form");
  root.hidden=false;root.replaceChildren();
  const title=make("h3",entry.revision?"Atualizar registo":"Novo registo operacional");
@@ -955,7 +972,8 @@ function edit(kind,entry={}){
  const defaults=kind==="booking"?{
   fee_basis:entry.revision?"legacy_unspecified":"artist_base",
   commission_mode:entry.revision?"unspecified":"standard",
-  billing_person:"unassigned",fit_level:"unreviewed",strategic_reason:"none"
+  billing_person:"unassigned",fit_level:"unreviewed",strategic_reason:"none",
+  booking_year:String(boardYear),booking_category:"unknown"
  }:{};
  for(const def of fields)editorField(grid,kind,def,{...defaults,...entry});
  if(kind==="contacts"){
@@ -964,6 +982,11 @@ function edit(kind,entry={}){
   grid.append(make("p","Ex.: 01/03 a 14/03 é 1–14 de março, todos os anos. Uma hipótese não entra na lista de recomendações. Fonte oficial ou resposta direta exigem uma referência.","cc-lead"));
  }
  if(kind==="booking"){
+  const linkedContact=grid.querySelector('[name="contact_id"]'),category=grid.querySelector('[name="booking_category"]');
+  if(linkedContact&&category)linkedContact.addEventListener("change",()=>{
+   const linked=byId.get(linkedContact.value);
+   if(linked&&["festival","venue"].includes(linked.kind))category.value=linked.kind;
+  });
   const artist=grid.querySelector('[name="artist"]'),commission=grid.querySelector('[name="commission_pct"]');
   if(artist&&commission){
    const suggest=()=>{
@@ -1615,6 +1638,25 @@ function renderDashboard(){
  }
  artist.append(artistGrid);root.append(artist);
 }
+
+window.addEventListener("caravela-board-open-booking",event=>{
+ const row=event.detail?.record;
+ if(row&&row.id){window.CaravelaControlApp?.openView("booking");edit("booking",row)}
+});
+window.addEventListener("caravela-board-create-booking",event=>{
+ const d=event.detail||{};
+ boardYear=Number(d.booking_year)||boardYear;
+ window.CaravelaControlApp?.openView("booking");
+ edit("booking",{contact_name:d.contact_name||"",contact_id:d.contact_id||"",
+  booking_year:String(boardYear),booking_category:d.booking_category||"unknown",
+  artist:d.artist||"",subject:d.subject||"",next_step:"Confirmar oportunidade e contacto"});
+});
+window.addEventListener("caravela-board-open-window",event=>{
+ const id=event.detail?.contact_id;
+ const row=contactRows().find(x=>x.id===id);
+ if(row){window.CaravelaControlApp?.openView("contacts");editContactWindow(row)}
+});
+
 // A small, on-demand explanation is displayed near the booking workflow.
 bookingView.querySelector(".cc-panel-head")?.after(colorLegend());
 function onOpened(event){

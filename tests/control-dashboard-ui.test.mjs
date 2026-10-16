@@ -40,7 +40,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261016business2/);
+ assert.match(html,/control-native-ui\.js\?v=20261017board1/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
@@ -79,4 +79,15 @@ test("one-window Zoho workflow uses a single human-approved operation",()=>{
  assert.match(ui,/CaravelaMailReviewTasks\.resolveBooking\(/);
  assert.doesNotMatch(ui,/transport\.request\("booking",old\?"PATCH":"POST"/);
  assert.match(transport,/mail\/resolve-booking/);
+});
+
+
+test("year-based booking and opportunities dashboard assets are loaded",()=>{
+ const html=get("crm-control.html"),app=get("control-app.js");
+ assert.match(html,/control-booking-board\.js\?v=20261017board1/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017board1/);
+ assert.match(html,/control-opportunities-ui\.js\?v=20261017radar1/);
+ assert.match(app,/data-view="opportunities"/);
+ assert.match(app,/\["opportunities", "Oportunidades"/);
+ assert.match(get("control-native-ui.js"),/cc-booking-advanced/);
 });

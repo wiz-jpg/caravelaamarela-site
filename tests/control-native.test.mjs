@@ -351,3 +351,29 @@ test("subjective fit must be documented, not inferred or confused with deal stat
  assert.equal(validateNative("booking",deal({strategic_reason:"prestige"})),null);
  assert.equal(validateNative("booking",deal({fit_level:"almost_certain",fit_reason:"test"})),null);
 });
+
+
+test("booking year and category are recorded without rewriting old records",async()=>{
+ const created=await req("booking","POST",deal({booking_year:"2027",booking_category:"festival"}));
+ assert.equal(created.status,201);
+ assert.equal((await created.json()).record.booking_year,"2027");
+ assert.equal(validateNative("booking",deal({booking_year:"2028",event_date:"2027-05-01"})),null);
+ assert.equal(validateNative("booking",deal()).booking_year,"");
+});
+test("radar opportunities use append-only D1 and remain in native export",async()=>{
+ const base={title:"International call",provider:"Public arts body",
+   source_url:"https://example.org/call",kind:"international",status:"research",
+   artist:"WILDCHAINS",country:"Portugal",deadline:"2027-04-10",review_date:"",
+   verified_on:"",owner:"Booking",next_step:"Read official notice"};
+ const result=await req("opportunities","POST",base);
+ assert.equal(result.status,201);
+ const first=(await result.json()).record;
+ assert.equal(first.kind,"international");
+ const updated=await req("opportunities","PATCH",{...base,id:first.id,revision:first.revision,status:"interesting"});
+ assert.equal(updated.status,200);
+ assert.equal((await req("opportunities","PATCH",{...base,id:first.id,revision:first.revision})).status,409);
+ assert.equal((await (await req("opportunities")).json()).records.length,1);
+ const backup=await (await req("export")).json();
+ assert.equal(backup.count,2);
+ assert.equal(backup.events[0].operation,"crm_opportunity_v1");
+});

@@ -1,0 +1,89 @@
+/* Caravela Control / season-based booking and source-led opportunity radar. */
+#control-app .cc-booking-board,#control-app .cc-radar{
+ margin:16px 0 24px;padding:19px;background:#18201d;border:1px solid #384c43;border-radius:16px;color:#f2f3e9
+}
+#control-app .cc-booking-board-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+#control-app .cc-booking-board-top h2{font-size:26px;font-weight:800;letter-spacing:-.025em;margin:4px 0 5px}
+#control-app .cc-booking-eyebrow{font-size:10px;font-weight:800;letter-spacing:.18em;color:#d5bf7f}
+#control-app .cc-booking-board-top p{max-width:620px;font-size:12px;margin:0}
+#control-app .cc-booking-board-controls{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+#control-app .cc-booking-board-controls label{font-size:11px;display:grid;gap:6px;margin:0}
+#control-app .cc-booking-board-controls select{background:#10201c;border:1px solid #5b756b;color:#f3f5ee;border-radius:8px;min-width:100px;padding:9px}
+#control-app .cc-booking-board-controls button{padding:10px 12px;margin:0;font-size:12px}
+#control-app .cc-booking-board-body>section{margin:20px 0}
+#control-app .cc-board-group>h3{font-size:19px;margin:0 0 2px;color:#f0dfb0}
+#control-app .cc-board-group>.cc-lead{font-size:12px;max-width:800px;margin:2px 0 12px}
+#control-app .cc-board-rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(225px,1fr);
+ overflow-x:auto;overscroll-behavior-x:contain;gap:11px;padding:1px 1px 13px;scrollbar-color:#687a66 transparent}
+#control-app .cc-board-lane{min-width:225px;max-width:355px;background:#121a19;border:1px solid #314b41;border-radius:12px;overflow:hidden}
+#control-app .cc-board-lane-head{min-height:55px;display:flex;align-items:center;justify-content:space-between;
+ gap:10px;padding:12px 11px;background:#202a26;border-bottom:1px solid #40564d}
+#control-app .cc-board-lane-head strong{font-size:12px;line-height:1.3}
+#control-app .cc-board-lane-count{font-size:12px;background:#34463b;border-radius:999px;padding:2px 8px;color:#e5eee4}
+#control-app .cc-board-lane-late .cc-board-lane-head{border-left:3px solid #bd806b}
+#control-app .cc-board-lane-now .cc-board-lane-head{border-left:3px solid #d3b95f}
+#control-app .cc-board-lane-soon .cc-board-lane-head{border-left:3px solid #638ab3}
+#control-app .cc-board-lane-confirmed .cc-board-lane-head{border-left:3px solid #79a786}
+#control-app .cc-board-lane-declined .cc-board-lane-head{border-left:3px solid #b1787a}
+#control-app .cc-board-lane-list{display:grid;align-content:start;gap:9px;padding:9px;max-height:580px;overflow-y:auto}
+#control-app .cc-board-item{display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+ border-radius:9px;background:#23302a;border:1px solid #46594c;padding:11px;min-width:0}
+#control-app .cc-board-candidate{background:#192c30;border-style:dashed;border-color:#50717c}
+#control-app .cc-board-item-title{font-size:13px;line-height:1.3;overflow-wrap:anywhere}
+#control-app .cc-board-item>small{font-size:11px;color:#c7d4cb;overflow-wrap:anywhere}
+#control-app .cc-board-artist{font-size:10px;background:#37483f;border:1px solid #59725e;
+ padding:3px 7px;border-radius:30px;line-height:1.3}
+#control-app .cc-board-action-label{font-size:11px;color:#f0e4bf;margin:2px 0 3px}
+#control-app .cc-board-item button{width:100%;font-size:11px;margin:4px 0 0;padding:7px 8px;text-align:center}
+#control-app .cc-board-item-actions{display:grid;gap:6px;width:100%}
+#control-app .cc-board-empty{color:#a9b7ae;font-size:11px;padding:9px 4px;margin:0}
+#control-app .cc-board-unclassified,#control-app .cc-booking-advanced{
+ background:#19211d;border:1px solid #3d5145;border-radius:10px;padding:12px 15px;margin:13px 0
+}
+#control-app .cc-board-unclassified summary,#control-app .cc-booking-advanced>summary{
+ cursor:pointer;color:#e6e9dd;font-size:12px;font-weight:750
+}
+#control-app .cc-board-unclassified button{padding:7px 10px;margin:6px 5px 3px 0;font-size:11px}
+#control-app .cc-booking-advanced .cc-native{margin-top:13px;border:0;padding:12px}
+#control-app .cc-radar>h2{font-size:22px;margin:0 0 5px}
+#control-app .cc-radar>.cc-lead{font-size:12px;max-width:790px}
+#control-app .cc-radar-tools{display:grid;grid-template-columns:minmax(200px,1fr) auto auto;gap:9px;margin:17px 0}
+#control-app .cc-radar-tools input{padding:10px;background:#111c18;color:#fff;border:1px solid #667d70;border-radius:8px}
+#control-app .cc-radar-tools button{font-size:12px;margin:0}
+#control-app .cc-radar section{margin-top:20px}
+#control-app .cc-radar section h3{font-size:17px;margin:0 0 11px}
+#control-app .cc-radar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+#control-app .cc-radar-item{background:#1c2c25;border:1px solid #415a4c;border-radius:12px;
+ padding:14px;display:flex;flex-direction:column;gap:7px;min-width:0}
+#control-app .cc-radar-item strong{font-size:14px}
+#control-app .cc-radar-item small{font-size:11px;color:#b9cebe}
+#control-app .cc-radar-item p{font-size:12px;line-height:1.5;margin:4px 0}
+#control-app .cc-radar-state{color:#e8d5a7;font-size:11px;font-weight:700}
+#control-app .cc-radar-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:9px}
+#control-app .cc-radar-actions button,#control-app .cc-radar-actions a{
+ display:inline-flex;align-items:center;justify-content:center;border:1px solid #7b8a74;
+ padding:8px 10px;border-radius:8px;text-decoration:none;font-weight:650;font-size:11px;
+ background:#24372d;color:#f0f3e9;margin:0
+}
+#control-app .cc-radar-editor{margin:20px 0;border:1px solid #77704b;border-radius:13px;padding:18px;background:#24241f}
+#control-app .cc-radar-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+#control-app .cc-radar-form h3,#control-app .cc-radar-form .cc-radar-actions,
+#control-app .cc-radar-form [role=status]{grid-column:1/-1}
+#control-app .cc-radar-form label{display:flex;flex-direction:column;gap:6px;font-size:12px}
+#control-app .cc-radar-form label>input,#control-app .cc-radar-form label>select,
+#control-app .cc-radar-form label>textarea{width:100%;background:#111b17;color:#f6f4ee;border:1px solid #687b69;
+ border-radius:8px;padding:10px}
+#control-app .cc-radar-form label>textarea{min-height:80px}
+@media(max-width:900px){
+ #control-app .cc-booking-board-top{flex-direction:column}
+ #control-app .cc-board-rail{grid-auto-columns:minmax(235px,75vw)}
+}
+@media(max-width:650px){
+ #control-app .cc-booking-board,#control-app .cc-radar{padding:12px}
+ #control-app .cc-booking-board-top h2{font-size:21px}
+ #control-app .cc-booking-board-controls{width:100%;display:grid;grid-template-columns:1fr 1fr}
+ #control-app .cc-booking-board-controls button{width:100%}
+ #control-app .cc-radar-tools{grid-template-columns:1fr 1fr}
+ #control-app .cc-radar-tools input{grid-column:1/-1}
+ #control-app .cc-radar-form{grid-template-columns:1fr}
+}

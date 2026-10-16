@@ -1,7 +1,7 @@
 /* Caravela Control native working records — Preview only.
  * Append-only manual records. Historical snapshots, Zoho and Sheets are immutable.
  * Statuses require human-entered evidence; email observation never promotes a deal. */
-const CONTACT_OP="crm_contact_v1",BOOKING_OP="crm_booking_v1",FINANCE_OP="crm_finance_v1";
+const CONTACT_OP="crm_contact_v1",BOOKING_OP="crm_booking_v1",FINANCE_OP="crm_finance_v1",OPPORTUNITY_OP="crm_opportunity_v1";
 const FINANCE_TYPES=new Set(["income","expense"]);
 const FINANCE_CATEGORIES=new Set(["agency_commission","creative_service","other_income","travel","production","marketing","other_expense"]);
 const FINANCE_STATUSES=new Set(["planned","due","settled","cancelled"]);
@@ -24,6 +24,10 @@ const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DAY=/^\d{4}-\d{2}-\d{2}$/;
 const MMDD=/^(\d{2})-(\d{2})$/;
 const WINDOW_BASIS=new Set(["unknown","official","direct","history","hypothesis"]);
+const WINDOW_TARGET=new Set(["unknown","same_year","prior_year"]);
+const BOOKING_CATEGORIES=new Set(["unknown","festival","venue","other"]);
+const RADAR_TYPES=new Set(["international","grant","showcase","contest","program","other"]);
+const RADAR_STATES=new Set(["research","interesting","preparing","submitted","awarded","declined","closed"]);
 function validWindowDate(value){
   const parts=MMDD.exec(value);
   if(!parts)return false;
@@ -52,12 +56,14 @@ function contact(input){
   }
   if(!row.name||!day(row.review_date)||!KINDS.has(input.kind)||!POLICIES.has(input.contact_policy))return null;
   row.contact_window_basis=input.contact_window_basis??"unknown";
-  if(!WINDOW_BASIS.has(row.contact_window_basis))return null;
+  row.contact_window_target=input.contact_window_target??"unknown";
+  if(!WINDOW_BASIS.has(row.contact_window_basis)||!WINDOW_TARGET.has(row.contact_window_target))return null;
   const setWindow=!!(row.contact_window_start||row.contact_window_end);
   if(setWindow&&(!validWindowDate(row.contact_window_start)||!validWindowDate(row.contact_window_end) ||
       row.contact_window_basis==="unknown"||!row.contact_window_reason))return null;
   if(!setWindow&&(row.contact_window_start||row.contact_window_end||
-      row.contact_window_basis!=="unknown"||row.contact_window_reason||row.contact_window_reference))return null;
+      row.contact_window_basis!=="unknown"||row.contact_window_target!=="unknown"||
+      row.contact_window_reason||row.contact_window_reference))return null;
   // An "official" or directly confirmed window must have an inspectable evidence reference.
   if(setWindow&&["official","direct"].includes(row.contact_window_basis)&&
      !row.contact_window_reference)return null;
@@ -113,6 +119,12 @@ function booking(input){
     if(row[k]===null)return null;
   }
   if(!row.contact_name||!row.artist||!row.subject||!row.next_step)return null;
+  row.booking_year=field(input.booking_year??"",4);
+  row.booking_category=input.booking_category??"unknown";
+  if(row.booking_year===null||(row.booking_year!==""&&!/^20[2-9]\d$/.test(row.booking_year))||
+     !BOOKING_CATEGORIES.has(row.booking_category)||
+     (row.booking_year&&row.event_date&&row.booking_year!==row.event_date.slice(0,4)))
+    return null;
   if(!STATUSES.has(input.stage)||!PRIORITIES.has(input.priority)||!EVIDENCES.has(input.evidence_type))return null;
   if(row.contact_id&&!validId(row.contact_id))return null;
   if(row.contact_email&&!EMAIL.test(row.contact_email))return null;
@@ -172,6 +184,25 @@ function booking(input){
   if(row.stage==="reply_reported"&&row.evidence_type==="none")return null;
   return row;
 }
+function opportunity(input){
+  if(!input||typeof input!=="object"||Array.isArray(input))return null;
+  const row={};
+  for(const [k,max] of Object.entries({title:180,provider:140,source_url:600,
+    artist:110,country:100,deadline:10,review_date:10,verified_on:10,
+    owner:110,next_step:400,eligibility_note:600,notes:1200})){
+    row[k]=field(input[k]??"",max);if(row[k]===null)return null;
+  }
+  if(!row.title||!row.provider||!row.next_step||
+     !RADAR_TYPES.has(input.kind)||!RADAR_STATES.has(input.status)||
+     !day(row.deadline)||!day(row.review_date)||!day(row.verified_on))return null;
+  if(!row.source_url)return null;
+  try{
+    const u=new URL(row.source_url);
+    if(u.protocol!=="https:"||u.username||u.password||
+       !u.hostname.includes(".")||u.hostname.length>180)return null;
+  }catch{return null}
+  return {...row,kind:input.kind,status:input.status};
+}
 function finance(input){
   if(!input||typeof input!=="object"||Array.isArray(input))return null;
   const row={};
@@ -197,10 +228,13 @@ function finance(input){
     amount,currency:"EUR"};
 }
 export function validateNative(kind,input){
-  return kind==="contacts"?contact(input):kind==="booking"?booking(input):kind==="finance"?finance(input):null;
+  return kind==="contacts"?contact(input):kind==="booking"?booking(input):
+    kind==="finance"?finance(input):kind==="opportunities"?opportunity(input):null;
 }
-const operation=kind=>kind==="contacts"?CONTACT_OP:kind==="booking"?BOOKING_OP:kind==="finance"?FINANCE_OP:null;
-const prefix=kind=>kind==="contacts"?"crm-contact:":kind==="booking"?"crm-booking:":"crm-finance:";
+const operation=kind=>kind==="contacts"?CONTACT_OP:kind==="booking"?BOOKING_OP:
+  kind==="finance"?FINANCE_OP:kind==="opportunities"?OPPORTUNITY_OP:null;
+const prefix=kind=>kind==="contacts"?"crm-contact:":kind==="booking"?"crm-booking:":
+  kind==="finance"?"crm-finance:":"crm-opportunity:";
 async function listAll(db,kind){
   const op=operation(kind);
   if(!op)return [];
@@ -315,13 +349,13 @@ export async function nativeExport(env){
  if(!env.ZOHO_DB)return fail("not_found",404);
  try{
   const count=await env.ZOHO_DB.prepare(
-    "SELECT COUNT(*) AS n FROM control_decision_events WHERE operation IN (?,?,?)"
-  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP).first();
+    "SELECT COUNT(*) AS n FROM control_decision_events WHERE operation IN (?,?,?,?)"
+  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP,OPPORTUNITY_OP).first();
   if((count?.n||0)>15000)return fail("export_event_limit",409);
   const result=await env.ZOHO_DB.prepare(
     "SELECT id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms "+
-    "FROM control_decision_events WHERE operation IN (?,?,?) ORDER BY created_ms ASC,rowid ASC LIMIT 15001"
-  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP).all();
+    "FROM control_decision_events WHERE operation IN (?,?,?,?) ORDER BY created_ms ASC,rowid ASC LIMIT 15001"
+  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP,OPPORTUNITY_OP).all();
   const events=result.results||[];
   if(events.length!==(count?.n||0))return fail("export_incomplete",503);
   return out({schema:"caravela.crm.native-backup.v1",exported_at:new Date().toISOString(),
@@ -347,7 +381,7 @@ function appendRevision(db,kind,id,record,actor,revision,mailReview=null){
       "AND t.message_id=? AND t.status='pending' AND t.revision=? "+
       "AND s.topic='booking' AND s.confidence='rule_based' AND lower(s.external_email)=?)":"");
   const query=db.prepare(changeSql).bind(eventId,entity,
-    kind==="booking"||kind==="finance"?record.artist:null,op,
+    kind==="booking"||kind==="finance"||kind==="opportunities"?record.artist:null,op,
     kind==="contacts"?record.contact_policy:record.stage||record.status,
     record.next_step||"Atualização manual",JSON.stringify(record),now,
     entity,op,...(revision?[revision]:[]),

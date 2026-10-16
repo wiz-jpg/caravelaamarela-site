@@ -148,7 +148,7 @@ export async function handleControl(request,env,url,zohoReader) {
   const mailDraftRoute=route==="mail/drafts";
   const nativeArchiveRoute=route==="native/archive";
   const nativeExportRoute=route==="native/export";
-  const nativeRoute=route==="native/contacts"||route==="native/booking"||route==="native/finance";
+  const nativeRoute=route==="native/contacts"||route==="native/booking"||route==="native/finance"||route==="native/opportunities";
   const limitedReads=new Set(["ops/overview"]);
   const syncRoutes=new Set(["zoho/sync","sheets/sync"]);
   const partnershipRoute=route==="partnerships"&&

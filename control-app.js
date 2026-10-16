@@ -18,7 +18,7 @@
     '<div class="cc-logo"><span class="cc-mark">C</span><div><strong>CARAVELA<br>CONTROL</strong><small>Workspace privado</small></div></div>' +
     '<nav class="cc-nav" aria-label="Navegação principal"><div class="cc-nav-label">Trabalho diário</div>' +
     '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Início</span></button>' +
-    '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking</span></button>' +
+    '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking</span></button><button type="button" data-view="opportunities" data-min-role="manager"><span class="cc-nav-symbol">⌕</span><span class="cc-nav-text">Oportunidades</span></button>' +
     '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
     '<details class="cc-nav-more"><summary><span class="cc-nav-symbol">▦</span><span class="cc-nav-text">Outras áreas</span></summary>' +
     '<button type="button" data-view="finance" data-min-role="manager"><span class="cc-nav-symbol">€</span><span class="cc-nav-text">Finanças</span></button>' +
@@ -55,7 +55,8 @@
   const viewInfo = [
     ["dashboard", "Início", "Prioridades do dia, follow-ups, oportunidades e estado dos artistas."],
     ["contacts", "Contactos", "Entidades, interlocutores e restrições de contacto."],
-    ["booking", "Booking", "Propostas em curso, decisões e próximos passos."],
+    ["booking", "Booking", "Programação por ano, festivais e venues."],
+    ["opportunities", "Oportunidades", "Apoios à internacionalização, candidaturas e showcases."],
     ["artists", "Artistas", "Projetos, condições e histórico das fichas originais."],
     ["finance", "Finanças", "Comissões, serviços, despesas e valores a receber — apenas movimentos registados."],
     ["partnerships", "Parcerias", "Marcas, entidades e parceiros estratégicos: histórico, propostas, evidência e próximos passos."],

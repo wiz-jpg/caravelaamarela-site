@@ -17,14 +17,12 @@
  const content=make("div",undefined,"cc-review-sections");
  const caveats=make("p","Os sinais das conversas são classificações automáticas para revisão. O texto integral não fica guardado no CRM. Nenhuma resposta confirma, por si só, um concerto ou uma autorização de envio.","cc-lead");
  box.append(head,status,metrics,content,caveats);
+ // The detailed reconciliation assistant is available on demand, not before
+ // the primary contact directory or the pending-message work queue.
  const native=document.getElementById("cc-native-contacts");
- const originalReview=container.querySelector(".cc-contact-triage");
- if(originalReview){
-  const archived=document.createElement("details");archived.className="cc-archive-toggle";
-  archived.append(make("summary","Revisão manual anterior · prazos e relações já registadas"));
-  originalReview.before(archived);archived.append(originalReview);
-  archived.before(box);
- }else if(native)native.before(box);else container.append(box);
+ const drawer=document.createElement("details");drawer.className="cc-archive-toggle cc-suggestions-drawer";
+ drawer.append(make("summary","Sugestões avançadas · duplicados e correspondências Zoho"),box);
+ if(native)native.after(drawer);else container.append(drawer);
  let busy=false,loaded=false;
  const date=ms=>ms?new Date(ms).toLocaleDateString("pt-PT",{day:"2-digit",month:"short",year:"numeric"}):"sem data confirmada";
  const action=(payload)=>window.dispatchEvent(new CustomEvent("caravela-control-contact-action",{detail:payload}));

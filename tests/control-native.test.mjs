@@ -277,3 +277,32 @@ test("a manual contacted state schedules a follow-up and keeps evidence as a use
  assert.equal(list[0].due_date,"");
  assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,2);
 });
+
+test("contact-specific booking season is append-only, referenced and not a send permission",async()=>{
+ const first=await req("contacts","POST",contact({
+  contact_window_start:"09-10",contact_window_end:"10-24",
+  contact_window_basis:"history",
+  contact_window_reason:"Período identificado na correspondência anterior",
+  contact_window_reference:"Arquivo do promotor · mensagem de 2025"
+ }));
+ assert.equal(first.status,201);
+ const initial=(await first.json()).record;
+ assert.equal(initial.contact_window_start,"09-10");
+ assert.equal(initial.contact_policy,"review");
+ const changed=await req("contacts","PATCH",contact({
+  id:initial.id,revision:initial.revision,
+  contact_window_start:"10-01",contact_window_end:"10-14",
+  contact_window_basis:"direct",
+  contact_window_reason:"Organizador comunicou janela de submissão",
+  contact_window_reference:"Zoho mensagem verificada manualmente"
+ }));
+ assert.equal(changed.status,200);
+ const latest=(await changed.json()).record;
+ assert.equal(latest.contact_window_basis,"direct");
+ assert.equal(latest.contact_policy,"review");
+ const events=sqlite.prepare("SELECT evidence_json FROM control_decision_events WHERE operation='crm_contact_v1' ORDER BY created_ms,rowid").all();
+ assert.equal(events.length,2);
+ assert.equal(JSON.parse(events[0].evidence_json).contact_window_start,"09-10");
+ assert.equal(JSON.parse(events[1].evidence_json).contact_window_start,"10-01");
+ assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_mail_headers").get().n,0);
+});

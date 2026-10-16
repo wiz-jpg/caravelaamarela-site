@@ -63,7 +63,19 @@ async function latestRun(db,provider){
   const runs=attempts.results||[];
   const success=runs.find(r=>r.status==="complete");
   const auto=runs.find(r=>r.status==="complete"&&triggerFrom(r.meta_json)==="cron");
-  return {provider,last_run_ms:runs[0]?.completed_ms||runs[0]?.started_ms||null,
+  const autoContent=runs.find(r=>{
+    if(r.status!=="complete"||triggerFrom(r.meta_json)!=="cron")return false;
+    try{const meta=JSON.parse(r.meta_json||"{}");return meta.analysis_enabled===true&&meta.analysis_failures===0}
+    catch{return false}
+  });
+  let currentAnalysis={enabled:false,failures:null,reason:null};
+  try{const meta=JSON.parse(runs[0]?.meta_json||"{}");
+    currentAnalysis={enabled:meta.analysis_enabled===true,failures:meta.analysis_failures??null,
+      reason:typeof meta.analysis_reason==="string"?meta.analysis_reason:null}
+  }catch{}
+  return {provider,last_analysis_run:currentAnalysis,
+    last_automatic_analysis_success_ms:autoContent?.completed_ms||null,
+    last_run_ms:runs[0]?.completed_ms||runs[0]?.started_ms||null,
     last_status:runs[0]?.status||"never",
     last_success_ms:success?.completed_ms||null,
     last_automatic_success_ms:auto?.completed_ms||null,

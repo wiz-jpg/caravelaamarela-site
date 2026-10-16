@@ -250,3 +250,13 @@
 .cc-partner-stage--paused,.cc-partner-stage--closed{color:#b5bfcc;background:#2d3139;border-color:#5b6571}
 
 .cc-partner-stage--declined{color:#f5aca8;background:#412627;border-color:#ab5b5c}
+
+/* Proof-of-sync indicator. Never use green until fresh cron history exists. */
+.cc-mail-automation-status{display:flex;align-items:center;justify-content:space-between;gap:13px;
+ background:#182432;border:1px solid #526271;border-radius:12px;padding:13px 17px;margin:12px 0}
+.cc-mail-automation-status strong{font-size:13px;color:#f2f4f6}
+.cc-mail-automation-status p{font-size:12px;color:#e7be82;margin:5px 0;line-height:1.45}
+.cc-mail-automation-status p.cc-zoho-current{color:#8cd0ae}
+.cc-mail-automation-status small{font-size:11px;color:#aebdcb;line-height:1.4}
+.cc-mail-automation-status button{font-size:12px;padding:9px 12px;flex-shrink:0}
+@media(max-width:670px){.cc-mail-automation-status{align-items:flex-start;flex-direction:column}}

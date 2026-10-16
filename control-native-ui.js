@@ -96,6 +96,13 @@ function contactRows(){
  byId.clear();rows.forEach(x=>byId.set(x.id,x));return rows;
 }
 function nativeRows(kind){return kind==="contacts"?contactRows():get("booking").slice()}
+function displayWindowDate(value){
+ return /^\d{2}-\d{2}$/.test(value||"")?value.slice(3,5)+"/"+value.slice(0,2):"";
+}
+function storeWindowDate(value){
+ const match=/^(\d{2})\/(\d{2})$/.exec(String(value||"").trim());
+ return match?match[2]+"-"+match[1]:"";
+}
 function windowInfo(contact){
  const tool=window.CaravelaContactWindow;
  if(!tool)return {status:"unknown",label:"Janela por pesquisar"};
@@ -517,6 +524,11 @@ function render(kind){
   const actions=make("div",undefined,"cc-native-card-actions");
   const button=make("button",r.revision?"Atualizar":"Editar ficha","cc-neutral");
   button.type="button";button.onclick=()=>edit(kind,r.__members?.find(x=>x.id===r.id)||r);actions.append(button);
+  if(kind==="contacts"){
+   const windowButton=make("button","Definir janela ideal","cc-neutral");windowButton.type="button";
+   windowButton.onclick=()=>editContactWindow(r);
+   actions.append(windowButton);
+  }
   if(kind==="contacts"&&r.__members?.length){
    const extra=make("details",undefined,"cc-contact-variants");
    extra.append(make("summary","Rever as "+r.__members.length+" fichas originais"));
@@ -689,12 +701,14 @@ function editorField(parent,kind,def,current){
  field.id=box.htmlFor;field.name=key;field.required=!!required;
  if(type==="number"){field.min="0";field.max="10000000";field.step="0.01"}
  if(key==="contact_window_start"||key==="contact_window_end"){
-   field.placeholder="MM-DD · ex.: 03-01";field.maxLength=5;field.pattern="[0-9]{2}-[0-9]{2}";
-   field.title="Indica mês e dia, por exemplo 03-01; o período repete-se anualmente.";
+   field.placeholder="DD/MM · ex.: 01/03";field.maxLength=5;field.pattern="[0-9]{2}/[0-9]{2}";
+   field.title="Indica dia e mês, por exemplo 01/03; o período repete-se anualmente.";
  }
  if(key==="contact_window_reference")field.placeholder="Link, email ou referência verificável";
  if(key==="emails")field.value=(current.emails||[]).join(", ");
  else if(key==="fee_amount"||key==="commission_pct")field.value=current[key]===null||current[key]===undefined?"":current[key];
+ else if(key==="contact_window_start"||key==="contact_window_end")
+   field.value=displayWindowDate(current[key]);
  else field.value=current[key]??({
    kind:"venue",contact_policy:"review",authorization_source:"none",contact_window_basis:"unknown",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
  }[key]||"");
@@ -809,6 +823,75 @@ function contactRelationships(form,entry){
    duplicate_decision:decision.value};
  };
 }
+function editContactWindow(entry){
+ const source=entry.__members?.find(x=>x.id===entry.id)||entry;
+ const root=$("cc-native-contacts-editor");
+ if(!root)return;
+ root.hidden=false;root.replaceChildren();
+ const panel=make("form",undefined,"cc-window-editor");
+ panel.append(make("h3","Altura ideal · "+source.name),
+  make("p","Regista uma janela anual apoiada por evidência. Isto apenas sugere quando preparar o contacto; não autoriza emails.","cc-lead"));
+ const fields=make("div",undefined,"cc-window-editor-grid");
+ function input(label,tag,value){
+  const box=make("label",label),el=make(tag);el.value=value||"";
+  box.append(el);fields.append(box);return el;
+ }
+ const start=input("Desde (DD/MM)","input",displayWindowDate(source.contact_window_start));
+ const end=input("Até (DD/MM)","input",displayWindowDate(source.contact_window_end));
+ for(const el of [start,end]){
+  el.type="text";el.placeholder="DD/MM";el.maxLength=5;el.pattern="[0-9]{2}/[0-9]{2}";
+ }
+ const basis=input("Como sabemos esta altura?","select",source.contact_window_basis||"unknown");
+ for(const [value,label] of Object.entries(choices.contact_window_basis)){
+  const option=make("option",label);option.value=value;basis.append(option);
+ }
+ basis.value=source.contact_window_basis||"unknown";
+ const why=input("Porquê este período?","textarea",source.contact_window_reason);
+ why.maxLength=360;why.rows=2;
+ const ref=input("Fonte / resposta / referência","input",source.contact_window_reference);
+ ref.type="text";ref.maxLength=450;ref.placeholder="URL, conversa Zoho ou nota de pesquisa";
+ panel.append(fields);
+ const actions=make("div",undefined,"cc-actions");
+ const submit=make("button","Guardar janela","cc-primary");submit.type="submit";
+ const clear=make("button","Sem janela comprovada","cc-neutral");clear.type="button";
+ const cancel=make("button","Cancelar","cc-neutral");cancel.type="button";
+ cancel.onclick=()=>{root.hidden=true;root.replaceChildren()};
+ clear.onclick=()=>{start.value="";end.value="";basis.value="unknown";why.value="";ref.value=""};
+ actions.append(submit,clear,cancel);panel.append(actions);
+ const notice=make("p","","status");notice.setAttribute("role","status");panel.append(notice);
+ panel.onsubmit=async event=>{
+  event.preventDefault();if(state.busy)return;
+  const left=storeWindowDate(start.value),right=storeWindowDate(end.value);
+  const tool=window.CaravelaContactWindow;
+  if((start.value||end.value)&&(!tool?.validMD(left)||!tool?.validMD(right))){
+   notice.textContent="Datas inválidas. Indica DD/MM, por exemplo 01/03 e 14/03.";return;
+  }
+  if((left||right)&&(!why.value.trim()||basis.value==="unknown")){
+   notice.textContent="Indica o fundamento e o motivo deste período.";return;
+  }
+  if((left||right)&&["official","direct"].includes(basis.value)&&!ref.value.trim()){
+   notice.textContent="Indica a referência verificável da fonte oficial ou resposta direta.";return;
+  }
+  const record={...source,contact_window_start:left,contact_window_end:right,
+   contact_window_basis:basis.value,contact_window_reason:why.value.trim(),
+   contact_window_reference:ref.value.trim()};
+  state.busy=true;submit.disabled=true;notice.textContent="A guardar no histórico...";
+  try{
+   const result=await api("contacts",source.revision?"PATCH":"POST",record);
+   const body=await result.json();
+   if(!result.ok)throw Error(({
+    invalid_record:"Confirma as datas, origem e dados da ficha original.",
+    historical_contact_blocked:"As restrições históricas são obrigatórias.",
+    revision_conflict:"A ficha mudou noutra sessão. Atualiza antes de guardar."
+   })[body.error]||body.error||"Não foi possível guardar");
+   await load("contacts");
+   root.hidden=true;root.replaceChildren();
+  }catch(error){notice.textContent=error.message}
+  finally{state.busy=false;submit.disabled=false}
+ };
+ root.append(panel);
+ root.scrollIntoView({behavior:"smooth",block:"start"});
+}
 function edit(kind,entry={}){
  const root=$("cc-native-"+kind+"-editor"),form=make("form",undefined,"cc-native-form");
  root.hidden=false;root.replaceChildren();
@@ -822,7 +905,7 @@ function edit(kind,entry={}){
  if(kind==="contacts"){
   const basis=grid.querySelector('[name="contact_window_basis"]');
   if(basis&&!basis.value)basis.value="unknown";
-  grid.append(make("p","Ex.: 03-01 a 03-14 é 1–14 de março, todos os anos. Uma hipótese não entra na lista de recomendações. Fonte oficial ou resposta direta exigem uma referência.","cc-lead"));
+  grid.append(make("p","Ex.: 01/03 a 14/03 é 1–14 de março, todos os anos. Uma hipótese não entra na lista de recomendações. Fonte oficial ou resposta direta exigem uma referência.","cc-lead"));
  }
  if(kind==="booking"){
   const artist=grid.querySelector('[name="artist"]'),commission=grid.querySelector('[name="commission_pct"]');
@@ -869,6 +952,13 @@ function edit(kind,entry={}){
   const record={};
   for(const [k] of fields)record[k]=form.elements.namedItem(k).value.trim();
   if(kind==="contacts"){
+   for(const key of ["contact_window_start","contact_window_end"]){
+     const input=record[key];
+     if(input&&!/^\d{2}\/\d{2}$/.test(input)){
+       notice.textContent="Usa DD/MM na janela anual, por exemplo 01/03.";return;
+     }
+     record[key]=storeWindowDate(input);
+   }
    record.emails=record.emails?record.emails.split(",").map(x=>x.trim()).filter(Boolean):[];
    record.origin_id=entry.origin_id||"";
    record.source_label=entry.source_label||"Registo manual";
@@ -1230,7 +1320,7 @@ function renderDashboard(){
   for(const {contact:entry,window:w} of group.slice(0,5)){
    const item=make("article",undefined,"cc-contact-window-card cc-contact-window-"+w.status);
    const action=make("button",entry.name,"cc-contact-window-name");action.type="button";
-   action.onclick=()=>{window.CaravelaControlApp?.openView("contacts");edit("contacts",entry)};
+   action.onclick=()=>{window.CaravelaControlApp?.openView("contacts");editContactWindow(entry)};
    item.append(action,make("span",w.status==="open"?"Janela aberta":"Abre em "+w.daysToStart+" dias","cc-contact-window-label"),
     make("small",w.label+" · "+(entry.city||entry.region||entry.country||"Localização não registada")),
     make("p",entry.contact_window_reason||"Consultar a fonte antes de agir","cc-contact-window-reason"),

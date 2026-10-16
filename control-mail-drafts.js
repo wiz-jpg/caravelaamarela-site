@@ -79,7 +79,9 @@ function value(input,k,max){
 function validate(input){
  if(!input||typeof input!=="object"||Array.isArray(input))return null;
  const to=value(input,"to",254),subject=value(input,"subject",180),
-  body=value(input,"body",12000),artist=value(input,"artist",110),
+  // Preserve intentional spacing, signatures and trailing newlines in email bodies.
+  body=typeof input.body==="string"&&input.body.length<=12000?input.body:null,
+  artist=value(input,"artist",110),
   context=value(input,"context",350),
   booking_id=value(input,"booking_id",80),
   source_message_id=value(input,"source_message_id",35);

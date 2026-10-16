@@ -271,6 +271,13 @@
   mail.textContent="Consultar no Zoho";mail.target="_blank";mail.rel="noopener noreferrer";
   mail.className="cc-review-task-link";
   actions.append(mail);
+  actions.append(btn("Preparar email · sem enviar",()=>{
+    window.dispatchEvent(new CustomEvent("caravela-control-draft-compose",{
+      detail:{to:task.external_email||"",source_message_id:task.message_id,
+       context:"Preparado após revisão da mensagem Zoho "+task.message_id+
+        ". Confirmar identidade e destinatário antes de eventual envio."}
+    }));
+  }));
   if(task.topic==="booking")
     actions.append(btn("Resolver numa janela",()=>void resolveBookingInPlace(task,article),"cc-primary"));
   actions.append(btn("Revisão concluída",()=>decide(task,"reviewed")),

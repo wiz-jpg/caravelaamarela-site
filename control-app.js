@@ -20,11 +20,11 @@
     '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Início</span></button>' +
     '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking</span></button>' +
     '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
+    '<details class="cc-nav-more"><summary><span class="cc-nav-symbol">▦</span><span class="cc-nav-text">Outras áreas</span></summary>' +
     '<button type="button" data-view="finance" data-min-role="manager"><span class="cc-nav-symbol">€</span><span class="cc-nav-text">Finanças</span></button>' +
     '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
-    '<div class="cc-nav-label cc-nav-label-spaced">Apoio</div>' +
     '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
-    '<button type="button" data-view="guide"><span class="cc-nav-symbol">?</span><span class="cc-nav-text">Como usar</span></button>' +
+    '<button type="button" data-view="guide"><span class="cc-nav-symbol">?</span><span class="cc-nav-text">Como usar</span></button></details>' +
     '<details class="cc-nav-admin" data-min-role="admin"><summary><span class="cc-nav-symbol">⚙</span><span class="cc-nav-text">Administração</span></summary>' +
     '<button type="button" data-view="communications" data-min-role="admin"><span class="cc-nav-symbol">✉</span><span class="cc-nav-text">Comunicações · Zoho</span></button>' +
     '<button type="button" data-view="sources" data-min-role="admin"><span class="cc-nav-symbol">▥</span><span class="cc-nav-text">Dados e backups</span></button>' +
@@ -222,6 +222,7 @@
     const requirement = permitted?.dataset.minRole;
     if (requirement && (rank[currentUser?.role] || 0) < rank[requirement]) return;
     if(permitted?.closest("details.cc-nav-admin"))permitted.closest("details.cc-nav-admin").open=true;
+    if(permitted?.closest("details.cc-nav-more"))permitted.closest("details.cc-nav-more").open=true;
     active = view;
     for (const [key, section] of viewMap) section.hidden = key !== view;
     for (const button of side.querySelectorAll("[data-view]")) {

@@ -14,6 +14,11 @@ const CONTACT_FIELDS=[
   ["authorization_email","Endereço da conversa (se comprovado)","email"],
   ["authorization_reference","Identificador da conversa Zoho (se comprovado)","text"],
   ["owner","Responsável Caravela","text"],["next_step","Próximo passo","textarea"],["review_date","Rever em","date"],
+  ["contact_window_start","Janela anual · início (MM-DD)","text"],
+  ["contact_window_end","Janela anual · fim (MM-DD)","text"],
+  ["contact_window_basis","Fundamento da janela","select"],
+  ["contact_window_reason","Porquê esta altura?","textarea"],
+  ["contact_window_reference","Fonte / email / link de prova","text"],
   ["notes","Notas internas","textarea"]
 ];
 const BOOKING_FIELDS=[
@@ -44,6 +49,7 @@ const choices={
    sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",
    confirmed:"Confirmado",declined:"Recusado",paused:"Em pausa",closed:"Concluído"},
  priority:{high:"Alta",medium:"Média",low:"Baixa"},
+ contact_window_basis:{unknown:"Ainda por investigar",official:"Calendário / candidatura oficial",direct:"Informação recebida do organizador",history:"Padrão histórico registado",hypothesis:"Hipótese a confirmar"},
  evidence_type:{none:"Sem comprovativo",user_report:"Registo manual / relato",
    sent_message:"Email enviado — verificado",received_message:"Email recebido — verificado",
    agreement:"Contrato / acordo verificado"}
@@ -90,6 +96,24 @@ function contactRows(){
  byId.clear();rows.forEach(x=>byId.set(x.id,x));return rows;
 }
 function nativeRows(kind){return kind==="contacts"?contactRows():get("booking").slice()}
+function windowInfo(contact){
+ const tool=window.CaravelaContactWindow;
+ if(!tool)return {status:"unknown",label:"Janela por pesquisar"};
+ return tool.annualWindow(contact,localToday());
+}
+function windowDescription(contact){
+ const w=windowInfo(contact);
+ if(w.status==="unknown")return "Por pesquisar · sem calendário validado";
+ const source=({
+   official:"Fonte oficial",direct:"Resposta do organizador",
+   history:"Padrão histórico",hypothesis:"Hipótese — confirmar antes de usar"
+ })[contact.contact_window_basis]||"Por validar";
+ return w.label+" · "+source;
+}
+function isWindowEligible(contact){
+ return contact.contact_policy!=="blocked"&&!contact.source_suppressed&&
+   !contact.source_shared_email&&contact.duplicate_decision!=="secondary"&&!contact.canonical_id;
+}
 /* Never derive an opportunity location from a shared/ambiguous name. */
 function bookingLocation(entry){
  const contacts=contactRows(),linked=entry.contact_id?
@@ -287,7 +311,12 @@ function filtered(kind){
  const filter=$("cc-native-"+kind+"-filter").value;
  const selected=nativeRows(kind).filter(r=>{
   if(kind==="contacts"){
-   if(filter!=="all"&&r.contact_policy!==filter)return false;
+   if(["window_open","window_soon","window_missing"].includes(filter)){
+     const w=windowInfo(r);
+     if(filter==="window_open"&&!(w.status==="open"&&isWindowEligible(r)))return false;
+     if(filter==="window_soon"&&!(w.status==="soon"&&isWindowEligible(r)))return false;
+     if(filter==="window_missing"&&w.status!=="unknown")return false;
+   }else if(filter!=="all"&&r.contact_policy!==filter)return false;
    for(const [id,key] of [["cc-native-contact-type","kind"],["cc-native-contact-country","country"],["cc-native-contact-region","region"]]){
     const chosen=$(id)?.value||"all";if(chosen!=="all"&&r[key]!==chosen)return false;
    }
@@ -299,7 +328,8 @@ function filtered(kind){
    } else if(filter!=="all"&&r.stage!==filter)return false;
   }
   return !term||lower([r.name,r.city,r.emails?.join(" "),r.contact_name,r.artist,r.subject,
-    r.contact_email,r.notes,r.next_step,r.owner].filter(Boolean).join(" ")).includes(term);
+    r.contact_email,r.notes,r.next_step,r.owner,
+    r.contact_window_reason,r.contact_window_reference].filter(Boolean).join(" ")).includes(term);
  });
  return kind==="contacts"?contactCards(selected):selected;
 }
@@ -441,7 +471,10 @@ function render(kind){
    card.append(more);
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
+   hint(card,"Melhor altura",windowDescription(r));
    hint(card,"Responsável Caravela",r.owner||"Por atribuir");
+   if(r.contact_window_start&&r.contact_window_reason)
+     hint(card,"Motivo da janela",r.contact_window_reason);
    if(r.__members?.length)hint(card,"Fichas agrupadas",
      r.__members.length+" registos históricos/operacionais apresentados em conjunto, sem fusão");
    hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
@@ -643,6 +676,11 @@ function editorField(parent,kind,def,current){
  }else {field=make("input");field.type=type;}
  field.id=box.htmlFor;field.name=key;field.required=!!required;
  if(type==="number"){field.min="0";field.max="10000000";field.step="0.01"}
+ if(key==="contact_window_start"||key==="contact_window_end"){
+   field.placeholder="MM-DD · ex.: 03-01";field.maxLength=5;field.pattern="[0-9]{2}-[0-9]{2}";
+   field.title="Indica mês e dia, por exemplo 03-01; o período repete-se anualmente.";
+ }
+ if(key==="contact_window_reference")field.placeholder="Link, email ou referência verificável";
  if(key==="emails")field.value=(current.emails||[]).join(", ");
  else if(key==="fee_amount"||key==="commission_pct")field.value=current[key]===null||current[key]===undefined?"":current[key];
  else field.value=current[key]??({
@@ -765,7 +803,7 @@ function edit(kind,entry={}){
  const title=make("h3",entry.revision?"Atualizar registo":"Novo registo operacional");
  const help=make("p",kind==="booking"?
   "Indica o próximo passo. Estados de envio ou confirmação exigem evidência concreta. O CRM não envia emails.":
-  "O arquivo original não é alterado. Confirma restrições antes de contactar.","cc-lead");
+  "Escolhe a altura anual para abordar esta entidade apenas quando houver evidência. Sem prova, assinala como hipótese. Nada será enviado automaticamente.","cc-lead");
  const fields=kind==="contacts"?CONTACT_FIELDS:BOOKING_FIELDS;
  const grid=make("div",undefined,"cc-field-grid");
  for(const def of fields)editorField(grid,kind,def,entry);

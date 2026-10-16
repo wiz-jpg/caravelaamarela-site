@@ -530,3 +530,57 @@
  #control-app .cc-review-tasks-home-preview{grid-template-columns:1fr}
  #control-app .cc-home-support .cc-home-secondary{grid-template-columns:1fr}
 }
+
+/* Phase 1 — private encrypted mail drafts; never an outbound mail composer. */
+.cc-drafts{margin:14px 0 20px;padding:17px 18px;
+ border:1px solid #455e6c;border-radius:13px;background:#182632}
+.cc-drafts-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}
+.cc-drafts-head h2{font-size:17px;margin:0 0 4px}
+.cc-drafts-head .cc-lead{font-size:12px;line-height:1.45;margin:0}
+.cc-drafts-head>button{font-size:12px;padding:9px 13px;flex-shrink:0}
+.cc-drafts>.cc-lead{font-size:12px;margin:11px 0}
+.cc-drafts-controls{display:flex;gap:10px;align-items:center;margin:12px 0}
+.cc-drafts-controls input,.cc-drafts-controls select{
+ min-width:0;padding:9px 12px;border:1px solid #546f80;border-radius:8px;
+ color:#f1f5f8;background:#121e28;min-height:39px;font-size:12px}
+.cc-drafts-controls input{flex:2}.cc-drafts-controls select{flex:1}
+.cc-drafts-grid{display:grid;gap:8px;max-height:310px;overflow:auto}
+.cc-drafts-card{display:flex;justify-content:space-between;align-items:center;gap:12px;
+ border:1px solid #3f5766;background:#1c3040;border-radius:9px;padding:11px 13px}
+.cc-drafts-card>div{display:grid;gap:3px;min-width:0}
+.cc-drafts-card strong{font-size:13px;overflow-wrap:anywhere}
+.cc-drafts-card span{font-size:12px;color:#d2e0e9;overflow-wrap:anywhere}
+.cc-drafts-card small{font-size:11px;color:#b5c6d4}
+.cc-drafts-card button{flex-shrink:0;font-size:12px;padding:7px 11px}
+.cc-drafts-editor{margin-top:15px;padding:15px 16px;border:1px solid #758464;
+ border-radius:10px;background:#20302d}
+.cc-drafts-edit-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.cc-drafts-edit-head h3{font-size:16px;margin:0}
+.cc-drafts-edit-head small{font-size:11px;color:#d1e3d5}
+.cc-drafts-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cc-drafts-form>label{display:grid;gap:5px;color:#e5ece8;font-size:12px;
+ font-weight:650;margin:0}
+.cc-drafts-form>label input,.cc-drafts-form>label textarea,
+.cc-drafts-form>label select{min-width:0;width:100%;font:inherit;min-height:39px;
+ background:#112127;color:#f1f6fa;border:1px solid #6b8290;
+ border-radius:8px;padding:9px 11px}
+.cc-drafts-form>label textarea{min-height:75px;resize:vertical;line-height:1.5}
+.cc-drafts-form>label:nth-child(3),.cc-drafts-form>label:nth-child(4),
+.cc-drafts-form>label:nth-child(5),.cc-drafts-form>label:nth-child(6){grid-column:1/-1}
+.cc-drafts-form>label:nth-child(4) textarea{min-height:165px}
+.cc-drafts-form>.cc-lead{font-size:11px;grid-column:1/-1;margin:0}
+.cc-drafts-form-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+ grid-column:1/-1}
+.cc-drafts-form-actions>button{font-size:12px;padding:9px 12px}
+.cc-drafts-form>p[role=status]{grid-column:1/-1;font-size:12px;line-height:1.4;margin:0}
+.cc-drafts-versions{margin-top:10px;border-top:1px solid #576f67;padding-top:8px}
+.cc-drafts-versions>summary{cursor:pointer;font-size:12px;font-weight:700;color:#e1f0e2}
+.cc-drafts-version-buttons{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.cc-drafts-version-buttons button{font-size:11px;padding:7px 10px}
+@media(max-width:700px){.cc-drafts-head,.cc-drafts-card{align-items:flex-start}
+ .cc-drafts-head{flex-direction:column}
+ .cc-drafts-controls{flex-direction:column}
+ .cc-drafts-controls>*{width:100%}
+ .cc-drafts-form{grid-template-columns:1fr}
+ .cc-drafts-form>label{grid-column:1/-1}
+ .cc-drafts-edit-head{flex-direction:column}}

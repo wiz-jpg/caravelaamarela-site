@@ -309,3 +309,44 @@
  .cc-review-task-filters{grid-template-columns:1fr}}
 
 .cc-agenda-roster-note{grid-column:1/-1;color:#a8bdcc;font-size:11px;line-height:1.5}
+
+/* Compact, full-surface business states — informational colors, with readable labels.
+   Applied only to booking opportunity cards and day-to-day task cards. */
+#control-app .cc-native-card.cc-tone-confirmed,#control-app .cc-home-task.cc-tone-confirmed{
+ background:#213f32;border-color:#4d8262;color:#eaf8ef}
+#control-app .cc-native-card.cc-tone-negotiating,#control-app .cc-home-task.cc-tone-negotiating{
+ background:#473a25;border-color:#9b7948;color:#fff3d7}
+#control-app .cc-native-card.cc-tone-contacted,#control-app .cc-home-task.cc-tone-contacted{
+ background:#343c46;border-color:#778592;color:#f0f4f8}
+#control-app .cc-native-card.cc-tone-prospect,#control-app .cc-home-task.cc-tone-prospect{
+ background:#20384f;border-color:#527da1;color:#e8f4ff}
+#control-app .cc-native-card.cc-tone-declined,#control-app .cc-home-task.cc-tone-declined{
+ background:#492b2e;border-color:#9d585d;color:#ffecec}
+#control-app .cc-native-card.cc-tone-paused,#control-app .cc-home-task.cc-tone-paused{
+ background:#2c3239;border-color:#636e79;color:#e7ecf2}
+#control-app .cc-native-card[class*="cc-tone-"] .cc-native-row span,
+#control-app .cc-home-task[class*="cc-tone-"] .cc-home-task-name,
+#control-app .cc-home-task[class*="cc-tone-"] .cc-home-task-info{color:inherit}
+#control-app .cc-native-card[class*="cc-tone-"] .cc-native-row small,
+#control-app .cc-home-task[class*="cc-tone-"] .cc-home-task-meta{color:#dae3e9}
+#control-app .cc-native-card[class*="cc-tone-"]{padding:13px 15px}
+#control-app .cc-native-card[class*="cc-tone-"] .cc-native-card-head{margin-bottom:8px}
+#control-app .cc-native-card[class*="cc-tone-"] .cc-native-row{padding:2px 0}
+#control-app .cc-native-card[class*="cc-tone-"] .cc-native-card-actions{margin-top:10px;padding-top:10px}
+.cc-booking-more{margin-top:9px;padding:8px 0;border-top:1px solid #ffffff35}
+.cc-booking-more summary{cursor:pointer;font-size:12px;font-weight:700;color:#f6f3e8}
+.cc-booking-more .cc-native-row{margin-top:6px}
+.cc-status-legend{margin:0 0 14px;border:1px solid #384c5e;border-radius:10px;background:#16232d;padding:10px 12px}
+.cc-status-legend>summary{font-size:12px;font-weight:750;color:#d8e7f0;cursor:pointer;user-select:none}
+.cc-status-legend-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.cc-status-legend-item{display:flex;flex-direction:column;gap:3px;padding:9px 11px;
+ border:1px solid transparent;border-radius:8px;font-size:12px}
+.cc-status-legend-item small{font-size:10px;opacity:.88}
+.cc-status-legend-item.cc-tone-confirmed{background:#213f32;border-color:#4d8262;color:#eaf8ef}
+.cc-status-legend-item.cc-tone-negotiating{background:#473a25;border-color:#9b7948;color:#fff3d7}
+.cc-status-legend-item.cc-tone-contacted{background:#343c46;border-color:#778592;color:#f0f4f8}
+.cc-status-legend-item.cc-tone-prospect{background:#20384f;border-color:#527da1;color:#e8f4ff}
+.cc-status-legend-item.cc-tone-declined{background:#492b2e;border-color:#9d585d;color:#ffecec}
+.cc-status-legend-item.cc-tone-paused{background:#2c3239;border-color:#636e79;color:#e7ecf2}
+.cc-status-legend>.cc-lead{font-size:11px;margin:0}
+@media(max-width:760px){.cc-status-legend-list{grid-template-columns:repeat(2,minmax(0,1fr))}}

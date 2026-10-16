@@ -260,3 +260,28 @@
 .cc-mail-automation-status small{font-size:11px;color:#aebdcb;line-height:1.4}
 .cc-mail-automation-status button{font-size:12px;padding:9px 12px;flex-shrink:0}
 @media(max-width:670px){.cc-mail-automation-status{align-items:flex-start;flex-direction:column}}
+
+/* Auto-created mail review queue — separate from confirmed commercial pipeline */
+.cc-review-tasks-home{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+ border:1px solid #49645c;background:#192720;border-radius:12px;padding:13px 16px;margin:13px 0}
+.cc-review-tasks-home strong{font-size:13px;color:#e6f0e7}
+.cc-review-tasks-home span{font-size:13px;color:#c1ddca;margin-right:auto}
+.cc-review-tasks-home button{font-size:12px;padding:9px 12px}
+.cc-review-tasks-panel{border:1px solid #43535c;border-radius:14px;
+ background:#18232b;padding:20px;margin:16px 0}
+.cc-review-tasks-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.cc-review-tasks-heading h2{font-size:18px;margin:0}
+.cc-review-tasks-heading .cc-lead{margin:5px 0 12px}
+.cc-review-tasks-heading button{font-size:12px;padding:9px 12px;flex-shrink:0}
+.cc-review-tasks-items{display:grid;gap:10px;margin:14px 0}
+.cc-review-task{border:1px solid #3c5360;background:#142029;border-radius:10px;padding:14px}
+.cc-review-task-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.cc-review-task-head strong{font-size:14px;overflow-wrap:anywhere}
+.cc-review-task-signal{font-size:12px;font-weight:700;color:#f4dd9a}
+.cc-review-task .cc-lead{font-size:12px;margin:7px 0}
+.cc-review-task-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cc-review-task-actions button,.cc-review-task-link{font-size:12px;padding:7px 10px}
+.cc-review-task-link{display:inline-block;color:#b6d9e7;text-decoration:underline}
+.cc-review-task-actions small{color:#e6bf8c;font-size:12px;flex-basis:100%}
+@media(max-width:680px){.cc-review-tasks-heading,.cc-review-task-head{flex-direction:column}
+ .cc-review-tasks-panel{padding:14px}.cc-review-tasks-heading button{width:100%}}

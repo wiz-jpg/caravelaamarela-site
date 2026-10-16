@@ -1254,7 +1254,7 @@ function renderDashboard(){
    title:row.name+" · "+(row.artist||"Artista a definir"),
    date:row.next_action_iso||row.next_followup_iso||"",priority:/^A\b/i.test(row.priority||"")?"high":"medium",
    stage:isFollowup?"contact_reported":"research",
-   statusLabel:isFollowup?"Arquivo · contacto registado":"Arquivo · por contactar",
+   statusLabel:isFollowup?"Arquivo · contacto referido":"Arquivo · por contactar (por verificar)",
    note:(row.next_step||"Rever oportunidade")+(row.link_status!=="verified_name_email"?" · identidade por confirmar":""),
    click:()=>displayHistoricalAction(row)};
   if(isFollowup)archiveFollowups.push(task);else archiveLeads.push(task);

@@ -1199,6 +1199,50 @@ function renderDashboard(){
   const cell=make("div",undefined,"cc-native-metric");
   cell.append(make("small",label),make("strong",count));metrics.append(cell);
  }
+ // Contact timing is separate from deal status and has no guessed deadlines.
+ const allContacts=contactRows();
+ const eligibleWindows=allContacts.filter(isWindowEligible).map(contact=>({
+   contact,window:windowInfo(contact)
+ })).filter(x=>["open","soon"].includes(x.window.status));
+ const openWindows=eligibleWindows.filter(x=>x.window.status==="open");
+ const upcomingWindows=eligibleWindows.filter(x=>x.window.status==="soon");
+ const timed=make("section",undefined,"cc-contact-timing");
+ const timingHead=make("div",undefined,"cc-contact-timing-head");
+ const timingIntro=make("div");
+ timingIntro.append(make("h3","Melhor altura para abordar"),
+   make("p","Janelas anuais registadas por entidade. Uma janela não autoriza o envio nem confirma que aceitem propostas.","cc-lead"));
+ const timingButton=make("button","Ver calendário de contactos","cc-neutral");timingButton.type="button";
+ timingButton.onclick=()=>{
+   window.CaravelaControlApp?.openView("contacts");
+   const sel=$("cc-native-contacts-filter");
+   if(sel){sel.value="window_open";sel.dispatchEvent(new Event("change"))}
+ };
+ timingHead.append(timingIntro,timingButton);
+ timed.append(timingHead);
+ const timingSummary=make("div",undefined,"cc-contact-timing-summary");
+ for(const [label,n] of [["Janela aberta",openWindows.length],
+   ["Próximos 30 dias",upcomingWindows.length]]){
+  const item=make("span");item.append(make("strong",n),make("small",label));timingSummary.append(item);
+ }
+ timed.append(timingSummary);
+ const timingItems=make("div",undefined,"cc-contact-timing-items");
+ for(const group of [openWindows,upcomingWindows]){
+  for(const {contact:entry,window:w} of group.slice(0,5)){
+   const item=make("article",undefined,"cc-contact-window-card cc-contact-window-"+w.status);
+   const action=make("button",entry.name,"cc-contact-window-name");action.type="button";
+   action.onclick=()=>{window.CaravelaControlApp?.openView("contacts");edit("contacts",entry)};
+   item.append(action,make("span",w.status==="open"?"Janela aberta":"Abre em "+w.daysToStart+" dias","cc-contact-window-label"),
+    make("small",w.label+" · "+(entry.city||entry.region||entry.country||"Localização não registada")),
+    make("p",entry.contact_window_reason||"Consultar a fonte antes de agir","cc-contact-window-reason"),
+    make("small",entry.contact_policy==="allowed"?"Contacto marcado como autorizado — verificar destinatário":
+      "Contacto e canal ainda por validar"));
+   timingItems.append(item);
+  }
+ }
+ timed.append(timingItems);
+ if(!eligibleWindows.length)timed.append(make("p",
+   "Ainda não existem janelas comprovadas em curso ou próximas. Define-as progressivamente nas fichas dos festivais e salas prioritários, com fonte ou histórico.","cc-lead"));
+ root.append(timed);
  const board=make("div",undefined,"cc-home-board");
  for(const bucket of buckets){
   const column=make("section",undefined,"cc-home-column");

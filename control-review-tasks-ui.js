@@ -158,7 +158,8 @@
    const updateForm=()=>{
     const selected=similar.find(x=>x.id===choose.value);
     if(selected){
-     entity.value=selected.contact_name||"";linked.value=selected.contact_id||"";
+     entity.value=selected.contact_name||"";entity.readOnly=true;
+     linked.value=selected.contact_id||"";
      artist.value=selected.artist||"";subject.value=selected.subject||"";
      stage.value=selected.stage||"research";
      // Preserve existing verified states without offering them for new assignments.
@@ -169,11 +170,16 @@
      owner.value=selected.owner||"";next.value=selected.next_step||"";
      due.value=selected.due_date||"";
     }else{
+     entity.readOnly=false;
      entity.value=task.association==="unique_candidate"&&task.matches?.[0]?.name||"";
      linked.value="";artist.value="";subject.value="";stage.value="research";
      owner.value="";next.value="";due.value="";
     }
     feedback.textContent="";
+   };
+   linked.onchange=()=>{
+    const candidate=(task.matches||[]).find(x=>x.id===linked.value);
+    if(candidate)entity.value=candidate.name;
    };
    choose.onchange=updateForm;
    updateForm();

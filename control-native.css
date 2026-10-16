@@ -406,3 +406,28 @@
 .cc-window-editor .cc-actions button{font-size:12px;padding:9px 12px}
 #control-app #cc-view-contacts .cc-native-card-actions button{font-size:11px;padding:7px 10px}
 @media(max-width:670px){.cc-window-editor-grid{grid-template-columns:1fr}}
+
+/* One-screen manual resolution, collapsed by default inside each Zoho signal */
+.cc-task-resolver{margin-top:11px;padding:13px 14px;
+ border:1px solid #74856d;border-radius:10px;background:#202d2b}
+.cc-task-resolver>strong{font-size:14px;color:#edf6e8}
+.cc-task-resolver>.cc-lead{font-size:12px;margin:7px 0 13px}
+.cc-task-resolve-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.cc-task-resolve-form>label{display:grid;gap:6px;align-content:start;
+ font-size:12px;color:#dce9e7;font-weight:650}
+.cc-task-resolve-form>label input:not([type=checkbox]),.cc-task-resolve-form>label select{
+ width:100%;min-height:39px;background:#131f24;color:#f1f7fa;border:1px solid #69808b;
+ border-radius:8px;padding:8px 10px;font:inherit}
+.cc-task-resolve-form>label:nth-child(1),
+.cc-task-resolve-form>label:nth-child(4),
+.cc-task-resolve-form>label:nth-child(7),
+.cc-task-resolve-form>label:nth-child(9){grid-column:1/-1}
+.cc-task-resolve-consent{display:flex!important;align-items:center;
+ flex-direction:row!important;grid-column:1/-1;gap:9px}
+.cc-task-resolve-consent input{width:17px;height:17px;flex-shrink:0;accent-color:#e4c46c}
+.cc-task-resolve-consent span{font-weight:650;font-size:12px;line-height:1.5}
+.cc-task-resolve-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;grid-column:1/-1}
+.cc-task-resolve-controls button{font-size:12px;padding:9px 12px}
+.cc-task-resolve-form>p[role=status]{grid-column:1/-1;color:#f1d79e;margin:0}
+@media(max-width:680px){.cc-task-resolve-form{grid-template-columns:1fr}
+ .cc-task-resolve-form>label{grid-column:1/-1}}

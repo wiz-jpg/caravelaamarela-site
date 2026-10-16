@@ -60,9 +60,9 @@
  const items=make("div",undefined,"cc-review-tasks-items");
  const foot=make("p","Rever a mensagem original no Zoho. Um sinal não comprova uma proposta aceite, recusa definitiva, autorização de envio ou data acordada.","cc-lead");
  panel.append(heading,filters,info,items,foot);
- const reviewSection=contacts.querySelector(".cc-contact-assistant");
- if(reviewSection)reviewSection.before(panel);
- else contacts.querySelector(".cc-panel-head")?.after(panel);
+ // Keep urgent Zoho work visible above the contact directory. Other
+ // reconciliation tools live in collapsed drawers further down the page.
+ contacts.querySelector(".cc-panel-head")?.after(panel);
  let loading=false,lastData=null;
  const priorityName=x=>["needs_reply","possible_confirmation"].includes(x)?"Rever primeiro":"Rever";
  const association=x=>x.association==="unique_candidate"?"Ficha candidata por email exato":

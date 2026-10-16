@@ -131,6 +131,11 @@ export async function syncZohoMail(request,env,url,zohoReader,{trigger="manual"}
         analysis={enabled:false,reason:"analysis_error",examined:0,new_signals:0,failures:0};
       }
     }
+    await db.prepare("UPDATE control_sync_runs SET meta_json=? WHERE id=?")
+      .bind(JSON.stringify({trigger:trigger==="cron"?"cron":"manual",
+        analysis_enabled:analysis.enabled===true,
+        analysis_failures:analysis.failures||0,
+        analysis_reason:analysis.reason||null}),id).run().catch(()=>{});
     return {ok:true,provider:"zoho",scanned,new_records:newRows,
       total_indexed:current?.n||0,read_only:true,analysis,
       note:"Metadados guardados; se a interpretação estiver ativa, só guarda sinais para revisão. Nunca altera automaticamente negócios."};

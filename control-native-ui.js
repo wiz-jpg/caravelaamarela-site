@@ -90,6 +90,40 @@ function contactRows(){
  byId.clear();rows.forEach(x=>byId.set(x.id,x));return rows;
 }
 function nativeRows(kind){return kind==="contacts"?contactRows():get("booking").slice()}
+/* Never derive an opportunity location from a shared/ambiguous name. */
+function bookingLocation(entry){
+ const contacts=contactRows(),linked=entry.contact_id?
+  contacts.filter(x=>x.id===entry.contact_id):
+  contacts.filter(x=>lower(x.name)===lower(entry.contact_name));
+ if(linked.length!==1)return "Por confirmar";
+ return [linked[0].city,linked[0].region,linked[0].country].filter(Boolean).join(" · ")||"Por confirmar";
+}
+function bookingTone(stage){
+ if(stage==="confirmed")return "confirmed";
+ if(stage==="negotiating"||stage==="reply_reported")return "negotiating";
+ if(stage==="sent_verified"||stage==="contact_reported")return "contacted";
+ if(stage==="declined")return "declined";
+ if(stage==="paused"||stage==="closed")return "paused";
+ return "prospect";
+}
+function colorLegend(){
+ const details=make("details",undefined,"cc-status-legend");
+ const summary=make("summary","Legenda dos estados");details.append(summary);
+ const list=make("div",undefined,"cc-status-legend-list");
+ for(const [tone,title,explanation] of [
+  ["confirmed","Confirmado","Acordo validado"],
+  ["negotiating","Em negociação","Resposta ou conversa a acompanhar"],
+  ["contacted","Contactado","Envio ou contacto registado; verificar evidência"],
+  ["prospect","Por contactar","Pesquisa e preparação"],
+  ["declined","Recusado","Proposta sem avanço"],
+  ["paused","Em pausa","Aguarda nova decisão"]
+ ]){
+  const item=make("span",undefined,"cc-status-legend-item cc-tone-"+tone);
+  item.append(make("strong",title),make("small",explanation));list.append(item);
+ }
+ details.append(list,make("p","Urgência e prazo são indicadores separados da cor do estado. Nunca deduzimos uma confirmação a partir de um email.","cc-lead"));
+ return details;
+}
 function suggestedChannel(contact){
  if(contact.source_suppressed||contact.contact_policy==="blocked")return null;
  const mails=[...new Set((contact.emails||[]).map(x=>String(x).trim().toLowerCase()).filter(Boolean))];
@@ -376,6 +410,7 @@ function render(kind){
    kind==="contacts"?"Sem contactos neste filtro. Abre a base guardada em Dados e backups.":"Sem negociações neste filtro. Cria a primeira proposta ou retoma uma ação histórica.","cc-notice"));
  for(const r of all.slice(0,limit)){
   const card=make("article",undefined,"cc-native-card");
+  if(kind==="booking")card.classList.add("cc-tone-"+bookingTone(r.stage));
   const title=make("strong",kind==="contacts"?r.name:r.contact_name+" · "+r.artist);
   const top=make("div",undefined,"cc-native-card-head");
   if(kind==="contacts"){
@@ -387,18 +422,23 @@ function render(kind){
   }
   top.append(title,badge(kind==="contacts"?r.contact_policy:r.stage,kind));card.append(top);
   if(kind==="booking"){
-   hint(card,"Proposta",r.subject);
-   hint(card,"Próximo passo",r.next_step);
-   hint(card,"Rever",r.due_date||"Sem prazo");
-   hint(card,"Cachet",r.fee_amount===null?"Não definido":Number(r.fee_amount).toLocaleString("pt-PT")+" €");
+   hint(card,"Localização",bookingLocation(r));
+   hint(card,"Último contacto",r.last_contact_date||"Não registado");
+   hint(card,"Próximo passo",r.next_step||"Por definir");
+   hint(card,"Responsável",r.owner||"Por atribuir");
+   hint(card,"Rever",r.due_date||"Sem prazo definido");
+   const more=make("details",undefined,"cc-booking-more");
+   more.append(make("summary","Detalhes da oportunidade"));
+   hint(more,"Proposta",r.subject);
+   hint(more,"Cachet",r.fee_amount===null?"Não definido":Number(r.fee_amount).toLocaleString("pt-PT")+" €");
    if(r.commission_pct!==null&&r.commission_pct!==undefined&&r.fee_amount!==null)
-    hint(card,"Comissão estimada",Number(r.fee_amount*r.commission_pct/100).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+" ("+r.commission_pct+"%) · ainda não recebida");
-   hint(card,"Data do concerto",r.event_date);
-   hint(card,"Comunicação / imprensa",choices.press_status[r.press_status||"unknown"]);
-   hint(card,"Preparação técnica",choices.advance_status[r.advance_status||"unknown"]);
-   hint(card,"Responsável Caravela",r.owner||"Por atribuir");
-   hint(card,"Evidência",(choices.evidence_type[r.evidence_type]||"")+" · "+(r.evidence_reference||"não referenciada"));
-   hint(card,"Origem",r.origin_label);
+    hint(more,"Comissão estimada",Number(r.fee_amount*r.commission_pct/100).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+" ("+r.commission_pct+"%) · ainda não recebida");
+   hint(more,"Data do concerto",r.event_date||"Sem data");
+   hint(more,"Comunicação / imprensa",choices.press_status[r.press_status||"unknown"]);
+   hint(more,"Preparação técnica",choices.advance_status[r.advance_status||"unknown"]);
+   hint(more,"Evidência",(choices.evidence_type[r.evidence_type]||"")+" · "+(r.evidence_reference||"não referenciada"));
+   hint(more,"Origem",r.origin_label);
+   card.append(more);
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
    hint(card,"Responsável Caravela",r.owner||"Por atribuir");
@@ -1000,6 +1040,7 @@ function homeTaskCard(task){
  const row=make("article",undefined,"cc-home-task");
  const stage=task.stage||"research";
  row.classList.add("cc-home-task--"+stage.replace(/[^a-z_-]/g,""));
+ row.classList.add("cc-tone-"+bookingTone(stage));
  const head=make("div",undefined,"cc-home-task-heading");
  const name=make("button",task.title,"cc-home-task-name");name.type="button";name.onclick=task.click;
  head.append(name,make("span",task.statusLabel||"Por analisar","cc-home-stage cc-home-stage--"+stage));
@@ -1009,6 +1050,9 @@ function homeTaskCard(task){
  if(task.triageSuggested)row.append(make("small","Triagem sugerida esta semana — prazo histórico por verificar","cc-home-suggestion"));
  const owner=make("div",undefined,"cc-home-task-meta");
  owner.append(make("span","Responsável: "+(task.record?.owner||"Por atribuir")),
+   make("span","Localização: "+(task.source==="booking"?bookingLocation(task.record):"Por validar")),
+   make("span",task.source==="booking"?
+     "Último contacto: "+(task.record?.last_contact_date||"Não registado"):"Último contacto: consultar arquivo"),
    make("span",task.date?"Prazo registado: "+task.date:"Sem prazo"));
  row.append(owner);
  if(task.source==="booking"||task.source==="arquivo"){
@@ -1203,6 +1247,8 @@ function renderDashboard(){
  }
  root.append(artist);
 }
+// A small, on-demand explanation is displayed near the booking workflow.
+bookingView.querySelector(".cc-panel-head")?.after(colorLegend());
 function onOpened(event){
  const view=event.detail?.view;
  if(view==="contacts"||view==="booking"){

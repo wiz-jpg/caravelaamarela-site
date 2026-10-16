@@ -29,6 +29,34 @@ async function draftKey(env){
  },seed,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
 }
 function aad(id,revision){return encoder.encode("caravela:draft:v1:"+MAILBOX+":"+id+":"+revision)}
+async function encryptedOffsiteCopy(env,{id,revision,ciphertext,status,now}){
+ if(env.CONTROL_R2_BACKUP_ENABLED!=="true")return false;
+ const bucket=env.CONTROL_BACKUP_BUCKET;
+ if(!bucket)throw Error("draft_backup_unavailable");
+ const key="mail-drafts/v1/"+id+"/"+revision+".json";
+ const blob=encoder.encode(JSON.stringify({
+  schema:"caravela.maildraft.encrypted.v1",id,revision,status,
+  ciphertext,created_ms:now
+ }));
+ const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",blob)),
+  b=>b.toString(16).padStart(2,"0")).join("");
+ const existing=await bucket.head(key);
+ if(existing){
+  if(existing.customMetadata?.sha256!==hash)throw Error("draft_backup_conflict");
+ }else{
+  await bucket.put(key,blob,{
+   httpMetadata:{contentType:"application/json"},
+   customMetadata:{sha256:hash}
+  });
+ }
+ const remote=await bucket.get(key);
+ if(!remote)throw Error("draft_backup_missing");
+ const received=new Uint8Array(await remote.arrayBuffer());
+ const remoteHash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",received)),
+  b=>b.toString(16).padStart(2,"0")).join("");
+ if(hash!==remoteHash)throw Error("draft_backup_checksum_failed");
+ return true;
+}
 async function protect(key,id,revision,payload){
  const iv=crypto.getRandomValues(new Uint8Array(12));
  const cipher=new Uint8Array(await crypto.subtle.encrypt({
@@ -152,13 +180,16 @@ export async function handleMailDrafts(request,env,url,{actor=""}={}){
    if(body?.id!==undefined||body?.revision!==undefined||body?.status!==undefined)
     return failure("unexpected_fields",422);
    const id=crypto.randomUUID(),ciphertext=await protect(key,id,1,payload);
+   // Verify an independent encrypted R2 copy first, when Preview R2 backups are enabled.
+   const backedUp=await encryptedOffsiteCopy(env,{id,revision:1,ciphertext,status:"draft",now});
    await db.batch([
     db.prepare("INSERT INTO control_mail_drafts(id,revision,status,created_ms,updated_ms,created_by,edited_by) VALUES(?,1,'draft',?,?,?,?)").bind(id,now,now,who,who),
     db.prepare("INSERT INTO control_mail_draft_versions(draft_id,revision,ciphertext,created_ms,edited_by) VALUES(?,1,?,?,?)").bind(id,ciphertext,now,who),
     db.prepare("INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) VALUES(?,?,?,?,?)")
       .bind(crypto.randomUUID(),now,"mail_draft_created",id,JSON.stringify({actor:who,revision:1}))
    ]);
-   return reply({ok:true,id,revision:1,status:"draft",saved:true,sent:false},201);
+   return reply({ok:true,id,revision:1,status:"draft",saved:true,sent:false,
+    independent_backup_verified:backedUp},201);
   }
   if(!ID.test(body?.id||"")||!Number.isSafeInteger(body?.revision)||
     body.revision<1||!["draft","archived"].includes(body?.status))
@@ -169,6 +200,9 @@ export async function handleMailDrafts(request,env,url,{actor=""}={}){
   if(existing.revision!==body.revision)return failure("revision_conflict",409);
   const revision=existing.revision+1;
   const ciphertext=await protect(key,body.id,revision,payload);
+  const backedUp=await encryptedOffsiteCopy(env,{
+    id:body.id,revision,ciphertext,status:body.status,now
+  });
   // A conditional optimistic update plus archival revision and audit are one D1 transaction.
   const changes=await db.batch([
    db.prepare("UPDATE control_mail_drafts SET revision=?,status=?,updated_ms=?,edited_by=? WHERE id=? AND revision=?")
@@ -185,7 +219,7 @@ export async function handleMailDrafts(request,env,url,{actor=""}={}){
   if(Number(changes[0]?.meta?.changes??changes[0]?.changes??0)!==1)
    return failure("revision_conflict",409);
   return reply({ok:true,id:body.id,revision,status:body.status,saved:true,sent:false,
-   old_versions_preserved:true});
+   old_versions_preserved:true,independent_backup_verified:backedUp});
  }catch(e){
   const code=["draft_crypto_unavailable","draft_decrypt_failed"].includes(e?.message)?
     e.message:"drafts_unavailable";

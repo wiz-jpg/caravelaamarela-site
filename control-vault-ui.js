@@ -80,6 +80,22 @@
       });
     }
   };
+  // Private, encrypted mail drafts. This transport intentionally exposes no SEND action.
+  window.CaravelaDraftTransport={
+    list(){return api("mail/drafts",{method:"GET"});},
+    read(id,revision){
+      const qs=new URLSearchParams({id});
+      if(revision)qs.set("revision",String(revision));
+      return api("mail/drafts?"+qs.toString(),{method:"GET"});
+    },
+    save(record){
+      return api("mail/drafts",{
+        method:record.id?"PATCH":"POST",
+        headers:{"Content-Type":"application/json","X-Caravela-Request":"1"},
+        body:JSON.stringify(record)
+      });
+    }
+  };
   window.CaravelaNativeTransport={
     request(kind,method="GET",entry=null){
       if(!["contacts","booking","finance","archive","export"].includes(kind)||!["GET","POST","PATCH","DELETE"].includes(method)||

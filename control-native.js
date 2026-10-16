@@ -12,6 +12,12 @@ const DUPLICATE_DECISIONS=new Set(["unreviewed","distinct","secondary"]);
 const STATUSES=new Set(["research","draft","contact_reported","sent_verified","reply_reported","negotiating","confirmed","declined","paused","closed"]);
 const PRIORITIES=new Set(["high","medium","low"]);
 const EVIDENCES=new Set(["none","user_report","sent_message","received_message","agreement"]);
+const FEE_BASES=new Set(["legacy_unspecified","artist_base"]);
+const COMMISSION_MODES=new Set(["unspecified","standard","exception"]);
+const BILLING_PEOPLE=new Set(["unassigned","sergio","ana"]);
+const FIT_LEVELS=new Set(["unreviewed","strong","possible","weak"]);
+const STRATEGIC_REASONS=new Set(["none","prestige","new_territory","territory_consolidation","industry_contacts","event_relevance"]);
+const cents=value=>Math.round(value*100);
 const LEGACY_ID=/^(festival|venue|promoter|press)_[a-f0-9]{22}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -100,7 +106,8 @@ function booking(input){
   for(const [k,max] of Object.entries({
     contact_name:140,artist:110,subject:180,contact_id:80,contact_email:254,
     fee_note:300,conditions:1000,next_step:400,due_date:10,event_date:10,press_reference:400,
-    last_contact_date:10,evidence_reference:450,notes:1600,origin_label:160,owner:110
+    last_contact_date:10,evidence_reference:450,notes:1600,origin_label:160,owner:110,
+    commercial_exception_note:400,fit_reason:500
   })){
     row[k]=field(input[k]??"",max);
     if(row[k]===null)return null;
@@ -125,6 +132,38 @@ function booking(input){
   if(commission!==null&&(typeof commission!=="number"||!Number.isFinite(commission)||
     commission<0||commission>100))return null;
   row.commission_pct=commission;
+  // fee_amount in older revisions has no reliable basis. Do not silently
+  // treat it as either an artist fee or a promoter's total offer.
+  row.fee_basis=input.fee_basis??"legacy_unspecified";
+  row.commission_mode=input.commission_mode??"unspecified";
+  row.billing_person=input.billing_person??"unassigned";
+  row.promoter_total_amount=input.promoter_total_amount??null;
+  if(!FEE_BASES.has(row.fee_basis)||!COMMISSION_MODES.has(row.commission_mode)||
+     !BILLING_PEOPLE.has(row.billing_person))return null;
+  const total=row.promoter_total_amount;
+  if(total!==null&&(typeof total!=="number"||!Number.isFinite(total)||
+     total<0||total>10000000||cents(total)/100!==total))return null;
+  if(row.fee_basis==="legacy_unspecified"&&
+     (total!==null||row.commission_mode!=="unspecified"||row.commercial_exception_note))
+    return null;
+  if(row.fee_basis==="artist_base"){
+    if(fee!==null&&cents(fee)/100!==fee)return null;
+    if(row.commission_mode==="unspecified"&&total!==null)return null;
+    if(total!==null&&(fee===null||total<fee))return null;
+    if(row.commission_mode==="standard"&&total!==null){
+      if(commission===null||cents(total)!==cents(fee)+Math.round(cents(fee)*commission/100))
+        return null;
+    }
+    if(row.commission_mode==="exception"&&!row.commercial_exception_note)return null;
+    if(row.commission_mode!=="exception"&&row.commercial_exception_note)return null;
+  }
+  // Strategic value is a human assessment, never an automatically verified fact.
+  row.fit_level=input.fit_level??"unreviewed";
+  row.strategic_reason=input.strategic_reason??"none";
+  if(!FIT_LEVELS.has(row.fit_level)||!STRATEGIC_REASONS.has(row.strategic_reason))
+    return null;
+  if(row.fit_level==="strong"&&!row.fit_reason)return null;
+  if(row.strategic_reason!=="none"&&!row.fit_reason)return null;
   row.stage=input.stage;row.priority=input.priority;row.evidence_type=input.evidence_type;
   const verified=["sent_verified","confirmed"].includes(row.stage);
   if(verified&&(!row.evidence_reference||!["sent_message","received_message","agreement"].includes(row.evidence_type)))

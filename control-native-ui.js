@@ -25,8 +25,17 @@ const BOOKING_FIELDS=[
   ["contact_name","Entidade / promotor","text",true],["contact_id","Associar a contacto","select"],
   ["artist","Artista","text",true],["subject","Proposta / evento","text",true],
   ["stage","Estado","select",true],["priority","Prioridade","select",true],
-  ["contact_email","Email operacional","email"],["fee_amount","Cachet (€)","number"],
-  ["commission_pct","Comissão acordada (%)","number"],
+  ["contact_email","Email operacional","email"],
+  ["fee_basis","Base do cachet","select"],
+  ["fee_amount","Cachet da banda / valor histórico (€)","number"],
+  ["commission_pct","Comissão de referência (%)","number"],
+  ["commission_mode","Condições da comissão","select"],
+  ["promoter_total_amount","Total proposto ao promotor (€)","number"],
+  ["commercial_exception_note","Justificação da exceção","textarea"],
+  ["billing_person","Responsável pela faturação individual (previsto)","select"],
+  ["fit_level","Encaixe artístico (avaliação humana)","select"],
+  ["strategic_reason","Principal valor estratégico","select"],
+  ["fit_reason","Fundamentação do encaixe / relevância","textarea"],
   ["event_date","Data prevista do concerto","date"],
   ["press_status","Estado de comunicação / imprensa","select"],["press_reference","Referência de imprensa / divulgação","text"],
   ["advance_status","Preparação técnica / advancing","select"],
@@ -49,6 +58,11 @@ const choices={
    sent_verified:"Envio verificado",reply_reported:"Resposta referida",negotiating:"Em negociação",
    confirmed:"Confirmado",declined:"Recusado",paused:"Em pausa",closed:"Concluído"},
  priority:{high:"Alta",medium:"Média",low:"Baixa"},
+ fee_basis:{legacy_unspecified:"Valor antigo · base por confirmar",artist_base:"Valor pretendido pela banda (antes da comissão)"},
+ commission_mode:{unspecified:"Por definir",standard:"Comissão adicionada ao cachet da banda",exception:"Condições excecionais aprovadas"},
+ billing_person:{unassigned:"Por definir",sergio:"Sérgio · atividade individual",ana:"Ana · atividade individual"},
+ fit_level:{unreviewed:"Por avaliar",strong:"Bom encaixe (avaliado)",possible:"Possível encaixe",weak:"Baixa adequação"},
+ strategic_reason:{none:"Ainda não definido",prestige:"Prestígio",new_territory:"Novo território",territory_consolidation:"Consolidar território",industry_contacts:"Contactos profissionais",event_relevance:"Relevância do evento"},
  contact_window_basis:{unknown:"Ainda por investigar",official:"Calendário / candidatura oficial",direct:"Informação recebida do organizador",history:"Padrão histórico registado",hypothesis:"Hipótese a confirmar"},
  evidence_type:{none:"Sem comprovativo",user_report:"Registo manual / relato",
    sent_message:"Email enviado — verificado",received_message:"Email recebido — verificado",
@@ -474,9 +488,30 @@ function render(kind){
    const more=make("details",undefined,"cc-booking-more");
    more.append(make("summary","Detalhes da oportunidade"));
    hint(more,"Proposta",r.subject);
-   hint(more,"Cachet",r.fee_amount===null?"Não definido":Number(r.fee_amount).toLocaleString("pt-PT")+" €");
-   if(r.commission_pct!==null&&r.commission_pct!==undefined&&r.fee_amount!==null)
-    hint(more,"Comissão estimada",Number(r.fee_amount*r.commission_pct/100).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+" ("+r.commission_pct+"%) · ainda não recebida");
+   const money=value=>Number(value).toLocaleString("pt-PT",{style:"currency",currency:"EUR"});
+   const artistBasis=r.fee_basis==="artist_base";
+   hint(more,artistBasis?"Cachet pretendido pela banda":"Cachet registado (base por confirmar)",
+     r.fee_amount===null?"Não definido":money(r.fee_amount));
+   if(artistBasis&&r.fee_amount!==null){
+    const total=r.promoter_total_amount;
+    if(total!==null&&total!==undefined){
+     hint(more,"Total registado para promotor",money(total));
+     hint(more,"Margem de booking prevista",money(Math.round((total-r.fee_amount)*100)/100)+" · não recebida");
+    }else if(r.commission_mode==="standard"&&r.commission_pct!==null&&r.commission_pct!==undefined){
+     const commission=Math.round(r.fee_amount*100*r.commission_pct/100)/100;
+     hint(more,"Proposta calculada (não acordada)",money(r.fee_amount+commission));
+     hint(more,"Comissão prevista",money(commission)+" · não recebida");
+    }
+   }else if(r.fee_amount!==null){
+    hint(more,"Comissão","Por verificar: registo antigo sem identificação da base de cálculo");
+   }
+   hint(more,"Condições comerciais",choices.commission_mode[r.commission_mode||"unspecified"]);
+   if(r.commercial_exception_note)hint(more,"Exceção comercial",r.commercial_exception_note);
+   hint(more,"Faturação individual prevista",choices.billing_person[r.billing_person||"unassigned"]);
+   hint(more,"Encaixe artístico",choices.fit_level[r.fit_level||"unreviewed"]);
+   if(r.strategic_reason&&r.strategic_reason!=="none")
+    hint(more,"Valor estratégico",choices.strategic_reason[r.strategic_reason]);
+   if(r.fit_reason)hint(more,"Avaliação fundamentada",r.fit_reason);
    hint(more,"Data do concerto",r.event_date||"Sem data");
    hint(more,"Comunicação / imprensa",choices.press_status[r.press_status||"unknown"]);
    hint(more,"Preparação técnica",choices.advance_status[r.advance_status||"unknown"]);
@@ -721,7 +756,8 @@ function editorField(parent,kind,def,current){
  }
  if(key==="contact_window_reference")field.placeholder="Link, email ou referência verificável";
  if(key==="emails")field.value=(current.emails||[]).join(", ");
- else if(key==="fee_amount"||key==="commission_pct")field.value=current[key]===null||current[key]===undefined?"":current[key];
+ else if(["fee_amount","commission_pct","promoter_total_amount"].includes(key))
+   field.value=current[key]===null||current[key]===undefined?"":current[key];
  else if(key==="contact_window_start"||key==="contact_window_end")
    field.value=displayWindowDate(current[key]);
  else field.value=current[key]??({
@@ -916,7 +952,12 @@ function edit(kind,entry={}){
   "Escolhe a altura anual para abordar esta entidade apenas quando houver evidência. Sem prova, assinala como hipótese. Nada será enviado automaticamente.","cc-lead");
  const fields=kind==="contacts"?CONTACT_FIELDS:BOOKING_FIELDS;
  const grid=make("div",undefined,"cc-field-grid");
- for(const def of fields)editorField(grid,kind,def,entry);
+ const defaults=kind==="booking"?{
+  fee_basis:entry.revision?"legacy_unspecified":"artist_base",
+  commission_mode:entry.revision?"unspecified":"standard",
+  billing_person:"unassigned",fit_level:"unreviewed",strategic_reason:"none"
+ }:{};
+ for(const def of fields)editorField(grid,kind,def,{...defaults,...entry});
  if(kind==="contacts"){
   const basis=grid.querySelector('[name="contact_window_basis"]');
   if(basis&&!basis.value)basis.value="unknown";
@@ -927,12 +968,48 @@ function edit(kind,entry={}){
   if(artist&&commission){
    const suggest=()=>{
     if(commission.value.trim())return;
+    if(entry.revision)return; // Never introduce an assumed rate while editing old records.
     if(/^(wildchains|devil of a woman)$/i.test(artist.value.trim()))commission.value="15";
+    else if(artist.value.trim())commission.value="20";
    };
    artist.addEventListener("blur",suggest);
    suggest();
-   const h=make("p","Roster principal: referência de comissão 15% sobre o cachet artístico. Confirma o acordo antes de guardar.","cc-lead");
+   const h=make("p","Modelo de referência: 15% por cima do valor pretendido pelo roster, 20% para artistas externos. São sugestões; confirma sempre as condições com a banda. Valor histórico não é recalculado.","cc-lead");
    grid.append(h);
+   const basis=grid.querySelector('[name="fee_basis"]'),
+    base=grid.querySelector('[name="fee_amount"]'),
+    mode=grid.querySelector('[name="commission_mode"]'),
+    total=grid.querySelector('[name="promoter_total_amount"]'),
+    exception=grid.querySelector('[name="commercial_exception_note"]');
+   const estimate=make("p",undefined,"cc-lead");
+   estimate.setAttribute("role","status");
+   const refreshEstimate=()=>{
+    const fee=base.value===""?null:Number(base.value);
+    const pct=commission.value===""?null:Number(commission.value);
+    const agreedTotal=total.value===""?null:Number(total.value);
+    if(basis.value!=="artist_base"){
+     estimate.textContent="Valor antigo: base de cálculo por identificar. Confirma o valor com a banda antes de mudar este campo.";
+    }else if(fee===null||!Number.isFinite(fee)){
+     estimate.textContent="Indica o cachet pretendido pela banda para calcular uma proposta.";
+    }else if(mode.value==="standard"&&pct!==null&&Number.isFinite(pct)){
+     const plus=Math.round(fee*100*pct/100)/100;
+     estimate.textContent="Proposta de referência: "+(fee+plus).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+
+       " (banda "+fee.toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+
+       " + comissão "+plus.toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+
+       "). Ainda não é um valor acordado.";
+    }else if(mode.value==="exception"){
+     estimate.textContent=agreedTotal!==null&&Number.isFinite(agreedTotal)?
+       "Exceção: margem prevista "+(agreedTotal-fee).toLocaleString("pt-PT",{style:"currency",currency:"EUR"})+
+       ". É necessária a aprovação das partes e uma justificação.":
+       "Exceção comercial: define condições e fundamenta a decisão.";
+    }else estimate.textContent="Comissão por definir; não será calculada automaticamente.";
+    exception.closest("label").hidden=mode.value!=="exception";
+   };
+   for(const input of [basis,base,mode,total,exception,commission])
+    input.addEventListener("input",refreshEstimate);
+   refreshEstimate();
+   grid.append(estimate);
+   grid.append(make("p","Abaixo de 400 € de cachet artístico, assinala a razão estratégica e valida a exceção com a banda; nunca é um bloqueio automático. 'Faturação individual prevista' não significa fatura emitida.","cc-lead"));
   }
   const stage=grid.querySelector('[name="stage"]'),
     lastContact=grid.querySelector('[name="last_contact_date"]'),
@@ -980,9 +1057,19 @@ function edit(kind,entry={}){
    try{Object.assign(record,relationshipData())}
    catch(error){notice.textContent=error.message;return}
   }else{
-   const money=record.fee_amount;record.fee_amount=money===""?null:Number(money);
-   record.commission_pct=record.commission_pct===""?null:Number(record.commission_pct);
+   for(const key of ["fee_amount","commission_pct","promoter_total_amount"])
+    record[key]=record[key]===""?null:Number(record[key]);
    record.currency="EUR";record.origin_label=entry.origin_label||"Registo manual";
+   if(record.fee_basis==="artist_base"&&record.fee_amount!==null&&record.fee_amount<400&&
+      !window.confirm("O cachet artístico está abaixo da referência de 400 €. A banda está alinhada com esta exceção?"))return;
+   if(record.fee_basis==="artist_base"&&record.promoter_total_amount!==null&&
+      record.commission_mode==="standard"&&record.commission_pct!==null){
+    const expected=Math.round(record.fee_amount*100)+
+       Math.round(Math.round(record.fee_amount*100)*record.commission_pct/100);
+    if(Math.round(record.promoter_total_amount*100)!==expected){
+     notice.textContent="O total indicado não corresponde à comissão por cima do cachet artístico. Usa «Condições excecionais» e explica o acordo.";return;
+    }
+   }
   }
   const id=entry.id,revision=entry.revision;
   if(id)record.id=id;

@@ -45,15 +45,18 @@ function selectDailyActions(records,{today,limit=5}={}){
    rank=4;reason="Oportunidade sem responsável e sem data de revisão";category="assign_owner";
   }else continue; // An unplanned prospect is not a proven urgent task.
   result.push({id:row.id,reason,category,dueDate:due===null?"":row.due_date,
-   missingOwner:!owner,rank,manualPriority:row.priority==="high"?0:row.priority==="medium"?1:2,
+   missingOwner:!owner,rank,
+   roster: /^(wildchains|devil of a woman)$/i.test(String(row.artist||"").trim())?0:1,
+   fit: row.fit_level==="strong"?0:row.fit_level==="possible"?1:row.fit_level==="unreviewed"?2:3,
+   manualPriority:row.priority==="high"?0:row.priority==="medium"?1:2,
    title:String(row.contact_name||"Entidade por identificar")+" · "+String(row.artist||"Artista por definir")});
  }
  result.sort((a,b)=>a.rank-b.rank||
   (a.dueDate||"9999").localeCompare(b.dueDate||"9999")||
-  a.manualPriority-b.manualPriority||
+  a.roster-b.roster||a.fit-b.fit||a.manualPriority-b.manualPriority||
   a.title.localeCompare(b.title,"pt-PT")||
   a.id.localeCompare(b.id));
- return result.slice(0,bound).map(({rank,manualPriority,...value})=>value);
+ return result.slice(0,bound).map(({rank,roster,fit,manualPriority,...value})=>value);
 }
 root.CaravelaWorkflowPriority=Object.freeze({selectDailyActions});
 })(typeof window!=="undefined"?window:globalThis);

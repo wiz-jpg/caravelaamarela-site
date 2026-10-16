@@ -306,3 +306,48 @@ test("contact-specific booking season is append-only, referenced and not a send 
  assert.equal(JSON.parse(events[1].evidence_json).contact_window_start,"10-01");
  assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM control_mail_headers").get().n,0);
 });
+
+
+test("legacy fee basis is preserved, never treated as artist cachet automatically",async()=>{
+ const old=await req("booking","POST",deal({commission_pct:15}));
+ assert.equal(old.status,201);
+ const item=(await old.json()).record;
+ assert.equal(item.fee_basis,"legacy_unspecified");
+ assert.equal(item.promoter_total_amount,null);
+ assert.equal(item.commission_mode,"unspecified");
+ assert.equal(item.fee_amount,700);
+ const restored=(await (await req("booking")).json()).records[0];
+ assert.equal(restored.fee_basis,"legacy_unspecified");
+ assert.equal(restored.fee_amount,700);
+ assert.equal(restored.commission_pct,15);
+});
+
+test("artist base + markup is server validated; exceptions require human explanation",async()=>{
+ const standard=deal({fee_basis:"artist_base",fee_amount:500,commission_pct:15,
+  commission_mode:"standard",promoter_total_amount:575,billing_person:"ana"});
+ assert.equal(validateNative("booking",standard).promoter_total_amount,575);
+ assert.equal(validateNative("booking",{...standard,promoter_total_amount:586.25}),null);
+ assert.equal(validateNative("booking",{...standard,promoter_total_amount:574.99}),null);
+ assert.equal(validateNative("booking",{...standard,promoter_total_amount:499}),null);
+ const exception={...standard,commission_mode:"exception",promoter_total_amount:550};
+ assert.equal(validateNative("booking",exception),null);
+ const justified={...exception,commercial_exception_note:"Valores aprovados pelo artista e responsável"};
+ const stored=await req("booking","POST",justified);
+ assert.equal(stored.status,201);
+ const item=(await stored.json()).record;
+ assert.equal(item.promoter_total_amount,550);
+ assert.equal(item.commercial_exception_note,justified.commercial_exception_note);
+ assert.equal(item.billing_person,"ana"); // Intention only, not invoice issued.
+ assert.equal((await (await req("finance")).json()).records.length,0);
+});
+test("subjective fit must be documented, not inferred or confused with deal state",()=>{
+ assert.equal(validateNative("booking",deal({fit_level:"strong"})),null);
+ const vetted=validateNative("booking",deal({
+  fit_level:"strong",strategic_reason:"new_territory",
+  fit_reason:"Promoter has programmed comparable rock bands"
+ }));
+ assert.equal(vetted.fit_level,"strong");
+ assert.equal(vetted.stage,"research");
+ assert.equal(validateNative("booking",deal({strategic_reason:"prestige"})),null);
+ assert.equal(validateNative("booking",deal({fit_level:"almost_certain",fit_reason:"test"})),null);
+});

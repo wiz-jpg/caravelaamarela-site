@@ -68,3 +68,15 @@ test("original booking records are never mutated or promoted to confirmed",()=>{
  assert.deepEqual(row,before);
  assert.equal(row.stage,"contact_reported");
 });
+
+
+test("roster priority and documented fit break ties but cannot override real due dates",()=>{
+ const rows=[
+  base("external",{artist:"Other Project",due_date:"2026-10-17",fit_level:"strong",priority:"high"}),
+  base("roster",{artist:"Devil of a Woman",due_date:"2026-10-17",fit_level:"possible",priority:"low"}),
+  base("fitted",{artist:"WILDCHAINS",due_date:"2026-10-17",fit_level:"strong",priority:"low"}),
+  base("due-now",{artist:"Other Project",due_date:"2026-10-16",fit_level:"weak",priority:"low"})
+ ];
+ assert.deepEqual(select(rows,{today:"2026-10-16"}).map(x=>x.id),
+  ["due-now","fitted","roster","external"]);
+});

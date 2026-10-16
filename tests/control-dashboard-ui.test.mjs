@@ -40,7 +40,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261016focus1/);
+ assert.match(html,/control-native-ui\.js\?v=20261016business1/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016drafts1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
@@ -50,9 +50,17 @@ test("Preview loads cache-busted current assets and never modifies main",()=>{
 
 test("daily focus is read-only and the complete queues remain accessible",()=>{
  const html=get("crm-control.html"),source=get("control-native-ui.js");
- assert.match(html,/control-workflow-priorities\.js\?v=20261016focus1/);
+ assert.match(html,/control-workflow-priorities\.js\?v=20261016business1/);
  assert.match(source,/selectDailyActions\(live,\{today,limit:5\}\)/);
  assert.match(source,/const allQueues=make\("details"/);
  assert.match(source,/allQueues\.append\(board\)/);
  assert.match(source,/root\.append\(focus\)/);
+});
+
+test("commercial details are explicit and do not recalculate historic cashflows",()=>{
+ const source=get("control-native-ui.js");
+ assert.match(source,/Cachet registado \(base por confirmar\)/);
+ assert.match(source,/r\.fee_basis==="artist_base"/);
+ assert.match(source,/Condições excecionais/);
+ assert.match(source,/Faturação individual prevista/);
 });

@@ -1185,7 +1185,7 @@ function homeTaskCard(task){
  const row=make("article",undefined,"cc-home-task");
  const stage=task.stage||"research";
  row.classList.add("cc-home-task--"+stage.replace(/[^a-z_-]/g,""));
- row.classList.add("cc-tone-"+bookingTone(stage));
+ row.classList.add("cc-tone-"+(task.source==="arquivo"?"archive":bookingTone(stage)));
  const head=make("div",undefined,"cc-home-task-heading");
  const name=make("button",task.title,"cc-home-task-name");name.type="button";name.onclick=task.click;
  head.append(name,make("span",task.statusLabel||"Por analisar","cc-home-stage cc-home-stage--"+stage));
@@ -1194,22 +1194,33 @@ function homeTaskCard(task){
  row.append(info);
  if(task.triageSuggested)row.append(make("small","Triagem sugerida esta semana — prazo histórico por verificar","cc-home-suggestion"));
  const owner=make("div",undefined,"cc-home-task-meta");
- owner.append(make("span","Responsável: "+(task.record?.owner||"Por atribuir")),
-   make("span","Localização: "+(task.source==="booking"?bookingLocation(task.record):"Por validar")),
-   make("span",task.source==="booking"?
-     "Último contacto: "+(task.record?.last_contact_date||"Não registado"):"Último contacto: consultar arquivo"),
-   make("span",task.date?"Prazo registado: "+task.date:"Sem prazo"));
+ if(task.source==="booking"){
+  owner.append(make("span","Responsável: "+(task.record?.owner||"Por atribuir")));
+  const location=bookingLocation(task.record);
+  if(location!=="Por confirmar")owner.append(make("span",location));
+  if(task.record?.last_contact_date)owner.append(make("span","Último contacto: "+task.record.last_contact_date));
+  owner.append(make("span",task.date?"Revisão: "+task.date:"Sem data definida"));
+ }else{
+  owner.append(make("span",task.date?"Data indicada no arquivo: "+task.date:
+    "Sem data comprovada no arquivo"));
+  owner.append(make("span","Envio, contacto e destinatário por verificar"));
+ }
  row.append(owner);
  if(task.source==="booking"||task.source==="arquivo"){
-  const tools=make("div",undefined,"cc-home-task-tools");
   const commands=task.stage==="confirmed"||task.stage==="declined"||task.stage==="closed"?[]:quickDefinitions;
-  for(const opt of commands){
-    const button=make("button",opt.symbol,"cc-home-status cc-home-status--"+opt.cls);
+  if(commands.length){
+   const details=make("details",undefined,"cc-home-decision");
+   details.append(make("summary",task.source==="arquivo"?
+     "Rever e registar decisão":"Atualizar estado"));
+   const tools=make("div",undefined,"cc-home-task-tools");
+   for(const opt of commands){
+    const button=make("button",opt.label,"cc-home-status cc-home-status--"+opt.cls);
     button.type="button";button.title=opt.label;
     button.setAttribute("aria-label",opt.label+" · "+task.title);
     button.onclick=()=>createFastAction(row,task,opt.key);tools.append(button);
+   }
+   details.append(tools);row.append(details);
   }
-  if(commands.length)row.append(tools);
  }
  return row;
 }

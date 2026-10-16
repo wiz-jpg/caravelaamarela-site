@@ -27,3 +27,32 @@ Estado: código preparado em Draft PR #1, ainda não ativado na Cloudflare. Não
 - O agendamento NÃO foi ativado remotamente por esta PR; só o proprietário Cloudflare o pode efetuar com os seus segredos.
 - Gmail WILDCHAINS continua fora do agendador. É uma integração independente.
 - Não enviar, não apagar históricos, não fazer merge/deploy de produção até duas provas de Cron real e testes de falha.
+
+
+## Fila automática de tarefas com validação humana — migração 0006
+
+O operador escolheu o modo A: após sincronização Zoho, sinais classificados por regras
+(booking, parcerias ou imprensa; interesse, possível confirmação/recusa, pergunta)
+originam **uma única tarefa pendente de revisão por mensagem**, sem decisões comerciais.
+
+- Aplicar **migrations/0006_control_review_tasks.sql** somente a `caravela-zoho-test`.
+  SQL é idempotente e não apaga nada.
+- Enquanto a migração faltar, o Zoho continua a sincronizar e interpretar emails;
+  a fila apresenta explicitamente `review_tasks_migration_required`.
+- No ciclo automático seguinte à migração, o sistema cria tarefas pendentes a partir
+  dos sinais já guardados e de novas mensagens, com identificação por message_id.
+- `GET /api/control/mail/review-tasks`: apenas manager/admin, devolve até 80
+  tarefas pendentes, classificação, remetente, candidatos por email exato e
+  indicação se um email é partilhado/restrito. Associação é só uma sugestão.
+- `PATCH /api/control/mail/review-tasks`: apenas manager/admin, com sessão
+  autenticada, origem e cabeçalho anti-CSRF; conclui revisão ou descarta sinal,
+  regista auditoria, exige versão atual. Não cria booking nem autoriza outreach.
+- Acesso à fila: Início → Tarefas por validar → Contactos.
+- **Sem escrita de assuntos/corpos**, sem envio de mensagens, sem alteração
+  de arquivo, histórico de decisões ou finanças.
+- O cron mantém-se apenas no Worker `caravela-control-automation-preview`;
+  não alterar Service Tokens, triggers nem website de produção.
+
+**Validação:** depois da migração e de pelo menos um cron bem-sucedido, consultar
+`SELECT status,COUNT(*) AS n FROM control_review_tasks GROUP BY status;`
+na D1 Preview, e confirmar na UI que a tarefa permanece pendente até revisão humana.

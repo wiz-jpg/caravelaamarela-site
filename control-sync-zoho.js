@@ -1,4 +1,5 @@
 /* Preview-only Zoho metadata sync. Exact-address observations, not commercial decisions. */
+import {interpretIndexedMessages} from "./control-mail-intelligence.js";
 const MAILBOX="booking@caravelaamarela.com";
 const EMAIL=/[a-z0-9.!#$%&'*+/=?^_{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 function emailList(data){
@@ -118,9 +119,21 @@ export async function syncZohoMail(request,env,url,zohoReader,{trigger="manual"}
     const current=await db.prepare("SELECT COUNT(*) AS n FROM control_mail_headers").first();
     newRows=(current?.n||0)-(previous?.n||0);
     await db.prepare("UPDATE control_sync_runs SET new_records=? WHERE id=?").bind(newRows,id).run();
+    // Optional, bounded body reads. The raw email exists only in memory.
+    // A metadata sync remains successful even when content analysis is not configured.
+    let analysis={enabled:false,reason:"feature_disabled",examined:0,new_signals:0,failures:0};
+    if(env.CONTROL_MAIL_ANALYSIS_ENABLED==="true"){
+      try{
+        analysis=await interpretIndexedMessages(db,MAILBOX,async({folderId,messageId})=>
+          providerRead(url,"content?"+
+            new URLSearchParams({folderId,messageId}),request,env,zohoReader));
+      }catch{
+        analysis={enabled:false,reason:"analysis_error",examined:0,new_signals:0,failures:0};
+      }
+    }
     return {ok:true,provider:"zoho",scanned,new_records:newRows,
-      total_indexed:current?.n||0,read_only:true,
-      note:"Email recebido não demonstra resposta a proposta; assuntos e corpos não são guardados."};
+      total_indexed:current?.n||0,read_only:true,analysis,
+      note:"Metadados guardados; se a interpretação estiver ativa, só guarda sinais para revisão. Nunca altera automaticamente negócios."};
   }catch{
     await db.prepare("INSERT INTO control_sync_runs(id,provider,started_ms,completed_ms,status,new_records,examined_records,reason,meta_json) VALUES(?,'zoho',? ,?,'failed',0,?,'provider_or_storage_error',?)")
       .bind(id,now,Date.now(),scanned,JSON.stringify({trigger:trigger==="cron"?"cron":"manual"})).run().catch(()=>{});

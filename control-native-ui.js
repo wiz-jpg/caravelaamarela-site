@@ -524,6 +524,15 @@ function render(kind){
   const actions=make("div",undefined,"cc-native-card-actions");
   const button=make("button",r.revision?"Atualizar":"Editar ficha","cc-neutral");
   button.type="button";button.onclick=()=>edit(kind,r.__members?.find(x=>x.id===r.id)||r);actions.append(button);
+  if(kind==="booking"){
+    const draftButton=make("button","Preparar email","cc-neutral");draftButton.type="button";
+    draftButton.onclick=()=>window.dispatchEvent(new CustomEvent("caravela-control-draft-compose",{
+      detail:{to:r.contact_email||"",artist:r.artist||"",booking_id:r.id||"",
+        subject:r.subject||"",context:"Oportunidade: "+r.contact_name+
+        ". Validar destinatário, condições e histórico antes de qualquer envio."}
+    }));
+    actions.append(draftButton);
+  }
   if(kind==="contacts"){
    const windowButton=make("button","Definir janela ideal","cc-neutral");windowButton.type="button";
    windowButton.onclick=()=>editContactWindow(r);
@@ -540,6 +549,12 @@ function render(kind){
    card.append(extra);
   }
   if(kind==="contacts"){
+   const contactDraft=make("button","Preparar email","cc-neutral");contactDraft.type="button";
+   contactDraft.onclick=()=>window.dispatchEvent(new CustomEvent("caravela-control-draft-compose",{
+     detail:{context:"Entidade: "+r.name+
+       ". Contacto por verificar: confirmar endereço, restrições e oportunidade antes de enviar."}
+   }));
+   actions.append(contactDraft);
    const b=make("button","Nova proposta","cc-neutral");b.type="button";
    b.onclick=()=>{window.CaravelaControlApp?.openView("booking");edit("booking",{
      contact_name:r.name,contact_id:r.id,

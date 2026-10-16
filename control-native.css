@@ -285,3 +285,25 @@
 .cc-review-task-actions small{color:#e6bf8c;font-size:12px;flex-basis:100%}
 @media(max-width:680px){.cc-review-tasks-heading,.cc-review-task-head{flex-direction:column}
  .cc-review-tasks-panel{padding:14px}.cc-review-tasks-heading button{width:100%}}
+
+/* Prioritized review on the daily home, without invented commercial deadlines. */
+.cc-review-tasks-home{display:block}
+.cc-review-tasks-home-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cc-review-tasks-home-header strong{font-size:13px}
+.cc-review-tasks-home-header span{margin-right:auto}
+.cc-review-tasks-home-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
+.cc-review-tasks-home-preview:empty{display:none}
+.cc-review-home-entry{border:1px solid #4d6659;background:#1b2e27;color:#e6f1e7;
+ border-radius:8px;padding:10px 12px;text-align:left;font-size:12px;font-weight:650;
+ overflow-wrap:anywhere}
+.cc-review-home-entry:hover,.cc-review-home-entry:focus-visible{border-color:#b4d2be;background:#274035}
+.cc-review-tasks-home-preview small{align-self:center;font-size:11px;color:#b5cfbc}
+.cc-review-task-filters{display:grid;grid-template-columns:minmax(160px,1fr) minmax(220px,2fr);
+ gap:12px;margin:12px 0 16px}
+.cc-review-task-filters label{display:flex;flex-direction:column;gap:6px;font-size:12px;
+ font-weight:700;color:#c5d5da}
+.cc-review-task-filters select,.cc-review-task-filters input{background:#121c22;color:#f0f3f5;
+ border:1px solid #647782;border-radius:8px;padding:9px 11px;font:inherit;width:100%;min-height:39px}
+.cc-review-task-guidance{font-size:12px;color:#c6dfe4;line-height:1.5;margin:5px 0 12px}
+@media(max-width:760px){.cc-review-tasks-home-preview{grid-template-columns:1fr}
+ .cc-review-task-filters{grid-template-columns:1fr}}

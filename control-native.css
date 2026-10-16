@@ -431,3 +431,102 @@
 .cc-task-resolve-form>p[role=status]{grid-column:1/-1;color:#f1d79e;margin:0}
 @media(max-width:680px){.cc-task-resolve-form{grid-template-columns:1fr}
  .cc-task-resolve-form>label{grid-column:1/-1}}
+
+/* Daily UX refinement — source-separated priorities and readable two-column cards.
+   These rules only affect the private Caravela Control workspace in Preview. */
+#control-app #cc-view-dashboard>.cc-panel-head,
+#control-app #cc-view-dashboard>.cc-actions{display:none!important}
+#control-app #cc-native-dash-metrics[hidden]{display:none!important}
+#control-app #cc-native-dash-metrics{display:none!important}
+#control-app #cc-view-dashboard .cc-native-dashboard{
+ background:#141d27;border:1px solid #344757;padding:18px 20px;margin:13px 0 17px}
+#control-app #cc-view-dashboard .cc-native-dashboard>.cc-native-head{margin-bottom:14px}
+#control-app #cc-view-dashboard .cc-native-dashboard>.cc-native-head h2{font-size:18px}
+#control-app #cc-view-dashboard .cc-native-dashboard>.cc-native-head .cc-lead{
+ font-size:12px;line-height:1.45;max-width:680px}
+#control-app #cc-view-dashboard .cc-native-dashboard>.cc-native-head button{
+ font-size:12px;padding:9px 12px}
+#control-app #cc-view-dashboard .cc-native-dashboard>.cc-native-list{margin:0}
+#control-app #cc-view-dashboard .cc-home-board{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;
+ align-items:start;margin:13px 0 17px}
+#control-app #cc-view-dashboard .cc-home-column{padding:14px;background:#182533;
+ border-color:#394d61;min-width:0}
+#control-app #cc-view-dashboard .cc-home-column h3{font-size:14px;line-height:1.45;margin:0 0 4px}
+#control-app #cc-view-dashboard .cc-home-column>.cc-lead{
+ font-size:12px;line-height:1.5;min-height:0;margin:0 0 11px}
+#control-app #cc-view-dashboard .cc-home-column-list{gap:8px}
+#control-app #cc-view-dashboard .cc-home-task{padding:12px 14px;border-radius:9px}
+#control-app #cc-view-dashboard .cc-home-task-name{font-size:14px;line-height:1.35}
+#control-app #cc-view-dashboard .cc-home-stage{font-size:11px;max-width:125px;padding:5px 8px}
+#control-app #cc-view-dashboard .cc-home-task-info{
+ font-size:12px;line-height:1.5;margin:9px 0;color:#e5ebf0;
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+#control-app #cc-view-dashboard .cc-home-task-meta{
+ display:flex;flex-direction:row;gap:7px 14px;flex-wrap:wrap;
+ font-size:11px;line-height:1.5;color:#d1dee8}
+#control-app #cc-view-dashboard .cc-home-task-meta span{overflow-wrap:anywhere}
+#control-app #cc-view-dashboard .cc-home-task.cc-tone-archive{
+ background:#29323f;border-color:#596778;color:#eff3f8}
+#control-app #cc-view-dashboard .cc-home-task.cc-tone-archive .cc-home-stage{
+ background:#414c59;color:#e3edf3;border-color:#7f8e9c}
+.cc-home-summary{display:flex;align-items:center;gap:7px 20px;flex-wrap:wrap;
+ padding:9px 12px;border:1px solid #344c5f;border-radius:9px;
+ background:#1b2936;color:#eaf1f8;margin:10px 0 14px}
+.cc-home-summary strong{font-size:13px;letter-spacing:0}
+.cc-home-summary span{font-size:12px;color:#c2d1df}
+.cc-home-nonative{grid-column:1/-1;padding:15px 16px;border:1px dashed #50677a;
+ background:#192a38;border-radius:10px}
+.cc-home-nonative strong{font-size:14px}
+.cc-home-nonative .cc-lead{font-size:12px;margin:6px 0 12px}
+.cc-home-nonative button{padding:9px 12px;font-size:12px}
+.cc-home-decision{margin-top:10px;padding-top:8px;border-top:1px solid #ffffff3a}
+.cc-home-decision>summary{font-size:12px;color:#eef2f9;font-weight:750;
+ cursor:pointer;user-select:none}
+#control-app #cc-view-dashboard .cc-home-task-tools{margin-top:9px;padding-top:0;
+ border-top:0;gap:7px}
+#control-app #cc-view-dashboard .cc-home-status{
+ width:auto;min-width:0;min-height:34px;font-weight:750;
+ font-size:12px;padding:7px 10px;border-radius:7px}
+#control-app #cc-view-dashboard .cc-home-status--won{color:#d0ffe4}
+#control-app #cc-view-dashboard .cc-home-status--lost{color:#ffd7d0}
+#control-app #cc-view-dashboard .cc-home-status--later{color:#ffe9b2}
+.cc-home-archive{margin-top:12px!important}
+.cc-home-archive>.cc-lead{font-size:12px;line-height:1.5;margin:4px 16px 10px}
+.cc-home-archive-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;margin:0 14px 15px}
+#control-app .cc-home-archive-columns .cc-home-column{padding:12px}
+#control-app .cc-home-archive-columns .cc-home-task{font-size:12px}
+#control-app .cc-home-archive-columns .cc-home-task-name{font-size:13px}
+#control-app .cc-home-support{margin:12px 0!important}
+#control-app .cc-home-support .cc-home-secondary{margin:10px 14px;
+ grid-template-columns:repeat(2,minmax(0,1fr))}
+#control-app .cc-home-support>.cc-archive-toggle{margin:10px 14px}
+#control-app .cc-home-support .cc-native-dash-task{margin:7px 14px;font-size:12px}
+#control-app .cc-roster-details .cc-agenda-artists{margin:10px 14px 15px;
+ padding:0;border:0}
+#control-app .cc-roster-details .cc-agenda-artists>.cc-agenda-roster-note{
+ grid-column:1/-1;font-size:12px;color:#bfcddd}
+#control-app .cc-roster-details .cc-agenda-artist{padding:12px 14px}
+#control-app .cc-zoho-health-drawer{margin-top:11px;padding-top:9px;
+ border-top:1px solid #485c61}
+#control-app .cc-zoho-health-drawer>summary{cursor:pointer;font-size:11px;
+ color:#b4c6cb;font-weight:650}
+#control-app .cc-zoho-health-drawer>.cc-mail-automation-status{
+ margin:10px 0 0;padding:10px 12px;background:#14212b}
+#control-app .cc-review-tasks-home{margin:8px 0 14px;padding:14px 17px;
+ background:#202c34;border-color:#546772}
+#control-app .cc-review-tasks-home-header strong{font-size:15px;color:#edf4f8}
+#control-app .cc-review-tasks-home-header span{font-size:13px;color:#f1d795}
+#control-app .cc-review-home-entry{font-size:13px;line-height:1.4;
+ padding:10px 12px;background:#273b40;border-color:#52716b}
+#control-app .cc-review-tasks-home-preview small{font-size:12px}
+@media(max-width:860px){
+ #control-app #cc-view-dashboard .cc-home-board,
+ .cc-home-archive-columns{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+ #control-app #cc-view-dashboard .cc-native-dashboard{padding:14px}
+ #control-app .cc-review-tasks-home-preview{grid-template-columns:1fr}
+ #control-app .cc-home-support .cc-home-secondary{grid-template-columns:1fr}
+}

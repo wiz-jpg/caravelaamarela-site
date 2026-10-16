@@ -1223,7 +1223,7 @@ function renderDashboard(){
  const endThisWeek=week(7),endNextWeek=week(14);
  const live=get("booking"),normalize=value=>lower(value).normalize("NFD").replace(/\p{M}/gu,"").replace(/[^a-z0-9]+/g," ").trim();
  const liveKeys=new Set(live.map(x=>normalize(x.contact_name)+"|"+normalize(x.artist)));
- const followups=[],leads=[],other=[],confirmed=[],paused=[];
+ const followups=[],leads=[],archiveFollowups=[],archiveLeads=[],other=[],confirmed=[],paused=[];
  for(const x of live){
   const task={source:"booking",record:x,artist:x.artist,name:x.contact_name,
    title:x.contact_name+" · "+x.artist,date:x.due_date||"",priority:x.priority,
@@ -1246,7 +1246,7 @@ function renderDashboard(){
    statusLabel:isFollowup?"Arquivo · contacto registado":"Arquivo · por contactar",
    note:(row.next_step||"Rever oportunidade")+(row.link_status!=="verified_name_email"?" · identidade por confirmar":""),
    click:()=>displayHistoricalAction(row)};
-  if(isFollowup)followups.push(task);else leads.push(task);
+  if(isFollowup)archiveFollowups.push(task);else archiveLeads.push(task);
  }
  // Preserve dated individual contact reviews as a separate planning queue.
  for(const x of contactRows()){
@@ -1260,35 +1260,30 @@ function renderDashboard(){
  const sorting=(a,b)=>(a.date||"9999").localeCompare(b.date||"9999")||
    Number(b.priority==="high")-Number(a.priority==="high")||a.title.localeCompare(b.title,"pt-PT");
  followups.sort(sorting);leads.sort(sorting);
+ archiveFollowups.sort(sorting);archiveLeads.sort(sorting);
  const followupOverdue=followups.filter(x=>x.date&&x.date<today);
  const followupSoon=followups.filter(x=>!x.date||x.date>=today);
- const outstanding=leads.filter(x=>x.date&&x.date<today);
- // A small batch of overdue prospects is suggested for triage this week, but
- // their recorded deadline is never overwritten or represented as a new promise.
- const suggested=outstanding.slice(0,8).map(x=>({...x,triageSuggested:true}));
- const newLate=outstanding.slice(8);
- const newWeek=[...leads.filter(x=>x.date&&x.date>=today&&x.date<endThisWeek),...suggested];
+ // Only operational bookings may populate the live action board. Historical
+ // statements are review candidates, never verified current follow-ups.
+ const newLate=leads.filter(x=>x.date&&x.date<today);
+ const newWeek=leads.filter(x=>x.date&&x.date>=today&&x.date<endThisWeek);
  const newFuture=leads.filter(x=>!x.date||x.date>=endThisWeek);
  const buckets=[
-  {title:"Para follow-up",count:followups.length,
-   help:"Contactos já registados. Verificar o histórico antes de insistir.",
+  {title:"Follow-ups operacionais",count:followups.length,
+   help:"Registos da plataforma. Confirma sempre a evidência antes de contactar.",
    items:[...followupOverdue,...followupSoon],id:"followup"},
-  {title:"Para contactar · atraso",count:newLate.length,
-   help:"Primeiros contactos com data original ultrapassada, ainda por revalidar.",
+  {title:"Primeiros contactos · vencidos",count:newLate.length,
+   help:"Prazos definidos em propostas operacionais que já passaram.",
    items:newLate,id:"late"},
-  {title:"Para contactar · esta semana",count:newWeek.length,
-   help:"Primeiros contactos agendados para esta semana.",
+  {title:"Primeiros contactos · esta semana",count:newWeek.length,
+   help:"Datas de revisão registadas para esta semana.",
    items:newWeek,id:"week"},
-  {title:"Para contactar · em breve",count:newFuture.length,
-   help:"Próximos contactos e oportunidades ainda sem data definida.",
+  {title:"A programar / mais tarde",count:newFuture.length,
+   help:"Propostas sem data ou com revisão marcada para depois desta semana.",
    items:newFuture,id:"future"}
  ];
- const stats=[["Follow-ups",followups.length],["Primeiros contactos atrasados",newLate.length],
-   ["Esta semana",newWeek.length],["Em breve",newFuture.length]];
- for(const [label,count] of stats){
-  const cell=make("div",undefined,"cc-native-metric");
-  cell.append(make("small",label),make("strong",count));metrics.append(cell);
- }
+ const archiveCount=archiveFollowups.length+archiveLeads.length;
+ metrics.hidden=true;
  // Contact timing is separate from deal status and has no guessed deadlines.
  const allContacts=contactRows();
  const eligibleWindows=allContacts.filter(isWindowEligible).map(contact=>({
@@ -1333,24 +1328,67 @@ function renderDashboard(){
  if(!eligibleWindows.length)timed.append(make("p",
    "Ainda não existem janelas comprovadas em curso ou próximas. Define-as progressivamente nas fichas dos festivais e salas prioritários, com fonte ou histórico.","cc-lead"));
  // The daily action queues take precedence over research calendars.
+ const overview=make("div",undefined,"cc-home-summary");
+ const liveTotal=followups.length+leads.length;
+ overview.append(make("strong",liveTotal?liveTotal+" oportunidades operacionais por tratar":
+   "Sem oportunidades operacionais pendentes"),
+   make("span",archiveCount+" ações antigas no arquivo · não são follow-ups atuais confirmados"));
+ root.append(overview);
  const board=make("div",undefined,"cc-home-board");
- for(const bucket of buckets){
+ const visibleBuckets=buckets.filter(x=>x.items.length>0);
+ for(const bucket of visibleBuckets){
   const column=make("section",undefined,"cc-home-column");
   column.append(make("h3",bucket.title+" · "+bucket.count),make("p",bucket.help,"cc-lead"));
-  if(!bucket.items.length)column.append(make("p","Sem ações identificadas.","cc-home-empty"));
   const list=make("div",undefined,"cc-home-column-list");
   const showMore=make("button","Mostrar mais","cc-neutral");showMore.type="button";
-  let visible=7;
+  let visible=3;
   function draw(){
    list.replaceChildren();
    for(const task of bucket.items.slice(0,visible))list.append(homeTaskCard(task));
    showMore.hidden=visible>=bucket.items.length;
    showMore.textContent="Mostrar mais ("+(bucket.items.length-visible)+")";
   }
-  showMore.onclick=()=>{visible+=8;draw()};draw();
+  showMore.onclick=()=>{visible+=5;draw()};draw();
   column.append(list,showMore);board.append(column);
  }
- root.append(colorLegend(),board,timed);
+ if(!visibleBuckets.length){
+  const empty=make("div",undefined,"cc-home-nonative");
+  empty.append(make("strong","O trabalho comercial ainda não foi lançado como oportunidades."),
+   make("p","Começa pelas respostas pendentes do Zoho ou recupera uma ação do arquivo, depois de confirmar os dados.","cc-lead"));
+  const open=make("button","Rever respostas Zoho","cc-neutral");open.type="button";
+  open.onclick=()=>window.CaravelaControlApp?.openView("contacts");
+  empty.append(open);board.append(empty);
+ }
+ if(visibleBuckets.length)root.append(colorLegend());
+ root.append(board);
+ const archive=make("details",undefined,"cc-archive-toggle cc-home-archive");
+ archive.append(make("summary","Arquivo histórico · "+archiveFollowups.length+
+   " contactos referidos · "+archiveLeads.length+" por contactar (verificar)"));
+ archive.append(make("p","Estes números provêm das AÇÕES importadas, não de mensagens confirmadas. Não entram automaticamente nos prazos atuais.","cc-lead"));
+ const archives=make("div",undefined,"cc-home-archive-columns");
+ for(const [title,entries] of [["Contactos históricos por rever",archiveFollowups],
+   ["Primeiros contactos do arquivo",archiveLeads]]){
+  const group=make("section",undefined,"cc-home-column");
+  group.append(make("h3",title+" · "+entries.length));
+  const list=make("div",undefined,"cc-home-column-list");
+  const more=make("button","Mostrar mais","cc-neutral");more.type="button";
+  let shown=3;
+  function paint(){
+   list.replaceChildren();
+   for(const task of entries.slice(0,shown))list.append(homeTaskCard(task));
+   more.hidden=shown>=entries.length;
+   more.textContent="Mostrar mais ("+(entries.length-shown)+")";
+  }
+  more.onclick=()=>{shown+=5;paint()};paint();
+  group.append(list,more);archives.append(group);
+ }
+ archive.append(archives);root.append(archive);
+ if(eligibleWindows.length)root.append(timed);
+ else{
+  const windowDrawer=make("details",undefined,"cc-archive-toggle cc-home-windows");
+  windowDrawer.append(make("summary","Janelas ideais de contacto · ainda sem períodos validados"),timed);
+  root.append(windowDrawer);
+ }
  // Supporting work stays below the four booking queues, not mixed with prospecting.
  const pendingPartner=partnerTasks.filter(x=>
    ["contact_reported","sent_verified","reply_reported","negotiating","draft"].includes(x.stage));

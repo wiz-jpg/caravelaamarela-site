@@ -2,7 +2,7 @@ import {test,beforeEach,afterEach} from "node:test";
 import assert from "node:assert/strict";
 import {DatabaseSync} from "node:sqlite";
 import {readFileSync} from "node:fs";
-import {materializeMailReviewTasks} from "../control-review-tasks.js";
+import {materializeMailReviewTasks,matchMailTaskContacts} from "../control-review-tasks.js";
 import {handleControl} from "../control-vault.js";
 
 const ADDRESS="booking@caravelaamarela.com";
@@ -96,4 +96,24 @@ test("missing migration disables task creation without touching Zoho or commerci
  assert.equal(out.enabled,false);assert.equal(out.reason,"migration_required");
  assert.equal((await call()).status,409);
  assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_mail_signals").get().n,1);
+});
+
+test("email association checks entity and interlocutor exact addresses without ambiguous merges",()=>{
+ const contacts=[
+  {id:"venue-a",name:"Auditório A",emails:["geral@auditorio.test"],
+   people:[{name:"João",email:"booking@produtora.test"}]},
+  {id:"festival-b",name:"Festival B",emails:["booking@produtora.test"],people:[]},
+  {id:"label-c",name:"Editora C",emails:["press@editora.test"],people:[],
+   contact_policy:"blocked"}
+ ];
+ let result=matchMailTaskContacts(contacts,"booking@produtora.test");
+ assert.equal(result.association,"shared_email");
+ assert.equal(result.matches.length,2);
+ result=matchMailTaskContacts(contacts,"geral@auditorio.test");
+ assert.equal(result.association,"unique_candidate");
+ assert.equal(result.matches[0].id,"venue-a");
+ result=matchMailTaskContacts(contacts,"press@editora.test");
+ assert.equal(result.association,"restricted");
+ result=matchMailTaskContacts(contacts,"missing@empresa.test");
+ assert.equal(result.association,"unmatched");
 });

@@ -18,7 +18,7 @@ test("the daily booking queues exclude archival claims without verified status",
  assert.doesNotMatch(source,/if\(isFollowup\)followups\.push\(task\)/);
  assert.match(source,/const archive=make\("details"/);
  assert.match(source,/const visibleBuckets=buckets\.filter\(x=>x\.items\.length>0\)/);
- assert.match(source,/cc-tone-archive/);
+ assert.match(source,/task\.source==="arquivo"\?"archive":bookingTone\(stage\)/);
  assert.match(source,/metrics\.hidden=true/); // Duplicate counter tiles are not shown.
 });
 

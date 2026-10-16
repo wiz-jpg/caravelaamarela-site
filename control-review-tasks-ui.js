@@ -197,7 +197,8 @@
      evidence_reference:"",fee_amount:null,commission_pct:null,currency:"EUR",
      fee_note:"",conditions:"",event_date:"",press_status:"unknown",press_reference:"",
      advance_status:"unknown",last_contact_date:"",owner:owner.value.trim(),
-     next_step:next.value.trim(),due_date:due.value,notes:"",
+     next_step:next.value.trim(),due_date:due.value,
+     notes:"[Revisão humana Zoho · mensagem "+task.message_id+"]",
      origin_label:"Zoho · mensagem "+task.message_id
     };
     const record=old?{
@@ -210,7 +211,8 @@
       owner:newEntry.owner,next_step:newEntry.next_step,due_date:newEntry.due_date,
       evidence_type:newEntry.stage==="reply_reported"&&old.evidence_type==="none"?
         "user_report":old.evidence_type,
-      notes:(old.notes||"").slice(0,1450)
+      notes:((old.notes||"").slice(0,1400)+"\n"+
+        "[Revisão humana Zoho · mensagem "+task.message_id+"]").trim()
     }:newEntry;
     // A verified state is not created from an automatic classification.
     if(["confirmed","sent_verified"].includes(record.stage)&&!old){

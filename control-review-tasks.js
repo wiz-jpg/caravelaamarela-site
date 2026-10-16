@@ -153,3 +153,39 @@ export async function handleMailReviewTasks(request,env,url,{actor=""}={}){
     return error("review_tasks_unavailable",503);
   }
 }
+
+
+/* One human-approved command: booking event and Zoho task in one D1 batch. */
+export async function handleResolveMailBooking(request,env,url,{actor=""}={}){
+  if(url.protocol!=="https:"||url.hostname!==PREVIEW_HOST)return error("not_found",404);
+  if(request.method!=="POST")return error("method_not_allowed",405);
+  if(!actor||request.headers.get("X-Caravela-Request")!=="1"||
+     (request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
+     request.headers.get("Sec-Fetch-Site")==="cross-site")return error("invalid_origin",403);
+  let input;
+  try{
+    const raw=await request.text();
+    if(raw.length>6500)return error("payload_too_large",413);
+    input=JSON.parse(raw);
+  }catch{return error("invalid_json",400)}
+  if(!VALID_ID.test(input?.message_id||"")||
+     !Number.isInteger(input?.task_revision)||input.task_revision<0||
+     input.review_confirmed!==true||
+     !["POST","PATCH"].includes(input.booking_method)||
+     !input.record||typeof input.record!=="object"||Array.isArray(input.record)||
+     typeof input.record.id!=="string"||
+     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(input.record.id))
+    return error("invalid_resolution",422);
+  if(!env.ZOHO_DB||!(await schemaReady(env.ZOHO_DB)))
+    return error("review_tasks_migration_required",409);
+  const nativeUrl=new URL("/api/control/native/booking",url);
+  const adapted=new Request(nativeUrl,{
+    method:input.booking_method,
+    headers:{"Origin":url.origin,"X-Caravela-Request":"1","Content-Type":"application/json"},
+    body:JSON.stringify(input.record)
+  });
+  return handleNative(adapted,env,nativeUrl,"native/booking",{
+    canRead:true,canWrite:true,actor,
+    mailReview:{message_id:input.message_id,revision:input.task_revision}
+  });
+}

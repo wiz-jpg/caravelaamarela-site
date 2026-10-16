@@ -334,28 +334,38 @@ function legacyPolicy(entity){
   if(entity.review_required||entity.shared_email)return "review";
   return "allowed";
 }
-function appendRevision(db,kind,id,record,actor,revision){
+function appendRevision(db,kind,id,record,actor,revision,mailReview=null){
   const eventId=crypto.randomUUID(),entity=prefix(kind)+id,op=operation(kind),now=Date.now();
   const changeSql="INSERT INTO control_decision_events("+
     "id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms) "+
     "SELECT ?,?,?,?,?,?,?,? WHERE "+(revision
       ?"(SELECT id FROM control_decision_events WHERE entity_id=? AND operation=? ORDER BY created_ms DESC,rowid DESC LIMIT 1)=?"
-      :"NOT EXISTS(SELECT 1 FROM control_decision_events WHERE entity_id=? AND operation=?)");
+      :"NOT EXISTS(SELECT 1 FROM control_decision_events WHERE entity_id=? AND operation=?)")+
+    (mailReview?" AND EXISTS (SELECT 1 FROM control_review_tasks t "+
+      "JOIN control_mail_signals s ON s.mailbox=t.mailbox AND s.folder_kind=t.folder_kind "+
+      "AND s.message_id=t.message_id WHERE t.mailbox=? AND t.folder_kind='incoming' "+
+      "AND t.message_id=? AND t.status='pending' AND t.revision=? "+
+      "AND s.topic='booking' AND s.confidence='rule_based' AND lower(s.external_email)=?)":"");
   const query=db.prepare(changeSql).bind(eventId,entity,
     kind==="booking"||kind==="finance"?record.artist:null,op,
     kind==="contacts"?record.contact_policy:record.stage||record.status,
     record.next_step||"Atualização manual",JSON.stringify(record),now,
-    entity,op,...(revision?[revision]:[]));
+    entity,op,...(revision?[revision]:[]),
+    ...(mailReview?[mailReview.mailbox,mailReview.message_id,mailReview.revision,mailReview.external_email]:[]));
   const audit=db.prepare("INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) "+
     "SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM control_decision_events WHERE id=?)")
     .bind(crypto.randomUUID(),now,"crm_"+kind+"_"+(revision?"updated":"created"),entity,
       JSON.stringify({actor:actor||"legacy_admin",revision_event:eventId}),eventId);
-  return [query,audit];
+  return {statements:[query,audit],eventId};
 }
-export async function handleNative(request,env,url,route,{canRead=false,canWrite=false,actor=""}={}){
+export async function handleNative(request,env,url,route,{canRead=false,canWrite=false,actor="",mailReview=null}={}){
   if(!env.ZOHO_DB||!canRead)return fail("forbidden",403);
   const kind=route.slice("native/".length);
   if(!operation(kind))return fail("not_found",404);
+  if(mailReview&&(kind!=="booking"||!["POST","PATCH"].includes(request.method)||
+      !actor||!/^\d{1,35}$/.test(mailReview.message_id||"")||
+      !Number.isInteger(mailReview.revision)||mailReview.revision<0))
+    return fail("invalid_mail_review",422);
   if(request.method==="GET"){
     try{
       const rows=await listAll(env.ZOHO_DB,kind);
@@ -438,7 +448,9 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
   }
   const record=validateNative(kind,input);
   if(!record)return fail("invalid_record",422);
-  const id=request.method==="POST"?(kind==="contacts"&&LEGACY_ID.test(input.id)?input.id:crypto.randomUUID()):input.id;
+  const id=request.method==="POST"?
+    (kind==="contacts"&&LEGACY_ID.test(input.id)?input.id:
+      mailReview&&UUID.test(input.id||"")?input.id:crypto.randomUUID()):input.id;
   if(!validId(id))return fail("invalid_id",422);
   // Do not allow hand-crafted historical references for newly created records.
   if(request.method==="POST"&&kind==="contacts"&&record.origin_id&&record.origin_id!==id)
@@ -446,6 +458,29 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
   if(request.method==="POST"&&kind==="contacts"&&LEGACY_ID.test(id)&&record.origin_id!==id)
     return fail("invalid_origin_reference",422);
   try{
+    // Retry after an uncertain network response must never duplicate the booking.
+    if(mailReview){
+      const sourceMail=await env.ZOHO_DB.prepare(
+        "SELECT t.status,t.revision,t.review_note,s.external_email,s.topic,s.confidence "+
+        "FROM control_review_tasks t JOIN control_mail_signals s "+
+        "ON s.mailbox=t.mailbox AND s.folder_kind=t.folder_kind AND s.message_id=t.message_id "+
+        "WHERE t.mailbox=? AND t.folder_kind='incoming' AND t.message_id=?"
+      ).bind("booking@caravelaamarela.com",mailReview.message_id).first();
+      if(!sourceMail||sourceMail.topic!=="booking"||
+         sourceMail.confidence!=="rule_based"||!sourceMail.external_email)
+        return fail("mail_review_not_eligible",409);
+      if(sourceMail.status==="reviewed"&&sourceMail.review_note==="booking:"+id){
+        const booked=(await listAll(env.ZOHO_DB,"booking")).find(x=>x.id===id);
+        if(booked)return out({ok:true,record:booked,review_completed:true,
+          already_applied:true,message_id:mailReview.message_id});
+      }
+      if(sourceMail.status!=="pending"||Number(sourceMail.revision)!==mailReview.revision)
+        return fail("mail_review_conflict",409);
+      if(record.contact_email.toLowerCase()!==String(sourceMail.external_email).toLowerCase())
+        return fail("mail_sender_mismatch",422);
+      mailReview={...mailReview,mailbox:"booking@caravelaamarela.com",
+        external_email:String(sourceMail.external_email).toLowerCase()};
+    }
     const before=await listAll(env.ZOHO_DB,kind);
     const found=before.find(x=>x.id===id);
     if(request.method==="POST"&&found)return fail("record_exists",409);
@@ -548,11 +583,40 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
     }
     // Atomic compare-and-append: two tabs cannot silently overwrite each other.
     // The audit row is inserted only if the guarded event was inserted.
-    const writes=await env.ZOHO_DB.batch(appendRevision(env.ZOHO_DB,kind,id,record,actor,
-      request.method==="PATCH"?input.revision:null));
-    const changes=writes[0]?.meta?.changes??writes[0]?.changes;
-    if(changes===0)return fail("revision_conflict",409);
+    const prepared=appendRevision(env.ZOHO_DB,kind,id,record,actor,
+      request.method==="PATCH"?input.revision:null,mailReview);
+    const statements=[...prepared.statements];
+    if(mailReview){
+      const time=Date.now(),note="booking:"+id,reviewer=String(actor).slice(0,80);
+      statements.push(env.ZOHO_DB.prepare(
+        "UPDATE control_review_tasks SET status='reviewed',reviewed_by=?,reviewed_ms=?,"+
+        "review_note=?,revision=revision+1,updated_ms=? "+
+        "WHERE mailbox=? AND folder_kind='incoming' AND message_id=? "+
+        "AND status='pending' AND revision=? "+
+        "AND EXISTS (SELECT 1 FROM control_decision_events WHERE id=?)"
+      ).bind(reviewer,time,note,time,mailReview.mailbox,mailReview.message_id,
+        mailReview.revision,prepared.eventId));
+      statements.push(env.ZOHO_DB.prepare(
+        "INSERT INTO control_audit(id,occurred_ms,operation,target,details_json) "+
+        "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM control_review_tasks "+
+        "WHERE mailbox=? AND folder_kind='incoming' AND message_id=? "+
+        "AND status='reviewed' AND revision=? AND review_note=? AND reviewed_ms=?) "+
+        "AND EXISTS(SELECT 1 FROM control_decision_events WHERE id=?)"
+      ).bind(crypto.randomUUID(),time,"crm_mail_task_resolved_booking",
+        "zoho-message:"+mailReview.message_id,
+        JSON.stringify({actor:reviewer,booking_id:id,revision_event:prepared.eventId}),
+        mailReview.mailbox,mailReview.message_id,mailReview.revision+1,note,time,prepared.eventId));
+    }
+    // Cloudflare D1 batch() runs transactionally. Closing the task requires
+    // the booking event inserted in the same transaction.
+    const writes=await env.ZOHO_DB.batch(statements);
+    const changes=Number(writes[0]?.meta?.changes??writes[0]?.changes??0);
+    if(changes!==1)return fail(mailReview?"mail_review_conflict":"revision_conflict",409);
+    if(mailReview&&Number(writes[2]?.meta?.changes??writes[2]?.changes??0)!==1)
+      return fail("mail_review_state_unverified",503);
     const current=(await listAll(env.ZOHO_DB,kind)).find(x=>x.id===id);
-    return out({ok:true,record:current,append_only:true},request.method==="POST"?201:200);
+    return out({ok:true,record:current,append_only:true,
+      ...(mailReview?{review_completed:true,message_id:mailReview.message_id}:{})},
+      request.method==="POST"?201:200);
   }catch{return fail("native_storage_failed",503);}
 }

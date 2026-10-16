@@ -72,6 +72,12 @@
   // Private human-review queue; no send, mail-body access or booking mutation.
   window.CaravelaMailReviewTasks={
     list(){return api("mail/review-tasks",{method:"GET"});},
+    resolveBooking(message_id,task_revision,booking_method,record){
+      return api("mail/resolve-booking",{
+        method:"POST",headers:{"Content-Type":"application/json","X-Caravela-Request":"1"},
+        body:JSON.stringify({message_id,task_revision,booking_method,record,review_confirmed:true})
+      });
+    },
     update(message_id,revision,status,note=""){
       if(!["reviewed","dismissed"].includes(status))throw Error("Ação de revisão inválida.");
       return api("mail/review-tasks",{

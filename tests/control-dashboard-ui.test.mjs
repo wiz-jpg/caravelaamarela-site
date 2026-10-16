@@ -41,7 +41,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
  assert.match(html,/control-native-ui\.js\?v=20261016business2/);
- assert.match(html,/control-review-tasks-ui\.js\?v=20261016drafts1/);
+ assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
  assert.match(html,/noindex,nofollow/);
@@ -71,4 +71,12 @@ test("opening a booking never silently schedules a follow-up",()=>{
  assert.match(source,/suggest\.onclick=\(\)=>/);
  assert.doesNotMatch(source,/suggestFollowup\(\)/);
  assert.match(source,/Não inventamos prazos ao abrir a ficha/);
+});
+
+
+test("one-window Zoho workflow uses a single human-approved operation",()=>{
+ const ui=get("control-review-tasks-ui.js"),transport=get("control-vault-ui.js");
+ assert.match(ui,/CaravelaMailReviewTasks\.resolveBooking\(/);
+ assert.doesNotMatch(ui,/transport\.request\("booking",old\?"PATCH":"POST"/);
+ assert.match(transport,/mail\/resolve-booking/);
 });

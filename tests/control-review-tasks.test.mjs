@@ -117,3 +117,99 @@ test("email association checks entity and interlocutor exact addresses without a
  result=matchMailTaskContacts(contacts,"missing@empresa.test");
  assert.equal(result.association,"unmatched");
 });
+
+
+const sampleBooking=(patch={})=>({
+ contact_name:"Example Venue",contact_id:"",contact_email:"venue@example.test",
+ artist:"WILDCHAINS",subject:"Festival 2027",stage:"research",priority:"medium",
+ fee_amount:null,commission_pct:null,currency:"EUR",fee_note:"",conditions:"",
+ event_date:"",press_status:"unknown",press_reference:"",advance_status:"unknown",
+ last_contact_date:"",owner:"Sérgio",next_step:"Validar condições",due_date:"",
+ evidence_type:"none",evidence_reference:"",notes:"Nota de teste",origin_label:"Zoho teste",...patch
+});
+async function resolve(id,taskRevision,record,method="POST",token=ADMIN,headers={}){
+ const url=new URL(HOST+"/api/control/mail/resolve-booking");
+ return handleControl(new Request(url,{method:"POST",headers:{
+  Authorization:"Bearer "+token,Origin:HOST,"X-Caravela-Request":"1",
+  "Content-Type":"application/json",...headers
+ },body:JSON.stringify({message_id:id,task_revision:taskRevision,
+  booking_method:method,record,review_confirmed:true})}),env,url);
+}
+test("atomic booking resolution closes task once, audits and never sends email",async()=>{
+ insert("701");await materializeMailReviewTasks(env.ZOHO_DB);
+ const uuid=crypto.randomUUID(),record=sampleBooking({id:uuid});
+ const result=await resolve("701",0,record);
+ assert.equal(result.status,201);
+ const body=await result.json();
+ assert.equal(body.review_completed,true);
+ assert.equal(body.record.id,uuid);
+ const task=sql.prepare("SELECT status,revision,review_note FROM control_review_tasks WHERE message_id='701'").get();
+ assert.equal(task.status,"reviewed");
+ assert.equal(task.revision,1);
+ assert.equal(task.review_note,"booking:"+uuid);
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,1);
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_audit WHERE operation='crm_mail_task_resolved_booking'").get().n,1);
+ const retry=await resolve("701",0,record);
+ assert.equal(retry.status,200);
+ assert.equal((await retry.json()).already_applied,true);
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,1);
+ assert.equal((await (await call()).json()).counts.pending,0);
+});
+test("resolution rejects stale task, mismatched sender, wrong topic and unauthorized caller",async()=>{
+ insert("711");insert("712","venue@example.test","press","interest");
+ await materializeMailReviewTasks(env.ZOHO_DB);
+ const row=sampleBooking({id:crypto.randomUUID()});
+ assert.equal((await resolve("711",1,row)).status,409);
+ assert.equal((await resolve("711",0,{...row,contact_email:"other@example.test"})).status,422);
+ assert.equal((await resolve("712",0,{...row,id:crypto.randomUUID()})).status,409);
+ assert.equal((await resolve("711",0,{...row,id:crypto.randomUUID()},"POST",CRON)).status,401);
+ assert.equal((await resolve("711",0,{...row,id:crypto.randomUUID()},"POST",ADMIN,
+  {"X-Caravela-Request":""})).status,403);
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,0);
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_review_tasks WHERE status='pending'").get().n,2);
+});
+test("one Zoho message cannot create bookings for two different opportunities",async()=>{
+ insert("801");await materializeMailReviewTasks(env.ZOHO_DB);
+ const first=sampleBooking({id:crypto.randomUUID()}),another=sampleBooking({id:crypto.randomUUID()});
+ assert.equal((await resolve("801",0,first)).status,201);
+ assert.equal((await resolve("801",0,another)).status,409);
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,1);
+});
+test("booking validation errors leave the mail task pending",async()=>{
+ insert("901");await materializeMailReviewTasks(env.ZOHO_DB);
+ const wrong=sampleBooking({id:crypto.randomUUID(),stage:"confirmed"});
+ assert.equal((await resolve("901",0,wrong)).status,422);
+ assert.equal(sql.prepare("SELECT status FROM control_review_tasks WHERE message_id='901'").get().status,"pending");
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_decision_events").get().n,0);
+});
+test("atomic resolution can revise existing opportunity without duplicating it",async()=>{
+ insert("991");await materializeMailReviewTasks(env.ZOHO_DB);
+ const bookUrl=new URL(HOST+"/api/control/native/booking");
+ const first=await handleControl(new Request(bookUrl,{method:"POST",headers:{
+  Authorization:"Bearer "+ADMIN,Origin:HOST,"X-Caravela-Request":"1"},
+  body:JSON.stringify(sampleBooking())
+ }),env,bookUrl);
+ assert.equal(first.status,201);
+ const original=(await first.json()).record;
+ const update={...original,next_step:"Resposta validada",stage:"reply_reported",evidence_type:"user_report"};
+ const patched=await resolve("991",0,update,"PATCH");
+ assert.equal(patched.status,200);
+ const result=await patched.json();
+ assert.equal(result.record.id,original.id);
+ assert.equal(result.record.stage,"reply_reported");
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,2);
+ assert.equal(sql.prepare("SELECT status FROM control_review_tasks WHERE message_id='991'").get().status,"reviewed");
+});
+test("stale booking revision leaves a pending Zoho task unchanged",async()=>{
+ insert("995");await materializeMailReviewTasks(env.ZOHO_DB);
+ const bookUrl=new URL(HOST+"/api/control/native/booking");
+ const first=await handleControl(new Request(bookUrl,{method:"POST",headers:{
+  Authorization:"Bearer "+ADMIN,Origin:HOST,"X-Caravela-Request":"1"},
+  body:JSON.stringify(sampleBooking())
+ }),env,bookUrl);
+ assert.equal(first.status,201);
+ const old=(await first.json()).record;
+ assert.equal((await resolve("995",0,{...old,revision:crypto.randomUUID()},"PATCH")).status,409);
+ assert.equal(sql.prepare("SELECT status FROM control_review_tasks WHERE message_id='995'").get().status,"pending");
+ assert.equal(sql.prepare("SELECT COUNT(*) n FROM control_decision_events WHERE operation='crm_booking_v1'").get().n,1);
+});

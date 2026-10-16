@@ -161,6 +161,7 @@
    controls.append(submit,dismiss);form.append(controls);
    const feedback=make("p","","cc-lead");feedback.setAttribute("role","status");form.append(feedback);
    let saved=false;
+   const newBookingId=crypto.randomUUID();
    const updateForm=()=>{
     const selected=similar.find(x=>x.id===choose.value);
     if(selected){
@@ -219,29 +220,27 @@
         "user_report":old.evidence_type,
       notes:((old.notes||"").slice(0,1400)+"\n"+
         "[Revisão humana Zoho · mensagem "+task.message_id+"]").trim()
-    }:newEntry;
+    }:{...newEntry,id:newBookingId};
     // A verified state is not created from an automatic classification.
     if(["confirmed","sent_verified"].includes(record.stage)&&!old){
       feedback.textContent="Confirmações e envios exigem a ficha completa e evidência.";return;
     }
-    submit.disabled=true;feedback.textContent="A guardar a decisão humana no booking…";
+    submit.disabled=true;feedback.textContent="A guardar oportunidade e revisão numa operação…";
     try{
-     const result=await transport.request("booking",old?"PATCH":"POST",record);
+     const result=await window.CaravelaMailReviewTasks.resolveBooking(
+       task.message_id,task.revision,old?"PATCH":"POST",record);
      const payload=await result.json();
-     if(!result.ok||!payload.ok)throw Error(payload.error||"Não foi possível guardar booking.");
+     if(!result.ok||!payload.ok)throw Error(payload.error||"Não foi possível concluir a operação.");
      saved=true;
-     feedback.textContent="Booking guardado. A concluir a revisão da mensagem…";
-     const updated=await window.CaravelaMailReviewTasks.update(task.message_id,task.revision,"reviewed","");
-     const review=await updated.json();
-     if(!updated.ok||!review.ok)throw Error("A oportunidade foi guardada, mas a tarefa continua pendente. Conclui-a manualmente para evitar duplicar o booking.");
+     feedback.textContent=payload.already_applied?
+       "Esta mensagem já tinha sido resolvida. Nenhuma oportunidade foi duplicada.":
+       "Oportunidade guardada e tarefa concluída na mesma operação.";
      lastData=null;await load();
      window.dispatchEvent(new CustomEvent("caravela-control-booking-updated"));
-    }catch(error){feedback.textContent=String(error.message||error);
-      if(saved){
-       submit.textContent="Oportunidade já guardada";
-       submit.disabled=true;
-      }
-    }finally{if(!saved)submit.disabled=false}
+    }catch(error){
+     feedback.textContent=String(error.message||error)+
+       " Se houve falha de ligação, podes repetir com a mesma seleção sem criar duplicados.";
+    }finally{submit.disabled=saved}
    };
    box.append(form);
   }catch(error){progress.textContent=String(error.message||error)}

@@ -1332,7 +1332,7 @@ function renderDashboard(){
  timed.append(timingItems);
  if(!eligibleWindows.length)timed.append(make("p",
    "Ainda não existem janelas comprovadas em curso ou próximas. Define-as progressivamente nas fichas dos festivais e salas prioritários, com fonte ou histórico.","cc-lead"));
- root.append(timed);
+ // The daily action queues take precedence over research calendars.
  const board=make("div",undefined,"cc-home-board");
  for(const bucket of buckets){
   const column=make("section",undefined,"cc-home-column");
@@ -1350,7 +1350,7 @@ function renderDashboard(){
   showMore.onclick=()=>{visible+=8;draw()};draw();
   column.append(list,showMore);board.append(column);
  }
- root.append(board);
+ root.append(colorLegend(),board,timed);
  // Supporting work stays below the four booking queues, not mixed with prospecting.
  const pendingPartner=partnerTasks.filter(x=>
    ["contact_reported","sent_verified","reply_reported","negotiating","draft"].includes(x.stage));

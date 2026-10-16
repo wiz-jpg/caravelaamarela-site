@@ -1420,7 +1420,9 @@ function renderDashboard(){
   btn.append(make("strong",item.count),make("span",item.title),make("small",item.detail));
   btn.onclick=()=>window.CaravelaControlApp?.openView(item.view);secondary.append(btn);
  }
- root.append(secondary);
+ const supporting=make("details",undefined,"cc-archive-toggle cc-home-support");
+ supporting.append(make("summary","Outras áreas · "+pendingPartner.length+
+   " parcerias · "+pendingFinance.length+" pagamentos por tratar"),secondary);
  const preparation=[];
  for(const item of live.filter(x=>x.stage==="confirmed"&&/^\d{4}-\d{2}-\d{2}$/.test(x.event_date||""))){
   const dueFor=offset=>nextBusinessDay(item.event_date,-offset);
@@ -1457,7 +1459,7 @@ function renderDashboard(){
     const search=$("cc-partners-search");if(search){search.value=p.name;search.dispatchEvent(new Event("input"))}
    };box.append(btn);
   }
-  root.append(box);
+  supporting.append(box);
  }
  const extra=[{label:"Revisões de contactos",rows:other,route:"contacts"},
   {label:"Negociações suspensas",rows:paused,route:"booking"}];
@@ -1469,11 +1471,13 @@ function renderDashboard(){
    const b=make("button",x.title+" · "+(x.date||"Sem prazo"),"cc-native-dash-task");
    b.type="button";b.onclick=x.click;details.append(b);
   }
-  root.append(details);
+  supporting.append(details);
  }
- const artist=make("section",undefined,"cc-agenda-artists");
- artist.append(make("h3","Roster principal"),
-  make("small","Apenas registos de booking criados na plataforma; o histórico das bandas não está incluído nestes totais.","cc-agenda-roster-note"));
+ root.append(supporting);
+ const artist=make("details",undefined,"cc-archive-toggle cc-roster-details");
+ artist.append(make("summary","Roster principal · dados operacionais"));
+ const artistGrid=make("div",undefined,"cc-agenda-artists");
+ artistGrid.append(make("small","Os totais abaixo incluem apenas propostas criadas na plataforma, não o histórico das bandas.","cc-agenda-roster-note"));
  for(const [name,rx] of [["WILDCHAINS",/wildchains/i],["Devil of a Woman",/devil\s*(of a woman)?/i]]){
   const relevant=live.filter(x=>rx.test(x.artist||"")),card=make("article",undefined,"cc-agenda-artist");
   card.append(make("strong",name),make("p",
@@ -1481,9 +1485,9 @@ function renderDashboard(){
     relevant.filter(x=>x.stage==="confirmed").length+" concertos confirmados registados · "+
     relevant.filter(x=>!x.owner).length+" sem responsável"));
   const b=make("button","Ver booking","cc-neutral");b.type="button";
-  b.onclick=()=>window.CaravelaControlApp?.openView("booking");card.append(b);artist.append(card);
+  b.onclick=()=>window.CaravelaControlApp?.openView("booking");card.append(b);artistGrid.append(card);
  }
- root.append(artist);
+ artist.append(artistGrid);root.append(artist);
 }
 // A small, on-demand explanation is displayed near the booking workflow.
 bookingView.querySelector(".cc-panel-head")?.after(colorLegend());

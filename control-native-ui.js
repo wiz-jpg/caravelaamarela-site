@@ -772,7 +772,7 @@ function editorField(parent,kind,def,current){
  else if(key==="contact_window_start"||key==="contact_window_end")
    field.value=displayWindowDate(current[key]);
  else field.value=current[key]??({
-   kind:"venue",contact_policy:"review",authorization_source:"none",contact_window_basis:"unknown",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
+   kind:"venue",contact_policy:"review",authorization_source:"none",contact_window_basis:"unknown",contact_window_target:"unknown",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
  }[key]||"");
  box.append(field);parent.append(box);return field;
 }
@@ -952,6 +952,7 @@ function editContactWindow(entry){
     revision_conflict:"A ficha mudou noutra sessão. Atualiza antes de guardar."
    })[body.error]||body.error||"Não foi possível guardar");
    await load("contacts");
+   window.dispatchEvent(new CustomEvent("caravela-control-contacts-updated"));
    root.hidden=true;root.replaceChildren();
   }catch(error){notice.textContent=error.message}
   finally{state.busy=false;submit.disabled=false}
@@ -973,7 +974,8 @@ function edit(kind,entry={}){
   fee_basis:entry.revision?"legacy_unspecified":"artist_base",
   commission_mode:entry.revision?"unspecified":"standard",
   billing_person:"unassigned",fit_level:"unreviewed",strategic_reason:"none",
-  booking_year:String(boardYear),booking_category:"unknown"
+  booking_year:entry.revision?"":entry.event_date?entry.event_date.slice(0,4):String(boardYear),
+  booking_category:"unknown"
  }:{};
  for(const def of fields)editorField(grid,kind,def,{...defaults,...entry});
  if(kind==="contacts"){
@@ -1128,6 +1130,8 @@ function edit(kind,entry={}){
    })[result.error]||result.error||"Erro "+response.status);
    root.hidden=true;root.replaceChildren();
    await load(kind);
+   if(kind==="booking")window.dispatchEvent(new CustomEvent("caravela-control-booking-updated"));
+   else window.dispatchEvent(new CustomEvent("caravela-control-contacts-updated"));
    $("cc-native-"+kind+"-status").textContent="Guardado com histórico de alterações. Nenhum email foi enviado.";
   }catch(error){notice.textContent=error.message;notice.classList.add("error")}
   finally{state.busy=false;save.disabled=false}

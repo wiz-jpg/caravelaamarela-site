@@ -60,6 +60,13 @@
    const item={type:"booking",record:r,contact,artists:artists(r.artist),
     locality:[contact?.city,contact?.region,contact?.country].filter(Boolean).join(" · "),
     window:windowFor(contact,year,today)};
+   if(r.stage==="closed"){other.push(item);continue}
+   if(r.stage==="paused"){
+    if(type==="festival")festival.planning.push(item);
+    else if(type==="venue")venue.suggestions.push(item);
+    else other.push(item);
+    continue;
+   }
    if(r.stage==="confirmed"){
     if(type==="festival")festival.confirmed.push(item);
     else if(type==="venue")venue.confirmed.push(item);

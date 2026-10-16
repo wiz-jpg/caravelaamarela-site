@@ -91,3 +91,11 @@ test("year-based booking and opportunities dashboard assets are loaded",()=>{
  assert.match(app,/\["opportunities", "Oportunidades"/);
  assert.match(get("control-native-ui.js"),/cc-booking-advanced/);
 });
+
+
+test("editing an old booking does not automatically assign the selected year",()=>{
+ const ui=get("control-native-ui.js");
+ assert.match(ui,/booking_year:entry\.revision\?"":/);
+ assert.match(ui,/contact_window_target:"unknown"/);
+ assert.match(ui,/caravela-control-contacts-updated/);
+});

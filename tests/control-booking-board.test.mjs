@@ -72,3 +72,17 @@ test("native opportunity sources require real https reference, states and human 
  assert.equal(validateNative("opportunities",{...row,deadline:"2027-02-31"}),null);
  assert.equal(validateNative("opportunities",{...row,next_step:""}),null);
 });
+
+
+test("paused and closed records do not become overdue outreach automatically",()=>{
+ const c=contact({contact_window_start:"10-01",contact_window_end:"10-15"});
+ const rows=[
+  booking({id:"closed",stage:"closed"}),
+  booking({id:"paused",stage:"paused"}),
+  booking({id:"open",stage:"research"})
+ ];
+ const result=classify({bookings:rows,contacts:[c],year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.late.length,1);
+ assert.equal(result.festival.planning.length,1);
+ assert.equal(result.other.length,1);
+});

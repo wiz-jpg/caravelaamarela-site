@@ -149,8 +149,8 @@
    const [bookings,contacts]=await Promise.all([b.json(),c.json()]);
    let archive=[];
    if(a.ok){const data=await a.json();archive=data.contacts||[]}
-   const byId=new Map(archive.map(x=>[x.id,{...x,contact_policy:"review",source_suppressed:!!x.suppressed,
-    source_shared_email:!!x.shared_email,contact_window_target:"unknown"}]));
+   const byId=new Map(archive.map(x=>[x.id,{...x,contact_policy:"review",source_suppressed:!!(x.suppressed||x.control_blocked||x.control_blocked_possible),
+    source_shared_email:!!(x.shared_email||x.review_required),contact_window_target:"unknown"}]));
    for(const row of contacts.records||[])byId.set(row.id,{...byId.get(row.id),...row});
    allBookings=bookings.records||[];allContacts=[...byId.values()];
    loaded=true;failed="";render();
@@ -163,6 +163,7 @@
  window.addEventListener("caravela-control-token-ready",()=>void load());
  window.addEventListener("caravela-control-authenticated",()=>void load());
  window.addEventListener("caravela-control-booking-updated",()=>void load());
+ window.addEventListener("caravela-control-contacts-updated",()=>void load());
  window.addEventListener("caravela-control-contact-action",()=>void load());
  window.addEventListener("caravela-control-signed-out",()=>{allBookings=[];allContacts=[];loaded=false;render()});
 })();

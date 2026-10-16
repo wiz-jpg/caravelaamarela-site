@@ -45,7 +45,11 @@ function contactMatches(contacts,address){
   const map=new Map();
   for(const contact of contacts){
     if(!contact?.id||!contact?.name||!Array.isArray(contact.emails))continue;
-    if(!contact.emails.some(addr=>normalizeEmail(addr)===address))continue;
+    // Use exact addresses from both the entity and its named interlocutors.
+    // A producer's shared mailbox must still produce several candidates.
+    const entityAddresses=contact.emails||[];
+    const peopleAddresses=(contact.people||[]).map(person=>person?.email);
+    if(![...entityAddresses,...peopleAddresses].some(addr=>normalizeEmail(addr)===address))continue;
     map.set(contact.id,{
       id:contact.id,name:contact.name,kind:contact.kind||"other",
       restricted:!!(contact.suppressed||contact.control_blocked||

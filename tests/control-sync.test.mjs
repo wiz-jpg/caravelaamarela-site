@@ -111,3 +111,32 @@ test("content feature gate and migration requirement are visible without breakin
  assert.equal(out.analysis.reason,"migration_required");
  assert.equal(out.total_indexed,2);
 });
+
+test("automatic Cron creates exactly one human-review task after classifying mail",async()=>{
+ db.exec(readFileSync(new URL("../migrations/0005_control_mail_signals.sql",import.meta.url),"utf8"));
+ db.exec(readFileSync(new URL("../migrations/0006_control_review_tasks.sql",import.meta.url),"utf8"));
+ env.CONTROL_MAIL_ANALYSIS_ENABLED="true";
+ const first=await (await request(CRON)).json();
+ assert.equal(first.ok,true);
+ assert.equal(first.analysis.new_signals,1);
+ assert.equal(first.review_tasks.enabled,true);
+ assert.equal(first.review_tasks.created,1);
+ assert.equal(db.prepare("SELECT COUNT(*) n FROM control_review_tasks WHERE status='pending'").get().n,1);
+ const again=await (await request(CRON)).json();
+ assert.equal(again.review_tasks.created,0);
+ assert.equal(db.prepare("SELECT COUNT(*) n FROM control_review_tasks").get().n,1);
+ assert.equal(db.prepare("SELECT COUNT(*) n FROM control_decision_events").get().n,0);
+ const meta=JSON.parse(db.prepare(
+  "SELECT meta_json FROM control_sync_runs ORDER BY started_ms DESC,rowid DESC LIMIT 1").get().meta_json);
+ assert.equal(meta.review_tasks_enabled,true);
+});
+test("absent review-task migration does not interrupt existing read-only Cron sync",async()=>{
+ db.exec(readFileSync(new URL("../migrations/0005_control_mail_signals.sql",import.meta.url),"utf8"));
+ env.CONTROL_MAIL_ANALYSIS_ENABLED="true";
+ const result=await (await request(CRON)).json();
+ assert.equal(result.ok,true);
+ assert.equal(result.analysis.enabled,true);
+ assert.equal(result.review_tasks.enabled,false);
+ assert.equal(result.review_tasks.reason,"migration_required");
+ assert.equal(db.prepare("SELECT COUNT(*) n FROM control_mail_signals").get().n,1);
+});

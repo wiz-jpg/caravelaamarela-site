@@ -19,7 +19,7 @@ test("the daily booking queues exclude archival claims without verified status",
  assert.match(source,/const archive=make\("details"/);
  assert.match(source,/const visibleBuckets=buckets\.filter\(x=>x\.items\.length>0\)/);
  assert.match(source,/cc-tone-archive/);
- assert.match(source,/const metrics=/); // Only native actual totals are used in live queue.
+ assert.match(source,/metrics\.hidden=true/); // Duplicate counter tiles are not shown.
 });
 
 test("critical Zoho reviews precede booking and technical health is collapsed",()=>{

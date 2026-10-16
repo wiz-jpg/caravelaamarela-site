@@ -244,7 +244,10 @@ function build(kind,heading){
     '<button type="button" class="cc-neutral" id="cc-basket-review">CSV para revisão (não enviar)</button>'+
     '<button type="button" class="cc-primary" id="cc-basket-export">Exportar CSV elegível</button></div>'+
     '<p id="cc-basket-summary" class="cc-lead" aria-live="polite"></p>';
-  geo.after(basket);
+  const batchTools=make("details",undefined,"cc-archive-toggle cc-mail-merge-toggle");
+  batchTools.append(make("summary","Ferramentas de seleção e exportação CSV"));
+  batchTools.append(basket);
+  geo.after(batchTools);
   root.querySelector("#cc-basket-visible").onclick=()=>{
     for(const contact of filtered("contacts").slice(0,state.shown.contacts))mergeSelection.add(contact.id);
     render("contacts");
@@ -260,7 +263,10 @@ function build(kind,heading){
     root.querySelector("#"+id).onchange=()=>render("contacts");
  }
  const filter=root.querySelector("#cc-native-"+kind+"-filter");
- const opts=kind==="contacts"?{all:"Todos",...choices.contact_policy}:{all:"Todos",due:"Follow-ups vencidos",...choices.stage};
+ const opts=kind==="contacts"?{
+  all:"Todos",window_open:"Janela aberta agora",window_soon:"Abre nos próximos 30 dias",
+  window_missing:"Janela por pesquisar",...choices.contact_policy
+ }:{all:"Todos",due:"Follow-ups vencidos",...choices.stage};
  for(const [key,label] of Object.entries(opts)){const el=make("option",label);el.value=key;filter.append(el)}
  filter.onchange=()=>{state.shown[kind]=kind==="contacts"?40:30;render(kind)};
  root.querySelector("#cc-native-"+kind+"-more").onclick=()=>{state.shown[kind]+=40;render(kind)};
@@ -426,8 +432,9 @@ function render(kind){
  if(kind==="contacts"){
   const rows=contactRows();
   const saved=get(kind).length;
+  const mapped=rows.filter(x=>windowInfo(x).status!=="unknown").length;
   $("cc-native-contacts-summary").textContent=rows.length+" fichas preservadas · "+
-   all.length+" entidades apresentadas após agrupamento visual · "+saved+
+   all.length+" neste filtro · "+mapped+" com janela anual registada · "+saved+
    " fichas operacionais. Os registos agrupados não foram fundidos.";
  }else{
   const due=get(kind).filter(x=>x.due_date&&x.due_date<=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())&&
@@ -472,38 +479,41 @@ function render(kind){
   } else {
    hint(card,"Tipo / local",((choices.kind[r.kind]||"")+" · "+[r.city,r.region,r.country].filter(Boolean).join(", ")));
    hint(card,"Melhor altura",windowDescription(r));
-   hint(card,"Responsável Caravela",r.owner||"Por atribuir");
+   const contactMore=make("details",undefined,"cc-contact-more");
+   contactMore.append(make("summary","Detalhes e histórico"));
+   hint(contactMore,"Responsável Caravela",r.owner||"Por atribuir");
    if(r.contact_window_start&&r.contact_window_reason)
-     hint(card,"Motivo da janela",r.contact_window_reason);
-   if(r.__members?.length)hint(card,"Fichas agrupadas",
+     hint(contactMore,"Motivo da janela",r.contact_window_reason);
+   if(r.__members?.length)hint(contactMore,"Fichas agrupadas",
      r.__members.length+" registos históricos/operacionais apresentados em conjunto, sem fusão");
-   hint(card,"Emails",r.emails?.join(", ")||"Sem endereço");
+   hint(contactMore,"Emails",r.emails?.join(", ")||"Sem endereço");
    if(r.authorization_source==="zoho_thread")
-    hint(card,"Relação comprovada","Conversa bilateral Zoho · "+r.authorization_email+" (não equivale a consentimento para campanhas)");
+    hint(contactMore,"Relação comprovada","Conversa bilateral Zoho · "+r.authorization_email+" (não equivale a consentimento para campanhas)");
    const formPreferred=!!r.source_form_url&&/formul[aá]rio/i.test(r.source_channel_quality||"");
-   if(formPreferred)hint(card,"Canal preferencial no arquivo","Formulário web (confirmar se continua ativo): "+r.source_form_url);
+   if(formPreferred)hint(contactMore,"Canal preferencial no arquivo","Formulário web (confirmar se continua ativo): "+r.source_form_url);
    const route=suggestedChannel(r);
-   if(route&&!formPreferred)hint(card,"Canal a validar",route.email+" · "+route.reason+" (sugestão; envio não autorizado)");
-   else if(!formPreferred&&r.emails?.length)hint(card,"Canal para proposta","Nenhum email adequado identificado; rever contacto");
-   if(r.media_type)hint(card,"Meio de comunicação",r.media_type);
-   if(r.people?.length)hint(card,"Interlocutores",r.people.map(p=>p.name+(p.role?" · "+p.role:"")).join("; "));
-   if(r.source_contact_person&&!r.people?.length)hint(card,"Interlocutor histórico (por rever)",r.source_contact_person);
-   if(r.canonical_id)hint(card,"Ficha associada a",byId.get(r.canonical_id)?.name||"entidade existente");
-   if(r.linked_producer_ids?.length)hint(card,"Produtora(s)",
+   if(route&&!formPreferred)hint(contactMore,"Canal a validar",route.email+" · "+route.reason+" (sugestão; envio não autorizado)");
+   else if(!formPreferred&&r.emails?.length)hint(contactMore,"Canal para proposta","Nenhum email adequado identificado; rever contacto");
+   if(r.media_type)hint(contactMore,"Meio de comunicação",r.media_type);
+   if(r.people?.length)hint(contactMore,"Interlocutores",r.people.map(p=>p.name+(p.role?" · "+p.role:"")).join("; "));
+   if(r.source_contact_person&&!r.people?.length)hint(contactMore,"Interlocutor histórico (por rever)",r.source_contact_person);
+   if(r.canonical_id)hint(contactMore,"Ficha associada a",byId.get(r.canonical_id)?.name||"entidade existente");
+   if(r.linked_producer_ids?.length)hint(contactMore,"Produtora(s)",
      r.linked_producer_ids.map(id=>byId.get(id)?.name||"entidade associada").join("; "));
-   if(r.organizer)hint(card,"Organização histórica",r.organizer);
-   if(r.source_recommendation)hint(card,"Encaixe histórico",r.source_recommendation);
-   if(r.source_suppressed)hint(card,"Restrição","Suprimido no arquivo: não contactar");
-   if(r.source_shared_email)hint(card,"Contacto partilhado","Endereço usado por várias entidades: validar interlocutor");
+   if(r.organizer)hint(contactMore,"Organização histórica",r.organizer);
+   if(r.source_recommendation)hint(contactMore,"Encaixe histórico",r.source_recommendation);
+   if(r.source_suppressed)hint(contactMore,"Restrição","Suprimido no arquivo: não contactar");
+   if(r.source_shared_email)hint(contactMore,"Contacto partilhado","Endereço usado por várias entidades: validar interlocutor");
    if(r.__members?.length){
     const kinds=[...new Set(r.__members.map(x=>x.media_type).filter(Boolean))];
-    if(kinds.length)hint(card,"Canais registados",kinds.join(" / "));
+    if(kinds.length)hint(contactMore,"Canais registados",kinds.join(" / "));
    }
-   if(r.relationship&&r.relationship!=="unknown")hint(card,"Relação",choices.relationship[r.relationship]);
-   hint(card,"Próximo passo",r.next_step);
-   hint(card,"Rever",r.review_date);
-   if(r.historical)hint(card,"Origem","Arquivo original — registo separado de alterações");
-  }
+   if(r.relationship&&r.relationship!=="unknown")hint(contactMore,"Relação",choices.relationship[r.relationship]);
+   hint(contactMore,"Próximo passo",r.next_step);
+   hint(contactMore,"Rever",r.review_date);
+   if(r.historical)hint(contactMore,"Origem","Arquivo original — registo separado de alterações");
+
+   card.append(contactMore);  }
   const actions=make("div",undefined,"cc-native-card-actions");
   const button=make("button",r.revision?"Atualizar":"Editar ficha","cc-neutral");
   button.type="button";button.onclick=()=>edit(kind,r.__members?.find(x=>x.id===r.id)||r);actions.append(button);
@@ -591,7 +601,9 @@ function renderHistory(){
 const triage=make("section",undefined,"cc-contact-triage");
 triage.innerHTML='<h2>Organização de contactos</h2><p class="cc-lead">Revisão assistida: nunca junta contactos nem altera dados sem aprovação.</p>'+
  '<div id="cc-contact-triage-stats" class="cc-native-metrics"></div><div id="cc-contact-triage-list"></div>';
-contactView.querySelector("#cc-native-contacts")?.before(triage);
+const tools=make("details",undefined,"cc-archive-toggle cc-contact-admin-toggle");
+tools.append(make("summary","Revisão de contactos e organização avançada"),triage);
+contactView.querySelector("#cc-native-contacts")?.after(tools);
 function renderContactTriage(){
  const root=$("cc-contact-triage-stats"),list=$("cc-contact-triage-list");if(!root||!list)return;
  root.replaceChildren();list.replaceChildren();
@@ -684,7 +696,7 @@ function editorField(parent,kind,def,current){
  if(key==="emails")field.value=(current.emails||[]).join(", ");
  else if(key==="fee_amount"||key==="commission_pct")field.value=current[key]===null||current[key]===undefined?"":current[key];
  else field.value=current[key]??({
-   kind:"venue",contact_policy:"review",authorization_source:"none",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
+   kind:"venue",contact_policy:"review",authorization_source:"none",contact_window_basis:"unknown",stage:"research",priority:"medium",evidence_type:"none",press_status:"unknown"
  }[key]||"");
  box.append(field);parent.append(box);return field;
 }
@@ -807,6 +819,11 @@ function edit(kind,entry={}){
  const fields=kind==="contacts"?CONTACT_FIELDS:BOOKING_FIELDS;
  const grid=make("div",undefined,"cc-field-grid");
  for(const def of fields)editorField(grid,kind,def,entry);
+ if(kind==="contacts"){
+  const basis=grid.querySelector('[name="contact_window_basis"]');
+  if(basis&&!basis.value)basis.value="unknown";
+  grid.append(make("p","Ex.: 03-01 a 03-14 é 1–14 de março, todos os anos. Uma hipótese não entra na lista de recomendações. Fonte oficial ou resposta direta exigem uma referência.","cc-lead"));
+ }
  if(kind==="booking"){
   const artist=grid.querySelector('[name="artist"]'),commission=grid.querySelector('[name="commission_pct"]');
   if(artist&&commission){

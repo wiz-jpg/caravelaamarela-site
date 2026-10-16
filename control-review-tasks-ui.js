@@ -195,7 +195,11 @@
      origin_label:"Zoho · mensagem "+task.message_id
     };
     const record=old?{
-      ...old,contact_name:newEntry.contact_name,contact_id:newEntry.contact_id,
+      ...old,
+      // Never unlink an existing association just because the current email
+      // has no unambiguous matching candidate in this task.
+      contact_name:newEntry.contact_id?newEntry.contact_name:old.contact_name,
+      contact_id:newEntry.contact_id||old.contact_id,
       artist:newEntry.artist,subject:newEntry.subject,stage:newEntry.stage,
       owner:newEntry.owner,next_step:newEntry.next_step,due_date:newEntry.due_date,
       evidence_type:newEntry.stage==="reply_reported"&&old.evidence_type==="none"?

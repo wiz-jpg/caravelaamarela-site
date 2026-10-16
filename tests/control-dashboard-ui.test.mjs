@@ -40,8 +40,9 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261016dashboardclean1/);
- assert.match(html,/control-review-tasks-ui\.js\?v=20261016dashboardclean1/);
- assert.match(html,/control-native\.css\?v=20261016dashboardclean1/);
+ assert.match(html,/control-native-ui\.js\?v=20261016drafts1/);
+ assert.match(html,/control-review-tasks-ui\.js\?v=20261016drafts1/);
+ assert.match(html,/control-native\.css\?v=20261016drafts1/);
+ assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
  assert.match(html,/noindex,nofollow/);
 });

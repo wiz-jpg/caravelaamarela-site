@@ -61,7 +61,7 @@
     }
     if(detail){
       detail.textContent=interpreting?
-        "Conteúdo analisado automaticamente · "+analysis.classified+" mensagens classificadas para revisão":
+        "Conteúdo analisado automaticamente · "+analysis.classified+" mensagens interpretadas por regras (nem todas geram tarefas)":
         !analysis.enabled?"Conteúdo: por ativar (só metadados)":
         !analysis.schema_ready?"Conteúdo: migração 0005 pendente":
         "Conteúdo: execução automática ainda não confirmada";

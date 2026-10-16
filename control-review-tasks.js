@@ -40,7 +40,7 @@ export async function materializeMailReviewTasks(db,{limit=80,now=Date.now()}={}
 }
 
 const normalizeEmail=x=>typeof x==="string"?x.trim().toLowerCase():"";
-function contactMatches(contacts,address){
+export function matchMailTaskContacts(contacts,address){
   if(!VALID_EMAIL.test(address||""))return {matches:[],association:"unknown"};
   const map=new Map();
   for(const contact of contacts){
@@ -78,7 +78,7 @@ async function linkedContacts(env,rows,url){
     const contacts=[...merged.values()],lookup=new Map();
     for(const row of rows){
       const address=normalizeEmail(row.external_email);
-      if(!lookup.has(address))lookup.set(address,contactMatches(contacts,address));
+      if(!lookup.has(address))lookup.set(address,matchMailTaskContacts(contacts,address));
     }
     return lookup;
   }catch{return new Map()}

@@ -69,6 +69,17 @@
     request(){return api("contacts/review",{method:"GET"});},
     sync(){return api("zoho/sync",{method:"POST",headers:{"X-Caravela-Request":"1"}});}
   };
+  // Private human-review queue; no send, mail-body access or booking mutation.
+  window.CaravelaMailReviewTasks={
+    list(){return api("mail/review-tasks",{method:"GET"});},
+    update(message_id,revision,status,note=""){
+      if(!["reviewed","dismissed"].includes(status))throw Error("Ação de revisão inválida.");
+      return api("mail/review-tasks",{
+        method:"PATCH",headers:{"Content-Type":"application/json","X-Caravela-Request":"1"},
+        body:JSON.stringify({message_id,revision,status,note})
+      });
+    }
+  };
   window.CaravelaNativeTransport={
     request(kind,method="GET",entry=null){
       if(!["contacts","booking","finance","archive","export"].includes(kind)||!["GET","POST","PATCH","DELETE"].includes(method)||

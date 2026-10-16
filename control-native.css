@@ -584,3 +584,18 @@
  .cc-drafts-form{grid-template-columns:1fr}
  .cc-drafts-form>label{grid-column:1/-1}
  .cc-drafts-edit-head{flex-direction:column}}
+
+
+/* Daily work-first shortlist. Commercial colors remain owned by .cc-home-task. */
+#control-app .cc-daily-focus{margin:14px 0 20px}
+#control-app .cc-daily-focus h3{font-size:17px;margin:0 0 5px;color:#f4f6f3}
+#control-app .cc-daily-focus>.cc-lead{font-size:12px;line-height:1.55;margin:0 0 12px}
+#control-app .cc-daily-focus-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#control-app .cc-daily-focus-item{min-width:0}
+#control-app .cc-daily-focus-reason{padding:8px 11px;background:#2e3740;color:#f6e8bc;
+ border:1px solid #5e6770;border-bottom:0;border-radius:10px 10px 0 0;
+ font-size:12px;font-weight:700;line-height:1.35}
+#control-app .cc-daily-focus-item .cc-home-task{border-radius:0 0 10px 10px}
+#control-app .cc-home-all-queues{margin:10px 0 16px}
+#control-app .cc-home-all-queues>.cc-home-board{margin:13px 0 3px}
+@media(max-width:720px){#control-app .cc-daily-focus-list{grid-template-columns:1fr}}

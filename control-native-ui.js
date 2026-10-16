@@ -1360,6 +1360,26 @@ function renderDashboard(){
    "Sem oportunidades operacionais pendentes"),
    make("span",archiveCount+" ações antigas no arquivo · não são follow-ups atuais confirmados"));
  root.append(overview);
+ const priorityModule=window.CaravelaWorkflowPriority;
+ const focusItems=priorityModule?.selectDailyActions(live,{today,limit:5})||[];
+ const focus=make("section",undefined,"cc-daily-focus");
+ focus.append(make("h3","As próximas decisões"));
+ focus.append(make("p","Até 5 propostas operacionais com revisão vencida, marcada para os próximos 7 dias, resposta por organizar ou responsável em falta. O arquivo e os sinais Zoho ficam nas suas próprias filas, sem prazos inventados.","cc-lead"));
+ if(!focusItems.length){
+  focus.append(make("p","Sem ações prioritárias comprovadas nesta altura. Consulta as restantes propostas para planear novos contactos.","cc-lead"));
+ }else{
+  const tasksById=new Map([...followups,...leads].map(task=>[task.record?.id,task]));
+  const focusGrid=make("div",undefined,"cc-daily-focus-list");
+  for(const item of focusItems){
+   const task=tasksById.get(item.id);
+   if(!task)continue;
+   const wrap=make("div",undefined,"cc-daily-focus-item");
+   const reason=make("div",item.reason+(item.missingOwner?" · Responsável por atribuir":""),"cc-daily-focus-reason");
+   wrap.append(reason,homeTaskCard(task));focusGrid.append(wrap);
+  }
+  focus.append(focusGrid);
+ }
+ root.append(focus);
  const board=make("div",undefined,"cc-home-board");
  const visibleBuckets=buckets.filter(x=>x.items.length>0);
  for(const bucket of visibleBuckets){
@@ -1385,8 +1405,12 @@ function renderDashboard(){
   open.onclick=()=>window.CaravelaControlApp?.openView("contacts");
   empty.append(open);board.append(empty);
  }
- if(visibleBuckets.length)root.append(colorLegend());
- root.append(board);
+ if(visibleBuckets.length){
+  root.append(colorLegend());
+  const allQueues=make("details",undefined,"cc-archive-toggle cc-home-all-queues");
+  allQueues.append(make("summary","Consultar todas as filas de Booking · "+liveTotal+" oportunidades"));
+  allQueues.append(board);root.append(allQueues);
+ }else root.append(board);
  const archive=make("details",undefined,"cc-archive-toggle cc-home-archive");
  archive.append(make("summary","Arquivo histórico · "+archiveFollowups.length+
    " contactos referidos · "+archiveLeads.length+" por contactar (verificar)"));

@@ -1649,11 +1649,16 @@ window.addEventListener("caravela-board-open-booking",event=>{
 });
 window.addEventListener("caravela-board-create-booking",event=>{
  const d=event.detail||{};
- boardYear=Number(d.booking_year)||boardYear;
+ const selectedYear=Number(d.season_hint||d.booking_year);
+ if(selectedYear>=2026&&selectedYear<=2031)boardYear=selectedYear;
  window.CaravelaControlApp?.openView("booking");
  edit("booking",{contact_name:d.contact_name||"",contact_id:d.contact_id||"",
-  booking_year:String(boardYear),booking_category:d.booking_category||"unknown",
-  artist:d.artist||"",subject:d.subject||"",next_step:"Confirmar oportunidade e contacto"});
+  // Historical action dates do not establish the year of a concert.
+  booking_year:d.booking_year===undefined?String(boardYear):String(d.booking_year),
+  booking_category:d.booking_category||"unknown",
+  artist:d.artist||"",subject:d.subject||"",
+  notes:d.notes||"",origin_label:d.origin_label||"Contacto do arquivo",
+  next_step:d.next_step||"Confirmar oportunidade, interlocutor e condições"});
 });
 window.addEventListener("caravela-auto-review-open",event=>{
  const item=event.detail?.item;

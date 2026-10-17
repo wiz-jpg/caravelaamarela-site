@@ -187,3 +187,17 @@
 #control-app .cc-auto-review-item button{justify-self:start;padding:8px 11px;font-size:11px}
 #control-app .cc-auto-review-panel>button{margin:12px 0 0}
 @media(max-width:730px){#control-app .cc-auto-review-list{grid-template-columns:1fr}}
+
+
+/* Provisional lane assignments are usable but never a verified business state. */
+#control-app .cc-board-inferred{
+ display:inline-flex;align-items:center;align-self:flex-start;
+ padding:4px 7px;border-radius:6px;
+ background:#5f512f;border:1px solid #c3aa65;color:#fff1bf;
+ font-size:10px;font-weight:750;line-height:1.25;letter-spacing:.01em
+}
+#control-app .cc-board-item .cc-board-inferred+small{color:#f6e2b9}
+#control-app .cc-board-lane-ongoing .cc-board-candidate{border-color:#bea875;background:#394943}
+#control-app .cc-board-lane-now .cc-board-candidate,
+#control-app .cc-board-lane-late .cc-board-candidate,
+#control-app .cc-board-lane-soon .cc-board-candidate{border-color:#d6bf81}

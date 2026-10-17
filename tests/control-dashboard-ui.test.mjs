@@ -40,7 +40,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261017autowork1/);
+ assert.match(html,/control-native-ui\.js\?v=20261017autolanes1/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
@@ -84,8 +84,8 @@ test("one-window Zoho workflow uses a single human-approved operation",()=>{
 
 test("year-based booking and opportunities dashboard assets are loaded",()=>{
  const html=get("crm-control.html"),app=get("control-app.js");
- assert.match(html,/control-booking-board\.js\?v=20261017focus2/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017focus2/);
+ assert.match(html,/control-booking-board\.js\?v=20261017autolanes1/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017autolanes1/);
  assert.match(html,/control-opportunities-ui\.js\?v=20261017focus2/);
  assert.match(app,/data-view="opportunities"/);
  assert.match(app,/\["opportunities", "Oportunidades"/);
@@ -123,4 +123,19 @@ test("automatic action review is visible on Inicio and only opens a manual propo
  assert.match(native,/window\.addEventListener\("caravela-auto-review-open"/);
  assert.match(native,/booking_year:""/);
  assert.doesNotMatch(ui,/sendEmail|mail\/send|stage:"sent_verified"/);
+});
+
+
+test("historical actions may enter proposed operational lanes without mutating deal state",()=>{
+ const board=get("control-booking-board.js");
+ const ui=get("control-booking-board-ui.js");
+ const native=get("control-native-ui.js");
+ const html=get("crm-control.html");
+ assert.match(board,/Classificação sugerida a partir de AÇÕES/);
+ assert.match(board,/provisional:true/);
+ assert.match(ui,/Classificação automática · por validar/);
+ assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
+ assert.match(native,/booking_year:d\.booking_year===undefined\?/);
+ assert.match(html,/control-booking-board\.css\?v=20261017autolanes1/);
+ assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });

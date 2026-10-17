@@ -47,27 +47,11 @@
   const festival={ongoing:[],late:[],now:[],soon:[],planning:[],archive:[],declined:[],confirmed:[]};
   const venue={ongoing:[],suggestions:[],archive:[],declined:[],confirmed:[]};
   const archivedKeys=new Set();
+  const contactsWithHistory=new Set();
   const nameKey=x=>low(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
   const lookup=new Map();
   for(const c of contacts){const key=nameKey(c.name);if(!lookup.has(key))lookup.set(key,[]);lookup.get(key).push(c)}
-  // Imported actions are *unverified source claims*, never current deal states.
-  // Link only a unique exact normalized entity name and compatible known email.
-  for(const a of actions){
-    if(!a?.name||!a?.id||a.no_outreach||a.contact_policy==="blocked")continue;
-    const options=(lookup.get(nameKey(a.name))||[]).filter(c=>
-      (!a.email||!(c.emails||[]).length||
-       c.emails.some(e=>low(e)===low(a.email))));
-    if(options.length!==1)continue;
-    const contact=options[0];
-    if(!["festival","venue"].includes(contact.kind))continue;
-    const key=contact.id+"|"+(artists(a.artist).join("+")||"unassigned");
-    if(archivedKeys.has(key))continue;
-    archivedKeys.add(key);
-    const item={type:"archive",archive:a,record:null,contact,artists:artists(a.artist),
-      locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
-      reason:"Histórico importado: "+(a.status||"sem estado")+" · verificar contacto, banda e ano"};
-    (contact.kind==="festival"?festival:venue).archive.push(item);
-  }
+
   const other=[],undated=[];
   const linkedForYear=new Set();
   const confirmedGigs=[];
@@ -108,8 +92,75 @@
     venue[stagesOngoing.has(r.stage)?"ongoing":"suggestions"].push(item);
    }else other.push(item);
   }
+  // Imported AÇÕES can populate operational review lanes without modifying native booking.
+  // Every derived card is visibly provisional; no status is promoted to confirmed.
+  const grouped=new Map();
+  const relevantDate=value=>d(value)&&value>=String(year-1)+"-01-01"&&value<=String(year)+"-12-31";
+  const safety=c=>c?.contact_policy!=="blocked"&&!c?.source_suppressed&&
+    !c?.source_shared_email&&!c?.suppressed&&!c?.control_blocked&&
+    !c?.control_blocked_possible&&!c?.shared_email&&!c?.canonical_id&&
+    c?.duplicate_decision!=="secondary";
+  const contactEmail=c=>[...(c.emails||[]),...(c.people||[]).map(p=>p.email)].map(x=>low(x)).filter(Boolean);
+  for(const a of actions){
+   if(!a?.id||!a?.name||a.no_outreach||a.contact_policy==="blocked")continue;
+   const options=(lookup.get(nameKey(a.name))||[]).filter(c=>
+     !a.email||!contactEmail(c).length||contactEmail(c).includes(low(a.email)));
+   let contact=null;
+   if(options.length===1)contact=options[0];
+   else if(options.length>1&&a.matched_entity_id){
+    // Still need a unique exact candidate, not just a mutable spreadsheet reference.
+    const found=options.filter(c=>c.id===a.matched_entity_id);
+    if(found.length===1)contact=found[0];
+   }
+   if(!contact||!["festival","venue"].includes(contact.kind)||!safety(contact))continue;
+   const project=artists(a.artist),band=project.join("+")||"unassigned";
+   const key=contact.id+"|"+band;
+   const already=bookings.some(r=>{
+    if(!r)return false;
+    if(r.contact_id!==contact.id&&nameKey(r.contact_name)!==nameKey(contact.name))return false;
+    const sameArtist=artists(r.artist).join("+")===band;
+    const explicit=exactYear(r);
+    return sameArtist&&(explicit===year||explicit===null);
+   });
+   if(already)continue;
+   const dates=[a.next_followup_iso,a.next_action_iso,a.last_contact_iso].filter(relevantDate);
+   const rowNumber=Number(a.origin?.row)||0;
+   const rank=(dates.sort().at(-1)||"")+"|"+String(rowNumber).padStart(7,"0");
+   const prev=grouped.get(key);
+   if(!prev||rank>prev.rank)grouped.set(key,{a,contact,project,rank});
+  }
+  for(const {a,contact,project} of grouped.values()){
+   const key=contact.id+"|"+(project.join("+")||"unassigned");
+   if(archivedKeys.has(key))continue;archivedKeys.add(key);
+   contactsWithHistory.add(contact.id);
+   const state=nameKey(a.status);
+   const isFirst=state==="por contactar";
+   const isOngoing=["enviado","em conversa","em negociacao"].includes(state);
+   const dated=(isOngoing?a.next_followup_iso||a.next_action_iso:a.next_action_iso||a.next_followup_iso)||"";
+   const validDate=relevantDate(dated)?dated:"";
+
+   const item={type:"archive",provisional:true,archive:a,record:null,contact,artists:project,
+    action_date:validDate,locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
+    reason:"Classificação sugerida a partir de AÇÕES · confirmar o ano e a evidência no Zoho"};
+   const days=validDate?Math.round((Date.parse(validDate+"T12:00:00Z")-
+     Date.parse(today+"T12:00:00Z"))/86400000):null;
+   if(contact.kind==="festival"){
+    let lane="archive";
+    if(isOngoing)lane="ongoing"; // Provisional follow-up even without a verified date.
+    else if(isFirst&&validDate&&days>=-90){
+     lane=days<0?"late":days<=7?"now":days<=45?"soon":"planning";
+    }else if(isFirst){
+     const verifiedWindow=windowFor(contact,year,today).status;
+     lane=["late","now","soon"].includes(verifiedWindow)?verifiedWindow:"planning";
+    }
+    // A reported refusal/confirmation from old records never closes a 2027 gig.
+    festival[lane].push(item);
+   }else{
+    venue[isOngoing?"ongoing":isFirst?"suggestions":"archive"].push(item);
+   }
+  }
   for(const contact of contacts){
-   if(!contact?.id||linkedForYear.has(contact.id)||
+   if(!contact?.id||linkedForYear.has(contact.id)||contactsWithHistory.has(contact.id)||
      contact.contact_policy==="blocked"||contact.source_suppressed||
      contact.source_shared_email||contact.canonical_id||contact.duplicate_decision==="secondary")continue;
    if(contact.kind==="festival"){

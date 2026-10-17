@@ -8,7 +8,7 @@
  const section=el("section",undefined,"cc-booking-board");
  const head=el("div",undefined,"cc-booking-board-top"),intro=el("div"),controls=el("div",undefined,"cc-booking-board-controls");
  intro.append(el("small","PLANEAMENTO DE BOOKING","cc-booking-eyebrow"),el("h2","Booking 2027","cc-booking-board-title"),
-  el("p","Festivais por período de contacto. Venues por negociações e oportunidades de rota. Tudo separado por época e projeto.","cc-lead"));
+  el("p","Festivais por janela de contacto e histórico analisado; venues por negociação e oportunidades de rota. Os cartões do arquivo são sugestões por validar.","cc-lead"));
  const yearLabel=el("label","Ano");
  const years=el("select");years.setAttribute("aria-label","Ano de programação");
  for(const y of [2026,2027,2028,2029,2030,2031]){const opt=el("option",y);opt.value=String(y);years.append(opt)}
@@ -51,6 +51,7 @@
   const event=r?.subject||"",location=item.locality||"Local por confirmar";
   if(event)card.append(el("small",event));
   card.append(el("small",location));
+  if(item.provisional)card.append(el("span","Classificação automática · por validar","cc-board-inferred"));
   if(r){
    const date=r.event_date||"";
    if(date)card.append(el("small","Concerto: "+date));
@@ -62,9 +63,10 @@
    b.onclick=()=>emit("caravela-board-open-booking",{record:r});card.append(b);
   }else{
    if(item.archive){
-    card.append(el("small","Arquivo importado · "+(item.archive.status||"estado desconhecido")));
+    card.append(el("small","Estado registado em AÇÕES: "+(item.archive.status||"desconhecido")));
+    if(item.action_date)card.append(el("small","Data da ação no arquivo: "+item.action_date));
     if(item.archive.next_step)card.append(el("p",item.archive.next_step,"cc-board-action-label"));
-    card.append(el("small","O ano, o envio e a negociação não foram confirmados"));
+    card.append(el("small","É uma sugestão para rever; ano do concerto, envio e negociação por confirmar"));
    }
    if(item.window&&item.window.from){
     card.append(el("small","Janela: "+item.window.from+" — "+item.window.to));
@@ -72,14 +74,23 @@
    }
    if(item.reason)card.append(el("p",item.reason,"cc-board-action-label"));
    if(item.nearbyGig?.event_date)card.append(el("small","Data próxima: "+item.nearbyGig.event_date));
-   card.append(el("small",item.archive?"Reconciliar com Booking antes de contactar":
+   card.append(el("small",item.archive?"Informação histórica · sem contacto autorizado automaticamente":
       "Contacto do arquivo · sem envio autorizado"));
    const acts=el("div",undefined,"cc-board-item-actions");
    const b=el("button",item.archive?"Retomar como proposta":"Preparar proposta","cc-neutral");b.type="button";
    b.onclick=()=>emit("caravela-board-create-booking",{
     contact_name:c.name,contact_id:c.id,booking_category:c.kind,
-    booking_year:years.value,artist:item.artists?.length===1?item.artists[0]:"",
-    subject:item.archive?.name|| (c.kind==="festival"?"Proposta festival ":"Proposta sala ")+years.value
+    booking_year:item.archive?"":years.value,
+    season_hint:years.value,
+    artist:item.artists?.length===1?item.artists[0]:"",
+    origin_label:item.archive?"AÇÕES · linha "+(item.archive.origin?.row||"?"):"Contacto de arquivo",
+    notes:item.archive?
+      "Classificação sugerida para planeamento de "+years.value+
+       ". Ano real do evento e histórico por verificar. Estado de origem: "+item.archive.status+
+       "; data de ação registada: "+(item.action_date||"não indicada"):"",
+    next_step:item.archive?.next_step||"Verificar oportunidade, condições e destinatário",
+    subject:item.archive?"Rever proposta "+years.value+" · "+c.name:
+      (c.kind==="festival"?"Proposta festival ":"Proposta sala ")+years.value
    });
    acts.append(b);
    if(c.kind==="festival"){
@@ -102,9 +113,9 @@
   try{result=api.classify({bookings:allBookings,contacts:allContacts,actions:allActions,year,today:today()})}
   catch(e){status.textContent="Não foi possível organizar as oportunidades: "+e.message;return}
   const festival=el("section",undefined,"cc-board-group");
-  festival.append(el("h3","Festivais"),el("p","Abordagens planeadas pelo ano do evento; atraso só quando a janela tem fundamento e ano definido.","cc-lead"));
+  festival.append(el("h3","Festivais"),el("p","Colunas com ações sugeridas a partir do histórico e janelas comprovadas. As sugestões não confirmam a edição 2027 nem autorizam emails.","cc-lead"));
   const venues=el("section",undefined,"cc-board-group");
-  venues.append(el("h3","Venues"),el("p","Sugestões apenas com base em locais de concertos confirmados, sem calcular tempos ou distâncias.","cc-lead"));
+  venues.append(el("h3","Venues"),el("p","Inclui ações importadas para rever, salas de interesse e proximidades a concertos confirmados; sem tempos de deslocação inventados.","cc-lead"));
   let visibleTotal=0;
   function lanes(holder,group,labels){
    const rail=el("div",undefined,"cc-board-rail");
@@ -144,8 +155,11 @@
    }
    body.append(unresolved);
   }
-  status.textContent=visibleTotal+" registos/candidatos visíveis · "+orphan.length+
-   " sem ano definido. Propostas diferentes mantêm IDs e histórico próprios.";
+  const provisional=[...Object.values(result.festival),...Object.values(result.venue)]
+   .flat().filter(x=>x.provisional&&visible(x)).length;
+  status.textContent=visibleTotal+" registos e candidatos · "+provisional+
+   " classificados automaticamente para validação · "+orphan.length+
+   " sem ano definido. Estados comerciais originais não alterados.";
  }
  async function load(){
   const t=window.CaravelaNativeTransport;if(!t){failed="Inicia sessão para consultar o Booking.";render();return}

@@ -97,7 +97,7 @@ test("historical contacts populate planning without fabricating contact windows"
  assert.equal(result.festival.now.length,0);
  assert.equal(result.festival.planning[0].type,"candidate");
 });
-test("historical claims appear only in a separate unverified archive lane",()=>{
+test("historical sent claims appear provisionally in follow-up, never confirmed",()=>{
  const c=contact({id:"f",emails:["venue@sample.com"]});
  const rows=[
   {id:"h1",name:"Festival Teste",email:"venue@sample.com",artist:"WILDCHAINS",
@@ -106,7 +106,106 @@ test("historical claims appear only in a separate unverified archive lane",()=>{
    status:"Em conversa"}
  ];
  const result=classify({bookings:[],contacts:[c],actions:rows,year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.archive.length,0);
+ assert.equal(result.festival.ongoing.length,1);
+ assert.equal(result.festival.ongoing[0].type,"archive");
+ assert.equal(result.festival.ongoing[0].provisional,true);
+ assert.equal(result.festival.confirmed.length,0);
+});
+
+
+const imported=(id,status,artist,date="",patch={})=>({
+ id,name:"Festival Teste",email:"venue@sample.com",artist,
+ status,next_step:"Verificar condições no Zoho",next_action_iso:date,
+ origin:{row:Number(id.replace(/\D+/g,""))||10},...patch
+});
+test("dated source actions are placed automatically in late, now, soon and planning",()=>{
+ const c=contact({emails:["venue@sample.com"],contact_window_start:"",
+  contact_window_end:"",contact_window_target:"unknown"});
+ for(const [date,lane] of [["2026-10-12","late"],["2026-10-17","now"],
+   ["2026-10-24","now"],["2026-11-03","soon"],["2027-01-05","planning"]]){
+  const result=classify({bookings:[],contacts:[c],
+   actions:[imported("r1","Por contactar","WILDCHAINS",date)],
+   year:2027,today:"2026-10-17"});
+  assert.equal(result.festival[lane].filter(x=>x.type==="archive").length,1,date);
+  assert.equal(result.festival.archive.length,0);
+  assert.equal(result.festival.confirmed.length,0);
+  assert.equal(result.festival.declined.length,0);
+  assert.equal(result.festival[lane][0].action_date,date);
+  assert.equal(result.festival[lane][0].provisional,true);
+ }
+});
+test("source-only older scheduled dates stay in review, not an active overdue alert",()=>{
+ const c=contact({emails:["venue@sample.com"]});
+ const result=classify({bookings:[],contacts:[c],
+  actions:[imported("r1","Por contactar","WILDCHAINS","2026-02-03")],
+  year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.late.length,0);
  assert.equal(result.festival.archive.length,1);
- assert.equal(result.festival.archive[0].type,"archive");
- assert.equal(result.festival.ongoing.length,0);
+});
+test("verified festival window classifies an undated action without fabricating another date",()=>{
+ const c=contact({id:"f2",emails:["venue@sample.com"]});
+ const result=classify({bookings:[],contacts:[c],
+  actions:[imported("r1","Por contactar","WILDCHAINS")],
+  year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.now.length,1);
+ assert.equal(result.festival.now[0].action_date,"");
+ assert.equal(result.festival.now[0].provisional,true);
+});
+test("separate historic rows for the two bands remain independently reviewable",()=>{
+ const c=contact({emails:["venue@sample.com"]});
+ const result=classify({bookings:[],contacts:[c],
+  actions:[
+   imported("r1","Por contactar","WILDCHAINS","2026-10-17"),
+   imported("r2","Em conversa","Devil of a Woman","2026-10-04")
+  ],year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.now.length,1);
+ assert.equal(result.festival.ongoing.length,1);
+ assert.equal(result.festival.now[0].artists[0],"WILDCHAINS");
+ assert.equal(result.festival.ongoing[0].artists[0],"Devil of a Woman");
+});
+test("native deals win over imported action suggestions for the same band",()=>{
+ const c=contact({emails:["venue@sample.com"]});
+ const result=classify({bookings:[booking({contact_id:c.id,artist:"WILDCHAINS",stage:"declined"})],
+  contacts:[c],actions:[imported("r1","Por contactar","WILDCHAINS","2026-10-17")],
+  year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.declined.length,1);
+ assert.equal(result.festival.now.length,0);
+ assert.equal(result.festival.planning.length,0);
+});
+test("old refusal and closed claims never become 2027 confirmed decisions",()=>{
+ const c=contact({emails:["venue@sample.com"]});
+ const result=classify({bookings:[],contacts:[c],year:2027,today:"2026-10-17",
+  actions:[
+   imported("r1","Recusado","WILDCHAINS"),
+   imported("r2","Fechado","Devil of a Woman")
+  ]});
+ assert.equal(result.festival.archive.length,2);
+ assert.equal(result.festival.declined.length,0);
+ assert.equal(result.festival.confirmed.length,0);
+});
+test("blocked, shared and suppressed historical contacts never enter actionable queues",()=>{
+ for(const patch of [
+  {contact_policy:"blocked"},{source_suppressed:true},
+  {source_shared_email:true},{duplicate_decision:"secondary"}
+ ]){
+  const c=contact({emails:["venue@sample.com"],...patch});
+  const out=classify({bookings:[],contacts:[c],
+   actions:[imported("r1","Por contactar","WILDCHAINS","2026-10-17")],
+   year:2027,today:"2026-10-17"});
+  assert.equal(out.festival.now.length,0);
+  assert.equal(out.festival.planning.length,0);
+  assert.equal(out.festival.archive.length,0);
+ }
+});
+test("multiple archive revisions on same entity and artist choose latest stated action",()=>{
+ const c=contact({emails:["venue@sample.com"]});
+ const r=classify({bookings:[],contacts:[c],year:2027,today:"2026-10-17",
+  actions:[
+   imported("r1","Por contactar","WILDCHAINS","2026-10-07"),
+   imported("r2","Por contactar","WILDCHAINS","2026-10-17")
+  ]});
+ assert.equal(r.festival.late.length,0);
+ assert.equal(r.festival.now.length,1);
+ assert.equal(r.festival.now[0].archive.id,"r2");
 });

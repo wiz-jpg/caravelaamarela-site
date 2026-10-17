@@ -1700,6 +1700,22 @@ window.addEventListener("caravela-board-open-contact",event=>{
  const row=contactRows().find(x=>x.id===event.detail?.id);
  if(row){window.CaravelaControlApp?.openView("contacts");edit("contacts",row)}
 });
+window.addEventListener("caravela-board-research-contact",event=>{
+ const d=event.detail||{};
+ const name=String(d.name||"").trim().slice(0,160);
+ const source=String(d.source_url||"").trim().slice(0,700);
+ if(!name||!/^https:\/\//.test(source))return;
+ window.CaravelaControlApp?.openView("contacts");
+ edit("contacts",{
+  name,kind:"festival",contact_subtype:"unknown",
+  country:"",city:"",region:"",emails:[],
+  contact_policy:"review",relationship:"unknown",
+  source_label:"Radar externo · pista por verificar",
+  notes:"Fonte a verificar: "+source+"\nA fonte pode ser um artigo e não a página do festival. "+
+   "Confirmar o nome, país, programação, contacto e adequação antes de guardar.",
+  next_step:"Validar identidade e fonte oficial antes de qualquer proposta"
+ });
+});
 window.addEventListener("caravela-board-open-window",event=>{
  const id=event.detail?.contact_id;
  const row=contactRows().find(x=>x.id===id);

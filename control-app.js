@@ -228,8 +228,11 @@
     if (requirement && (rank[currentUser?.role] || 0) < rank[requirement]) return;
     if(permitted?.closest("details.cc-nav-admin"))permitted.closest("details.cc-nav-admin").open=true;
     if(permitted?.closest("details.cc-nav-more"))permitted.closest("details.cc-nav-more").open=true;
+    const changing=active!==view;
     active = view;
     for (const [key, section] of viewMap) section.hidden = key !== view;
+    // An area is a workspace, not a continuation of the previous area's scroll.
+    if(changing){main.scrollTop=0;window.scrollTo({top:0,behavior:"auto"})}
     for (const button of side.querySelectorAll("[data-view]")) {
       if (button.dataset.view === view) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");

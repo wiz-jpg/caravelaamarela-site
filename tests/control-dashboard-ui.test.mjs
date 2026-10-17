@@ -40,7 +40,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261017deletefix1/);
+ assert.match(html,/control-native-ui\.js\?v=20261017workflow3/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261017workflow3/);
@@ -199,7 +199,7 @@ test("removing a native Other contact requires confirmation, verified server tom
  const html=get("crm-control.html"),ui=get("control-press-ui.js"),
   native=get("control-native-ui.js"),app=get("control-app.js");
  assert.match(html,/control-press-ui\.js\?v=20261017pressscope2/);
- assert.match(html,/control-app\.js\?v=20261017deletefix1/);
+ assert.match(html,/control-app\.js\?v=20261017workflow3/);
  assert.match(ui,/async function removeNativeContact\(c\)/);
  assert.match(ui,/!c\?\.revision\|\|c\.origin_id\|\|c\.historical/);
  assert.match(ui,/window\.confirm\(/);
@@ -333,4 +333,23 @@ test("Portuguese-sheet press provenance never overwrites a contact source addres
  assert.match(geography,/country-unknown/);
  assert.match(geography,/country-multi/);
  assert.match(geography,/Portugal — sem distrito especificado/);
+});
+
+
+test("external festival shortlist can open an unsaved native contact in review mode",()=>{
+ const ui=get("control-booking-board-ui.js"),native=get("control-native-ui.js");
+ assert.match(ui,/caravela-board-research-contact/);
+ assert.match(ui,/Rever e criar contacto/);
+ assert.match(native,/window\.addEventListener\("caravela-board-research-contact"/);
+ assert.match(native,/contact_policy:"review"/);
+ assert.match(native,/Confirmar o nome, país, programação, contacto e adequação/);
+ assert.doesNotMatch(native,/radar\/festivals.*POST/);
+});
+
+
+test("workspace navigation always resets the previous view scroll",()=>{
+ const app=get("control-app.js");
+ assert.match(app,/const changing=active!==view/);
+ assert.match(app,/main\.scrollTop=0/);
+ assert.match(app,/window\.scrollTo\(\{top:0,behavior:"auto"\}\)/);
 });

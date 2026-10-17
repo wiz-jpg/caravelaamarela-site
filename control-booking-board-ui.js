@@ -390,6 +390,15 @@
      const link=el("a","Consultar fonte");link.href=candidate.page;
      link.target="_blank";link.rel="noopener noreferrer";actions.append(link);
     }
+    const create=el("button","Rever e criar contacto","cc-neutral");
+    create.type="button";
+    create.title="Abre uma ficha por confirmar; nada será guardado antes de validação humana.";
+    create.onclick=()=>emit("caravela-board-research-contact",{
+     name:candidate.name,source_url:candidate.page||"",
+     source_kind:candidate.status==="unverified_lead"?"Página encontrada em pesquisa":"Edição identificada",
+     artist:radarArtist,territory:radarTerritory
+    });
+    actions.append(create);
     card.append(actions);cards.append(card);
    }
    if(!items.length)cards.append(el("p",label.startsWith("Novas")?

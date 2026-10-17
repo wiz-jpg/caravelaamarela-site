@@ -143,7 +143,7 @@ test("historical actions may enter proposed operational lanes without mutating d
 
 test("press grouping, published agenda and one-click triage exist in the Booking UI",()=>{
  const html=get("crm-control.html"),ui=get("control-booking-board-ui.js");
- assert.match(html,/control-press-geography\.js\?v=20261017verify2/);
+ assert.match(html,/control-press-geography\.js\?v=20261017pressdistrict1/);
  assert.match(ui,/booking_reviews/);
  assert.match(ui,/reviewItem\(item,key,"confirmed"\)/);
  assert.match(ui,/reviewItem\(item,move\.value,"moved"\)/);

@@ -165,3 +165,25 @@
  #control-app .cc-press-head{flex-direction:column}
  #control-app .cc-essential-card-head{flex-wrap:wrap}
 }
+
+/* Automatic daily review: pending validation, not approved contact. */
+#control-app .cc-auto-review-panel{
+ margin:16px 0;padding:18px;border-radius:14px;
+ border:1px solid #8a9a70;background:#23332b;color:#f6f7f0
+}
+#control-app .cc-auto-review-panel h2{font-size:19px;margin:0 0 5px;color:#f5e7b8}
+#control-app .cc-auto-review-panel>.cc-lead{font-size:12px;margin:6px 0 13px}
+#control-app .cc-auto-review-metrics{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}
+#control-app .cc-auto-review-metric{background:#354b3d;border:1px solid #729078;
+ border-radius:9px;padding:10px 13px;display:grid;gap:4px;min-width:115px}
+#control-app .cc-auto-review-metric strong{font-size:22px}
+#control-app .cc-auto-review-metric small{font-size:11px}
+#control-app .cc-auto-review-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#control-app .cc-auto-review-item{display:grid;align-content:start;gap:7px;padding:12px;
+ border:1px solid #839b83;background:#35463c;border-radius:10px}
+#control-app .cc-auto-review-item strong{font-size:13px;color:#fff}
+#control-app .cc-auto-review-item small{font-size:11px;color:#eddfad}
+#control-app .cc-auto-review-item .cc-lead{font-size:12px}
+#control-app .cc-auto-review-item button{justify-self:start;padding:8px 11px;font-size:11px}
+#control-app .cc-auto-review-panel>button{margin:12px 0 0}
+@media(max-width:730px){#control-app .cc-auto-review-list{grid-template-columns:1fr}}

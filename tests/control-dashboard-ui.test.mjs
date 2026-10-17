@@ -40,7 +40,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261017focus2/);
+ assert.match(html,/control-native-ui\.js\?v=20261017autowork1/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
@@ -109,4 +109,18 @@ test("essential dashboard, press and contact categories are loaded",()=>{
  for(const file of ["control-home-focus-ui.js","control-press-ui.js",
    "control-opportunity-availability.js","control-opportunities-ui.js",
    "control-booking-board-ui.js"])assert.doesNotThrow(()=>new Function(get(file)),file);
+});
+
+
+test("automatic action review is visible on Inicio and only opens a manual proposal",()=>{
+ const html=get("crm-control.html"),ui=get("control-auto-review-ui.js"),
+   native=get("control-native-ui.js");
+ assert.match(html,/control-auto-review\.js\?v=20261017autowork1/);
+ assert.match(html,/control-auto-review-ui\.js\?v=20261017autowork1/);
+ assert.match(ui,/t\.request\("archive","GET"\)/);
+ assert.match(ui,/t\.request\("booking","GET"\)/);
+ assert.match(ui,/caravela-auto-review-open/);
+ assert.match(native,/window\.addEventListener\("caravela-auto-review-open"/);
+ assert.match(native,/booking_year:""/);
+ assert.doesNotMatch(ui,/sendEmail|mail\/send|stage:"sent_verified"/);
 });

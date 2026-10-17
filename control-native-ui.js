@@ -1655,6 +1655,22 @@ window.addEventListener("caravela-board-create-booking",event=>{
   booking_year:String(boardYear),booking_category:d.booking_category||"unknown",
   artist:d.artist||"",subject:d.subject||"",next_step:"Confirmar oportunidade e contacto"});
 });
+window.addEventListener("caravela-auto-review-open",event=>{
+ const item=event.detail?.item;
+ if(!item||typeof item!=="object"||!item.title)return;
+ window.CaravelaControlApp?.openView("booking");
+ edit("booking",{
+  contact_name:item.title,artist:item.artist||"",
+  contact_id:!item.identity_review?item.contact_id||"":"",
+  contact_email:"",booking_year:"",booking_category:"unknown",
+  subject:"Rever oportunidade de booking",
+  stage:"research",priority:item.priority===0?"high":"medium",
+  origin_label:item.source_reference||"Arquivo histórico",
+  next_step:"Validar origem, identidade, data e condições antes de qualquer envio",
+  notes:"Sugestão automática a validar · "+(item.status_source||"")+
+    " · "+(item.reason||"")+" · ação histórica "+(item.action_id||"")
+ });
+});
 window.addEventListener("caravela-board-open-contact",event=>{
  const row=contactRows().find(x=>x.id===event.detail?.id);
  if(row){window.CaravelaControlApp?.openView("contacts");edit("contacts",row)}

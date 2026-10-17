@@ -13,9 +13,11 @@
  function region(row){
   const country=norm(row?.country);
   if(country&&!portugal.has(country))return {key:"country:"+country,label:String(row.country).trim()};
+  if(root.CaravelaPressEditorial?.national(row))
+   return {key:"culture",label:"Cultura portuguesa"};
   const place=district(row);
   if(place)return {key:"district:"+norm(place),label:place};
-  return {key:"unknown",label:country&&portugal.has(country)?"Distrito por confirmar":"Localização por confirmar"};
+  return {key:"pt-unspecified",label:"Portugal — sem distrito especificado"};
  }
  function group(rows){
   const by=new Map();
@@ -23,7 +25,8 @@
    if(!by.has(g.key))by.set(g.key,{...g,rows:[]});
    by.get(g.key).rows.push(row);
   }
-  const order=x=>x.key.startsWith("district:")?0:x.key.startsWith("country:")?1:2;
+  const order=x=>x.key==="culture"?0:x.key.startsWith("district:")?1:
+   x.key==="pt-unspecified"?2:x.key.startsWith("country:")?3:4;
   return [...by.values()].sort((a,b)=>order(a)-order(b)||
     a.label.localeCompare(b.label,"pt-PT")).map(g=>({...g,
     rows:g.rows.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-PT"))}));
@@ -115,7 +118,7 @@
   if(braga.has(city)||r==="braga")return "Braga";
   if(porto.has(city)||r==="porto")return "Porto";
   if(districts.has(r))return districts.get(r);
-  return cityDistrict.get(city)||null;
+  return cityDistrict.get(city)||root.CaravelaPressEditorial?.inferredDistrict(row)||null;
  }
  function districtsWithin(rows){
   const groups=new Map();

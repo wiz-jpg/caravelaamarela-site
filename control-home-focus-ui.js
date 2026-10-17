@@ -9,8 +9,11 @@
  panel.append(mk("h2","Prioridades de hoje"),mk("p","Só o trabalho que exige atenção. As oportunidades históricas continuam por confirmar.","cc-lead"));
  const columns=mk("div",undefined,"cc-essential-grid");panel.append(columns);
  let presses=[];
- function linkTo(viewId,title){const b=mk("button",title,"cc-neutral");b.type="button";
-  b.onclick=()=>window.CaravelaControlApp?.openView(viewId);return b}
+ function linkTo(viewId,title,section=""){const b=mk("button",title,"cc-neutral");b.type="button";
+  b.onclick=()=>{window.CaravelaControlApp?.openView(viewId);
+   if(viewId==="press"&&section)window.dispatchEvent(
+     new CustomEvent("caravela-press-focus-region",{detail:{key:section}}));
+  };return b}
  const slots={};
  for(const [id,title,viewId,button] of [
   ["follow","Follow-ups","booking","Abrir Booking"],
@@ -34,10 +37,15 @@
  }
  panel.after(archiveDrawer);
  const statusLine=mk("p","","cc-lead");panel.append(statusLine);
- function item(label,note,viewId){
+ function item(label,note,viewId,targets=null){
   const card=mk("div",undefined,"cc-essential-item");
   card.append(mk("strong",label),mk("small",note));
-  card.append(linkTo(viewId,"Ver detalhes"));return card;
+  if(Array.isArray(targets)&&targets.length){
+   const links=mk("div",undefined,"cc-home-press-links");
+   for(const area of targets)links.append(linkTo(viewId,area.label,area.key));
+   card.append(links);
+  }else card.append(linkTo(viewId,"Ver detalhes"));
+  return card;
  }
  function fill(id,values,empty){const slot=slots[id];slot.list.replaceChildren();slot.count.textContent=values.length?values.length+" itens":"";
   for(const v of values.slice(0,5))slot.list.append(item(...v));
@@ -45,15 +53,18 @@
  }
  function pressSection(){
   const items=[];
-  for(const s of presses?.suggestions||[]){
-   const local=s.city?" · "+s.city:"";
-   items.push([s.title+" · "+s.artist,
-    "Press sugerido: "+(s.contacts||[]).slice(0,3).map(x=>x.name).join(", ")+local,"press"]);
+  for(const suggestion of presses?.suggestions||[]){
+   const targets=(suggestion.targets||[]).filter(x=>!x.unavailable);
+   items.push([suggestion.title+" · "+suggestion.artist,
+    "Secções de imprensa: "+(targets.map(x=>x.label).join(" + ")||"Distrito por confirmar")+
+    (suggestion.city?" · "+suggestion.city:""),
+    "press",targets]);
   }
-  for(const p of presses?.campaigns||[]){
-   if(p.kind==="release")items.push([p.title+" · "+p.artist,"Lançamento "+p.event_date+" · "+p.next_step,"press"]);
+  for(const campaign of presses?.campaigns||[]){
+   if(campaign.kind==="release")items.push([campaign.title+" · "+campaign.artist,
+    "Lançamento "+campaign.event_date+" · "+campaign.next_step,"press"]);
   }
-  fill("press",items,"Nenhuma ação de imprensa registada. Adiciona um lançamento ou confirma um concerto.");
+  fill("press",items,"Sem ações de imprensa registadas para já.");
  }
  async function load(){
   const t=window.CaravelaNativeTransport;if(!t)return;

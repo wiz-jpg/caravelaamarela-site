@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import vm from "node:vm";
 const ctx={};
+vm.runInNewContext(readFileSync(new URL("../control-press-editorial.js",import.meta.url),"utf8"),{globalThis:ctx});
+vm.runInNewContext(readFileSync(new URL("../control-press-geography.js",import.meta.url),"utf8"),{globalThis:ctx});
 vm.runInNewContext(readFileSync(new URL("../control-press-csv.js",import.meta.url),"utf8"),{globalThis:ctx});
 const csv=ctx.CaravelaPressCsv;
 test("district CSV includes all rows, not merely the first 35 cards",()=>{
@@ -53,4 +55,19 @@ test("CSV does not export blank or repeated internal IDs",()=>{
  const data=csv.create({key:"unknown",rows:[{id:"x",name:"A"},{id:"x",name:"B"},{name:"C"}]});
  assert.equal(data.count,1);
  assert.equal(data.filename,"caravela-imprensa-unknown.csv");
+});
+
+
+test("culture and district exports disclose validated section without falsifying the original address",()=>{
+ const culture=csv.create({key:"culture",rows:[{
+  id:"blitz",name:"Blitz",kind:"press",city:"Lisboa",country:"Portugal",
+  emails:["redacao@example.pt"]
+ }]});
+ assert.match(culture.content,/Cultura portuguesa/);
+ assert.match(culture.content,/Âmbito editorial nacional validado/);
+ const local=csv.create({key:"district:braga",rows:[{
+  id:"ominho",name:"O Minho",kind:"press",country:"Portugal"
+ }]});
+ assert.match(local.content,/Braga/);
+ assert.match(local.content,/Lista de imprensa Caravela/);
 });

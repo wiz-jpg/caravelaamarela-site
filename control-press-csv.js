@@ -3,7 +3,8 @@
  * A location CSV includes all rows shown by the current press search. */
 (function(root){"use strict";
  const headers=["Entidade","Email(s)","Interlocutor(es)","Email(s) de interlocutor",
-  "Localidade","Região","País","Situação de contacto","Fonte","ID da ficha"];
+  "Localidade original","Região original","País original","Secção de imprensa",
+  "Base da classificação","Situação de contacto","Fonte","ID da ficha"];
  const unique=a=>[...new Set(a.map(v=>String(v||"").trim()).filter(Boolean))];
  function policy(c){
   if(c.contact_policy==="blocked"||c.suppressed||c.source_suppressed||
@@ -20,6 +21,8 @@
   return '"'+s.replace(/"/g,'""')+'"';
  }
  function dataRow(c){
+  const section=root.CaravelaPressGeography?.region(c);
+  const proof=root.CaravelaPressEditorial?.source(c);
   const people=Array.isArray(c.people)?c.people.filter(x=>x&&typeof x==="object"):[];
   const emails=unique([...(Array.isArray(c.emails)?c.emails:[]),c.source_primary_email,
     c.authorization_email]);
@@ -27,6 +30,7 @@
   return [c.name||"",emails.join(" | "),
     unique(people.map(x=>[x.name,x.role].filter(Boolean).join(" — "))).join(" | "),
     personEmails.join(" | "),c.city||"",c.region||"",c.country||"",
+    section?.label||"",proof?.basis||"Localização da ficha original",
     policy(c),c.source_label||c.source||"",c.id||""];
  }
  function filename(group){

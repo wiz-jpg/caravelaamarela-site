@@ -136,14 +136,14 @@ test("historical actions may enter proposed operational lanes without mutating d
  assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
- assert.match(html,/control-booking-board\.css\?v=20261017closed3/);
+ assert.match(html,/control-booking-board\.css\?v=20261017pressscope2/);
  assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });
 
 
 test("press grouping, published agenda and one-click triage exist in the Booking UI",()=>{
  const html=get("crm-control.html"),ui=get("control-booking-board-ui.js");
- assert.match(html,/control-press-geography\.js\?v=20261017district-radar1/);
+ assert.match(html,/control-press-geography\.js\?v=20261017pressscope2/);
  assert.match(ui,/booking_reviews/);
  assert.match(ui,/reviewItem\(item,key,"confirmed"\)/);
  assert.match(ui,/reviewItem\(item,move\.value,"moved"\)/);
@@ -167,9 +167,9 @@ test("Booking reports the public agenda years and one-click access to actual Fec
 test("press directory is collapsible by location and, for Portugal, by district; each has CSV",()=>{
  const html=get("crm-control.html"),ui=get("control-press-ui.js"),
   geo=get("control-press-geography.js"),csv=get("control-press-csv.js");
- assert.match(html,/control-press-geography\.js\?v=20261017district-radar1/);
- assert.match(html,/control-press-csv\.js\?v=20261017pressdistrict1/);
- assert.match(html,/control-press-ui\.js\?v=20261017district-radar1/);
+ assert.match(html,/control-press-geography\.js\?v=20261017pressscope2/);
+ assert.match(html,/control-press-csv\.js\?v=20261017pressscope2/);
+ assert.match(html,/control-press-ui\.js\?v=20261017pressscope2/);
  assert.match(ui,/mk\("details",undefined,nested\?/);
  assert.doesNotMatch(ui,/const isPortugal=key==="portugal"/);
  assert.doesNotMatch(ui,/if\(isPortugal\)/);
@@ -198,7 +198,7 @@ test("other contacts exclude promoters and show evidence-based specific types",(
 test("removing a native Other contact requires confirmation, verified server tombstone, and cross-view refresh",()=>{
  const html=get("crm-control.html"),ui=get("control-press-ui.js"),
   native=get("control-native-ui.js"),app=get("control-app.js");
- assert.match(html,/control-press-ui\.js\?v=20261017district-radar1/);
+ assert.match(html,/control-press-ui\.js\?v=20261017pressscope2/);
  assert.match(html,/control-app\.js\?v=20261017deletefix1/);
  assert.match(ui,/async function removeNativeContact\(c\)/);
  assert.match(ui,/!c\?\.revision\|\|c\.origin_id\|\|c\.historical/);
@@ -226,7 +226,7 @@ test("2026 FNAC and Devil published gigs live inside Fechados with past grey",()
 });
 test("press navigation is district-first for all Portuguese contacts",()=>{
  const source=get("control-press-ui.js"),geo=get("control-press-geography.js");
- assert.match(source,/Portugal: diretamente por distrito/);
+ assert.match(source,/Cultura portuguesa para meios nacionais/);
  assert.doesNotMatch(source,/if\(isPortugal\)/);
  assert.match(source,/CaravelaPressGeography\?\.district\(event\)/);
  assert.match(geo,/key:"district:"\+norm\(place\)/);
@@ -248,4 +248,26 @@ test("closed concerts are in their native lanes, past styled grey, radar below b
  assert.match(board,/festival\.confirmed\.sort\(sortConfirmed\)/);
  assert.match(board,/venue\.confirmed\.sort\(sortConfirmed\)/);
  assert.match(get("control-booking-board.css"),/\.cc-board-past/);
+});
+
+
+test("Culture editorial reach, verified districts and the rest of Portugal are separate sections",()=>{
+ const geo=get("control-press-geography.js"),editorial=get("control-press-editorial.js"),
+  ui=get("control-press-ui.js"),html=get("crm-control.html");
+ assert.match(html,/control-press-editorial\.js\?v=20261017pressscope2/);
+ assert.match(geo,/key:"culture",label:"Cultura portuguesa"/);
+ assert.match(geo,/key:"pt-unspecified",label:"Portugal — sem distrito especificado"/);
+ assert.match(editorial,/musicfest pt/);
+ assert.match(editorial,/blitz/);
+ assert.match(editorial,/arte e cultura/);
+ assert.match(ui,/block\.dataset\.pressKey=key/);
+ assert.match(ui,/focusPressRegion\(target\.key\)/);
+});
+test("home press summaries link to Culture and district sections instead of copying media contacts",()=>{
+ const home=get("control-home-focus-ui.js"),ui=get("control-press-ui.js");
+ assert.match(home,/cc-home-press-links/);
+ assert.match(home,/caravela-press-focus-region/);
+ assert.match(ui,/function pressTargets\(event\)/);
+ assert.match(ui,/caravela-press-focus-region/);
+ assert.match(get("crm-control.html"),/control-home-focus-ui\.js\?v=20261017pressscope2/);
 });

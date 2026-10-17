@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import {readFileSync} from "node:fs";
 const src=readFileSync(new URL("../control-press-geography.js",import.meta.url),"utf8");
-const ctx={};vm.runInNewContext(src,{globalThis:ctx});
+const ctx={};
+vm.runInNewContext(readFileSync(new URL("../control-press-editorial.js",import.meta.url),"utf8"),{globalThis:ctx});
+vm.runInNewContext(src,{globalThis:ctx});
 const {region,group}=ctx.CaravelaPressGeography;
 test("press is grouped directly by district in Portugal and by country abroad",()=>{
  assert.equal(region({city:"Guimarães",country:"Portugal"}).key,"district:braga");
@@ -60,9 +62,34 @@ test("explicit districts take precedence and unidentified district remains uncla
 
 
 test("Portuguese city with no province is not classified into an arbitrary district",()=>{
- assert.equal(region({city:"Cidade não catalogada",country:"Portugal"}).key,"unknown");
+ assert.equal(region({city:"Cidade não catalogada",country:"Portugal"}).key,"pt-unspecified");
  assert.equal(region({city:"Porto",country:"Brasil"}).key,"country:brasil");
  assert.equal(region({city:"Braga",country:"Portugal"}).key,"district:braga");
  assert.equal(region({city:"Guimarães",country:"Portugal"}).label,"Braga");
  assert.equal(region({city:"Gondomar",country:"Portugal"}).label,"Porto");
+});
+
+
+test("national music press has its own section regardless of district of office",()=>{
+ const records=[
+  {name:"musicfest.pt",kind:"press",city:"Porto",country:"Portugal"},
+  {name:"Blitz",kind:"press",city:"Lisboa",country:"Portugal"},
+  {name:"Arte e Cultura",kind:"press",city:"Braga",country:"Portugal"},
+  {name:"O Minho",kind:"press",country:"Portugal"}
+ ];
+ const result=group(records);
+ assert.equal(result[0].key,"culture");
+ assert.equal(result[0].rows.length,3);
+ assert.equal(result[1].key,"district:braga");
+ assert.equal(result[1].rows.length,1);
+});
+test("Portuguese media with uncertain district stay separate from regional and foreign sections",()=>{
+ const result=group([
+  {name:"Meio novo",kind:"press",country:"Portugal"},
+  {name:"O Amarense",kind:"press",country:"Portugal"},
+  {name:"Media Paris",kind:"press",country:"França",city:"Paris"}
+ ]);
+ assert.equal(result.some(g=>g.key==="pt-unspecified"&&g.rows[0].name==="Meio novo"),true);
+ assert.equal(result.some(g=>g.key==="district:braga"&&g.rows[0].name==="O Amarense"),true);
+ assert.equal(result.some(g=>g.key==="country:franca"),true);
 });

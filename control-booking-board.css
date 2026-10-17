@@ -329,3 +329,25 @@
 #control-app details.cc-booking-public-source>summary{cursor:pointer;font-size:11px;color:#b9d0bf}
 #control-app .cc-booking-fit-radar{margin:24px 0 12px;border-color:#88a197}
 #control-app .cc-booking-radar-tools button{font-size:12px;padding:10px 13px}
+
+/* Editorial national press is a coverage class, not a geographic district. */
+#control-app .cc-press-location[data-press-key="culture"]{
+ background:#384632;border-color:#c6ad68
+}
+#control-app .cc-press-location[data-press-key="culture"]>.cc-press-location-summary{
+ background:#605838;color:#fff4d4
+}
+#control-app .cc-press-location[data-press-key="pt-unspecified"]{
+ border-color:#778781
+}
+#control-app .cc-press-suggestion-routes{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+#control-app .cc-press-suggestion-routes button{width:auto;padding:9px 12px;
+ background:#385448;color:#f4f8ee;border:1px solid #9bbb9d;border-radius:8px;font-size:12px}
+#control-app .cc-press-suggestion-routes button:disabled{opacity:.55;cursor:not-allowed}
+#control-app .cc-home-press-links{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+#control-app .cc-home-press-links button{width:auto;background:#375c46;
+ font-size:11px;padding:8px 10px;border:1px solid #9ab69f;border-radius:7px;color:#fff}
+@media(max-width:650px){
+ #control-app .cc-press-suggestion-routes{display:grid}
+ #control-app .cc-press-suggestion-routes button{width:100%}
+}

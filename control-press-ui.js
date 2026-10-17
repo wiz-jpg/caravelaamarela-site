@@ -92,26 +92,47 @@
  function eligible(c){return c.kind==="press"&&c.contact_policy!=="blocked"&&
   !c.suppressed&&!c.control_blocked&&!c.control_blocked_possible&&
   !c.shared_email&&!c.source_shared_email&&!c.canonical_id&&c.duplicate_decision!=="secondary"}
- function pressFor({kind,city="",region="",country=""}){
-  const geography=window.CaravelaPressGeography;
-  if(!geography)return [];
-  const district=geography.district({city,region,country});
-  const national=c=>["national","nacional"].includes(l(c.coverage_scope||c.press_scope||""));
-  const list=contacts.filter(eligible).filter(c=>{
-   if(kind==="release"&&!district)return national(c);
-   if(district)return geography.district(c)===district||national(c);
-   if(country&&l(country)!=="portugal")return l(c.country)===l(country);
-   return false;
-  });
-  return list.sort((a,b)=>{
-   const pa=Number(district&&geography.district(a)===district);
-   const pb=Number(district&&geography.district(b)===district);
-   return pb-pa||l(a.name).localeCompare(l(b.name),"pt-PT");
-  }).slice(0,10);
+ function pressTargets(event){
+  const g=window.CaravelaPressGeography;
+  if(!g)return [];
+  const groups=g.group(contacts.filter(c=>c.kind==="press"));
+  const byKey=new Map(groups.map(x=>[x.key,x]));
+  const result=[];
+  if(byKey.has("culture"))result.push({key:"culture",
+   label:"Cultura portuguesa",count:byKey.get("culture").rows.length});
+  if(event?.kind!=="release"){
+   const district=g.district(event),country=String(event?.country||"").trim().toLowerCase();
+   const key=district?"district:"+district.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase():
+    country&&country!=="pt"&&country!=="portugal"?"country:"+country:null;
+   const group=key?byKey.get(key):null;
+   if(group)result.push({key,label:group.label,count:group.rows.length});
+   else if(district)result.push({key,label:district,count:0,unavailable:true});
+   else if(!key)result.push({key:"pt-unspecified",label:"Distrito do concerto por confirmar",
+    count:0,unavailable:true});
+  }
+  return result;
+ }
+ function focusPressRegion(key){
+  if(!key)return;
+  window.CaravelaControlApp?.openView("press");
+  pressSearch.value="";
+  openedRegions.add(key);
+  directory(pressDirectory,"press","");
+  const detail=[...pressDirectory.querySelectorAll("details.cc-press-location")]
+   .find(x=>x.dataset.pressKey===key);
+  if(detail){
+   detail.open=true;
+   if(typeof detail.scrollIntoView==="function")detail.scrollIntoView({
+    behavior:"smooth",block:"center"});
+  }else pressDirectory.prepend(mk("p",
+   "Esta secção não contém meios identificados. Confirma primeiro a localização.","cc-lead"));
  }
  function candidateCard(c,desc=""){
   const card=mk("article",undefined,"cc-contact-result");
-  card.append(mk("strong",c.name),mk("small",[c.city,c.region,c.country].filter(Boolean).join(" · ")||"Âmbito geográfico por confirmar"));
+  const category=window.CaravelaPressGeography?.region(c);
+  const proof=window.CaravelaPressEditorial?.source(c);
+  card.append(mk("strong",c.name),mk("small",category?.label||"Localização por confirmar"));
+  if(proof)card.append(mk("small",proof.basis));
   if(desc)card.append(mk("small",desc));
   const b=mk("button","Abrir ficha","cc-neutral");b.type="button";b.onclick=()=>openContact(c);card.append(b);
   return card;
@@ -121,24 +142,26 @@
   const rows=contacts.filter(c=>kind==="press"?c.kind==="press":
    !["festival","venue","press","promoter"].includes(c.kind));
   const filtered=rows.filter(c=>!q||l([c.name,c.kind,c.city,c.region,c.country,
+    window.CaravelaPressGeography?.region(c)?.label||"",
     (c.emails||[]).join(" "),c.contact_subtype,c.relationship,c.source_label].join(" ")).includes(q));
   if(kind==="press")el.append(mk("p",filtered.length+" fichas · originais preservados","cc-lead"));
   if(kind==="press"){
    const groups=window.CaravelaPressGeography?.group(filtered)||[];
    const searching=!!q;
    if(!groups.length)el.append(mk("p","Nenhum meio de comunicação encontrado.","cc-lead"));
-   el.append(mk("p","Portugal: diretamente por distrito. Estrangeiro: por país. O CSV exporta os contactos desta localização"+
+   el.append(mk("p","Cultura portuguesa para meios nacionais, distritos para meios regionais e «Portugal — sem distrito especificado» para os restantes. O CSV exporta os contactos desta secção"+
      (searching?" com a pesquisa atual.":"."),"cc-lead cc-press-directory-help"));
    function makeLocation(group,nested=false){
     const key=group.key;
     const block=mk("details",undefined,nested?"cc-press-location cc-press-district":"cc-press-location");
+    block.dataset.pressKey=key;
     const header=mk("summary",undefined,"cc-press-location-summary");
     const name=mk("span",group.label,"cc-press-location-name");
     const count=mk("span",group.rows.length+" contactos","cc-press-location-count");
     header.append(name,count);block.append(header);
     const interior=mk("div",undefined,"cc-press-location-body");
     const endBar=mk("div",undefined,"cc-press-location-footer");
-    const caption=mk("small","CSV com todos os contactos deste distrito ou país, incluindo fichas que exigem validação.");
+    const caption=mk("small","CSV com todos os contactos da secção, incluindo fichas que exigem validação.");
     const action=mk("button","Exportar CSV · "+group.rows.length+" contactos","cc-primary");
     action.type="button";
     const feedback=mk("small","","cc-press-export-feedback");
@@ -269,20 +292,29 @@
     events.push({kind:p.kind,title:p.title,artist:p.artist,date:p.event_date,city:p.city,region:p.region,country:p.country})}
   for(const event of events.slice(0,10)){
    const block=mk("section",undefined,"cc-press-suggestion-group");
-   const eventDistrict=window.CaravelaPressGeography?.district(event)||"";
+   const location=window.CaravelaPressGeography?.district(event)||"";
    block.append(mk("strong",event.title+" · "+event.artist),
     mk("small",pressKinds[event.kind]+" · "+event.date+
       (event.city?" · "+event.city:"")+
-      (eventDistrict?" · Distrito de "+eventDistrict:"")));
-   const candidates=pressFor(event);
-   if(!candidates.length)block.append(mk("p","Sem imprensa regional comprovada. Revê o distrito do concerto ou os meios de âmbito nacional.","cc-lead"));
-   const cards=mk("div",undefined,"cc-press-candidate-grid");
-   for(const c of candidates)cards.append(candidateCard(c,"Sugestão · verificar cobertura, interlocutor e consentimento"));
-   block.append(cards);suggestions.append(block);
+      (location?" · Distrito de "+location:"")));
+   const targets=pressTargets(event),links=mk("div",undefined,"cc-press-suggestion-routes");
+   for(const target of targets){
+    const b=mk("button","Abrir "+target.label+
+      (target.unavailable?" · sem meios identificados":" · "+target.count+" meios"),"cc-neutral");
+    b.type="button";b.disabled=!!target.unavailable;
+    b.onclick=()=>focusPressRegion(target.key);links.append(b);
+   }
+   block.append(links);
+   if(!targets.length)block.append(mk("p",
+    "Não há secções de imprensa verificadas para esta divulgação.","cc-lead"));
+   suggestions.append(block);
   }
-  if(!events.length)suggestions.append(mk("p","Regista um concerto confirmado no Booking ou um lançamento para obter sugestões contextualizadas.","cc-lead"));
+  if(!events.length)suggestions.append(mk("p",
+   "Confirma um concerto ou regista um lançamento para apresentar as secções de imprensa relevantes.","cc-lead"));
   window.dispatchEvent(new CustomEvent("caravela-control-press-context",{detail:{
-   campaigns:active.slice(0,10),suggestions:events.slice(0,8).map(e=>({...e,contacts:pressFor(e).map(x=>({id:x.id,name:x.name,city:x.city,region:x.region}))}))
+   campaigns:active.slice(0,10),suggestions:events.slice(0,8).map(e=>({...e,
+    targets:pressTargets(e).map(x=>({key:x.key,label:x.label,count:x.count,unavailable:!!x.unavailable}))
+   }))
   }}));
  }
  function field(form,key,label,type,original,opts=null){
@@ -364,6 +396,7 @@
  window.addEventListener("caravela-control-view-opened",e=>{
   if(["press","other-contacts","dashboard"].includes(e.detail?.view))void load();
  });
+ window.addEventListener("caravela-press-focus-region",e=>focusPressRegion(e.detail?.key||"culture"));
  window.addEventListener("caravela-control-signed-out",()=>{
   contacts=[];bookings=[];plans=[];announcements=[];pendingReload=false;
   otherStatus.textContent="";render();

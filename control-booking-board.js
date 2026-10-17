@@ -149,6 +149,10 @@
     if(isOngoing)lane="ongoing"; // Provisional follow-up even without a verified date.
     else if(isFirst&&validDate&&days>=-90){
      lane=days<0?"late":days<=7?"now":days<=45?"soon":"planning";
+    }else if(isFirst&&validDate){
+     // A stale documented action remains in historical review; do not
+     // replace its age with a recurring venue window.
+     lane="archive";
     }else if(isFirst){
      const verifiedWindow=windowFor(contact,year,today).status;
      lane=["late","now","soon"].includes(verifiedWindow)?verifiedWindow:"planning";

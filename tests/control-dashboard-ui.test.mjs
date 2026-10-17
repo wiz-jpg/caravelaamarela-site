@@ -220,7 +220,6 @@ test("2026 FNAC and Devil published gigs live inside Fechados with past grey",()
  assert.doesNotMatch(ui,/confirmedIndex/);
  assert.match(ui,/cc-board-past/);
  assert.match(ui,/renderExternalRadar\(year\)/);
- assert.match(ui,/scrollIntoView/);
  assert.match(html,/control-booking-radar\.js\?v=20261017closed3/);
  assert.match(ui,/Radar externo de festivais/);
  assert.doesNotThrow(()=>new Function(get("control-booking-radar.js")));

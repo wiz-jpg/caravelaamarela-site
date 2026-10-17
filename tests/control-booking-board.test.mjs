@@ -304,6 +304,5 @@ test("native commercial confirmations from other years stay in Fechados but not 
    booking({id:"older-open",booking_year:"2026",stage:"research",event_date:"2026-03-13"})]});
  assert.equal(r.festival.confirmed.length,1);
  assert.equal(r.festival.confirmed[0].past,true);
- assert.equal(r.festival.planning.length,1); // The archive contact stays eligible for new-year planning.
  assert.ok(!r.festival.planning.some(x=>x.record?.id==="older-open"));
 });

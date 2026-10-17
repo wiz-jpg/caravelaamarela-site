@@ -411,3 +411,40 @@ test("press campaign reminders are append-only and not inferred mail sends",asyn
  assert.equal(archive.count,2);
  assert.ok(archive.events.every(x=>x.operation==="crm_press_plan_v1"));
 });
+
+
+test("booking lane verification is append-only, revision-guarded, never commercial confirmation",async()=>{
+ const base={source_type:"action",source_id:"r49",source_key:"action:r49|2027|wildchains",
+  contact_id:"",artist:"WILDCHAINS",year:"2027",lane:"ongoing",
+  decision:"confirmed",notes:""};
+ assert.equal(validateNative("booking_reviews",base).reviewed,true);
+ assert.equal(validateNative("booking_reviews",{...base,lane:"confirmed"}),null);
+ assert.equal(validateNative("booking_reviews",{...base,decision:"moved",notes:""}),null);
+ const created=await req("booking_reviews","POST",base);
+ assert.equal(created.status,201);
+ const old=(await created.json()).record;
+ assert.equal(old.lane,"ongoing");
+ const changed=await req("booking_reviews","PATCH",{...base,id:old.id,revision:old.revision,
+  lane:"planning",decision:"moved",notes:"Rever proposta em novembro"});
+ assert.equal(changed.status,200);
+ assert.equal((await req("booking_reviews","PATCH",{...base,id:old.id,revision:old.revision})).status,409);
+ const current=(await (await req("booking_reviews")).json()).records;
+ assert.equal(current.length,1);
+ assert.equal(current[0].lane,"planning");
+ assert.equal((await (await req("booking")).json()).records.length,0);
+ const exportData=await (await req("export")).json();
+ assert.equal(exportData.count,2);
+ assert.equal(exportData.events[0].operation,"crm_booking_review_v1");
+});
+test("a booking review source key cannot be rewritten onto another action",async()=>{
+ const a={source_type:"contact",source_id:"festival_123456789abcdef1234567",
+ source_key:"contact:festival_123456789abcdef1234567|2027|",
+ artist:"",year:"2027",lane:"planning",decision:"confirmed",notes:""};
+ const result=await req("booking_reviews","POST",a);
+ assert.equal(result.status,201);
+ const old=(await result.json()).record;
+ const changed={...a,id:old.id,revision:old.revision,
+  source_id:"festival_123456789abcdef1234568",
+  source_key:"contact:festival_123456789abcdef1234568|2027|"};
+ assert.equal((await req("booking_reviews","PATCH",changed)).status,409);
+});

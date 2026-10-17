@@ -1,7 +1,7 @@
 /* Caravela Control native working records — Preview only.
  * Append-only manual records. Historical snapshots, Zoho and Sheets are immutable.
  * Statuses require human-entered evidence; email observation never promotes a deal. */
-const CONTACT_OP="crm_contact_v1",BOOKING_OP="crm_booking_v1",FINANCE_OP="crm_finance_v1",OPPORTUNITY_OP="crm_opportunity_v1",PRESS_OP="crm_press_plan_v1";
+const CONTACT_OP="crm_contact_v1",BOOKING_OP="crm_booking_v1",FINANCE_OP="crm_finance_v1",OPPORTUNITY_OP="crm_opportunity_v1",PRESS_OP="crm_press_plan_v1",REVIEW_OP="crm_booking_review_v1";
 const FINANCE_TYPES=new Set(["income","expense"]);
 const FINANCE_CATEGORIES=new Set(["agency_commission","creative_service","other_income","travel","production","marketing","other_expense"]);
 const FINANCE_STATUSES=new Set(["planned","due","settled","cancelled"]);
@@ -31,6 +31,8 @@ const RADAR_STATES=new Set(["research","interesting","preparing","submitted","aw
 const RADAR_AVAILABILITY=new Set(["unverified","open_verified","closed_verified"]);
 const PRESS_PLAN_TYPES=new Set(["release","gig","other"]);
 const PRESS_PLAN_STATES=new Set(["planned","in_progress","completed","paused"]);
+const BOOKING_REVIEW_LANES=new Set(["ongoing","late","now","soon","planning","archive","suggestions"]);
+const BOOKING_REVIEW_DECISIONS=new Set(["confirmed","moved"]);
 function validWindowDate(value){
   const parts=MMDD.exec(value);
   if(!parts)return false;
@@ -224,6 +226,27 @@ function pressPlan(input){
      !PRESS_PLAN_TYPES.has(input.kind)||!PRESS_PLAN_STATES.has(input.status))return null;
   return {...row,kind:input.kind,status:input.status};
 }
+function bookingReview(input){
+  if(!input||typeof input!=="object"||Array.isArray(input))return null;
+  const row={};
+  for(const [key,max] of Object.entries({source_key:450,source_id:110,
+    contact_id:80,artist:110,notes:600})){
+    row[key]=field(input[key]??"",max);if(row[key]===null)return null;
+  }
+  row.year=String(input.year||"");
+  row.lane=input.lane;
+  row.decision=input.decision;
+  row.source_type=input.source_type;
+  if(!/^(202[6-9]|20[3-9][0-9])$/.test(row.year)||
+    !["action","contact"].includes(row.source_type)||
+    !row.source_id||!row.source_key||!BOOKING_REVIEW_LANES.has(row.lane)||
+    !BOOKING_REVIEW_DECISIONS.has(row.decision)||
+    !row.source_key.startsWith(row.source_type+":"+row.source_id+"|"+row.year+"|")||
+    row.source_key!==row.source_type+":"+row.source_id+"|"+row.year+"|"+row.artist.toLowerCase()||
+    (row.contact_id&&!validId(row.contact_id))||
+    (row.decision==="moved"&&!row.notes))return null;
+  return {...row,reviewed:true};
+}
 function finance(input){
   if(!input||typeof input!=="object"||Array.isArray(input))return null;
   const row={};
@@ -251,13 +274,16 @@ function finance(input){
 export function validateNative(kind,input){
   return kind==="contacts"?contact(input):kind==="booking"?booking(input):
     kind==="finance"?finance(input):kind==="opportunities"?opportunity(input):
-    kind==="press_plans"?pressPlan(input):null;
+    kind==="press_plans"?pressPlan(input):
+    kind==="booking_reviews"?bookingReview(input):null;
 }
 const operation=kind=>kind==="contacts"?CONTACT_OP:kind==="booking"?BOOKING_OP:
   kind==="finance"?FINANCE_OP:kind==="opportunities"?OPPORTUNITY_OP:
-  kind==="press_plans"?PRESS_OP:null;
+  kind==="press_plans"?PRESS_OP:
+  kind==="booking_reviews"?REVIEW_OP:null;
 const prefix=kind=>kind==="contacts"?"crm-contact:":kind==="booking"?"crm-booking:":
-  kind==="finance"?"crm-finance:":kind==="opportunities"?"crm-opportunity:":"crm-press-plan:";
+  kind==="finance"?"crm-finance:":kind==="opportunities"?"crm-opportunity:":
+  kind==="booking_reviews"?"crm-booking-review:":"crm-press-plan:";
 async function listAll(db,kind){
   const op=operation(kind);
   if(!op)return [];
@@ -372,8 +398,8 @@ export async function nativeExport(env){
  if(!env.ZOHO_DB)return fail("not_found",404);
  try{
   const count=await env.ZOHO_DB.prepare(
-    "SELECT COUNT(*) AS n FROM control_decision_events WHERE operation IN (?,?,?,?,?)"
-  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP,OPPORTUNITY_OP,PRESS_OP).first();
+    "SELECT COUNT(*) AS n FROM control_decision_events WHERE operation IN (?,?,?,?,?,?)"
+  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP,OPPORTUNITY_OP,PRESS_OP,REVIEW_OP).first();
   if((count?.n||0)>15000)return fail("export_event_limit",409);
   const result=await env.ZOHO_DB.prepare(
     "SELECT id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms "+
@@ -404,8 +430,8 @@ function appendRevision(db,kind,id,record,actor,revision,mailReview=null){
       "AND t.message_id=? AND t.status='pending' AND t.revision=? "+
       "AND s.topic='booking' AND s.confidence='rule_based' AND lower(s.external_email)=?)":"");
   const query=db.prepare(changeSql).bind(eventId,entity,
-    kind==="booking"||kind==="finance"||kind==="opportunities"||kind==="press_plans"?record.artist:null,op,
-    kind==="contacts"?record.contact_policy:record.stage||record.status,
+    kind==="booking"||kind==="finance"||kind==="opportunities"||kind==="press_plans"||kind==="booking_reviews"?record.artist:null,op,
+    kind==="contacts"?record.contact_policy:record.stage||record.status||record.decision,
     record.next_step||"Atualização manual",JSON.stringify(record),now,
     entity,op,...(revision?[revision]:[]),
     ...(mailReview?[mailReview.mailbox,mailReview.message_id,mailReview.revision,mailReview.external_email]:[]));
@@ -507,7 +533,7 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
   if(!record)return fail("invalid_record",422);
   const id=request.method==="POST"?
     (kind==="contacts"&&LEGACY_ID.test(input.id)?input.id:
-      mailReview&&UUID.test(input.id||"")?input.id:crypto.randomUUID()):input.id;
+      (mailReview||kind==="booking_reviews")&&UUID.test(input.id||"")?input.id:crypto.randomUUID()):input.id;
   if(!validId(id))return fail("invalid_id",422);
   // Do not allow hand-crafted historical references for newly created records.
   if(request.method==="POST"&&kind==="contacts"&&record.origin_id&&record.origin_id!==id)
@@ -540,6 +566,8 @@ export async function handleNative(request,env,url,route,{canRead=false,canWrite
     }
     const before=await listAll(env.ZOHO_DB,kind);
     const found=before.find(x=>x.id===id);
+    if(kind==="booking_reviews"&&found&&found.source_key!==record.source_key)
+      return fail("review_source_immutable",409);
     if(request.method==="POST"&&found)return fail("record_exists",409);
     if(kind==="contacts"){
       if(record.canonical_id===id||record.linked_producer_ids.includes(id))

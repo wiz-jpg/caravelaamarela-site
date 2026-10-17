@@ -201,3 +201,18 @@
 #control-app .cc-board-lane-now .cc-board-candidate,
 #control-app .cc-board-lane-late .cc-board-candidate,
 #control-app .cc-board-lane-soon .cc-board-candidate{border-color:#d6bf81}
+
+/* Booking verification: actionable decisions without silently promoting deal states. */
+#control-app .cc-board-validation-actions{display:grid;grid-template-columns:1fr auto;gap:6px;width:100%;padding-top:7px;border-top:1px solid #728b7b}
+#control-app .cc-board-validation-actions button:first-child{grid-column:1/-1;background:#335f46;border:1px solid #75ad88;color:#eaffea}
+#control-app .cc-board-validation-actions select{min-width:0;width:100%;border-radius:7px;background:#172c26;color:#fff;border:1px solid #839f8e;padding:8px;font-size:11px}
+#control-app .cc-board-validation-actions button{margin:0;width:auto;padding:7px 10px;font-size:11px}
+#control-app .cc-board-verified{display:inline-flex;align-self:flex-start;padding:4px 7px;border-radius:6px;font-weight:700;font-size:10px;background:#2c6e49;color:#e8ffea;border:1px solid #86b79b}
+#control-app .cc-board-promoters{padding-top:14px;border-top:1px solid #53705d}
+#control-app .cc-board-promoter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px;max-height:350px;overflow-y:auto}
+#control-app .cc-press-region{padding:13px;border:1px solid #678673;border-radius:12px;background:#263d32;margin:12px 0}
+#control-app .cc-press-region-head{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-bottom:12px}
+#control-app .cc-press-region-head h4{font-size:15px;font-weight:800;color:#f3e8bd;margin:0}
+#control-app .cc-press-region-head span{border-radius:999px;padding:4px 8px;font-size:11px;background:#4c6d59;color:#fff}
+#control-app .cc-press-region details{margin-top:9px}
+#control-app .cc-press-region details>summary{cursor:pointer;font-size:12px;font-weight:700;margin-bottom:8px}

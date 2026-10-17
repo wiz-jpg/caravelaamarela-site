@@ -41,11 +41,12 @@
   return {status,from,to,daysUntil:diff,reason:contact.contact_window_reason||"",
     basis:contact.contact_window_basis};
  }
- function classify({bookings=[],contacts=[],actions=[],year=2027,today="2026-10-17"}={}){
+ function classify({bookings=[],contacts=[],actions=[],reviews=[],published=[],year=2027,today="2026-10-17"}={}){
   if(!Number.isInteger(year)||year<2020||year>2099||!d(today))throw Error("invalid_board_date");
   const byId=new Map(contacts.map(x=>[x.id,x]));
   const festival={ongoing:[],late:[],now:[],soon:[],planning:[],archive:[],declined:[],confirmed:[]};
   const venue={ongoing:[],suggestions:[],archive:[],declined:[],confirmed:[]};
+  const reviewed=new Map(reviews.filter(x=>x?.source_key&&x.year===String(year)).map(x=>[x.source_key,x]));
   const archivedKeys=new Set();
   const contactsWithHistory=new Set();
   const nameKey=x=>low(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
@@ -55,6 +56,7 @@
   const other=[],undated=[];
   const linkedForYear=new Set();
   const confirmedGigs=[];
+  const promoter=[];
   const sorted=bookings.filter(x=>x&&typeof x==="object").slice();
   for(const r of sorted){
    const actualYear=exactYear(r);
@@ -129,6 +131,13 @@
    const prev=grouped.get(key);
    if(!prev||rank>prev.rank)grouped.set(key,{a,contact,project,rank});
   }
+  const chosen=(item,lane,group)=>{const review=reviewed.get(item.source_key);
+    if(review&&Object.prototype.hasOwnProperty.call(group,review.lane)){
+      item.provisional=false;item.reviewed=true;item.review_decision=review.decision;
+      item.review_note=review.notes||"";lane=review.lane;
+    }
+    group[lane].push(item);
+  };
   for(const {a,contact,project} of grouped.values()){
    const key=contact.id+"|"+(project.join("+")||"unassigned");
    if(archivedKeys.has(key))continue;archivedKeys.add(key);
@@ -140,6 +149,7 @@
    const validDate=relevantDate(dated)?dated:"";
 
    const item={type:"archive",provisional:true,archive:a,record:null,contact,artists:project,
+    source_key:"action:"+a.id+"|"+year+"|"+String(a.artist||"").toLowerCase(),
     action_date:validDate,locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
     reason:"Classificação sugerida a partir de AÇÕES · confirmar o ano e a evidência no Zoho"};
    const days=validDate?Math.round((Date.parse(validDate+"T12:00:00Z")-
@@ -158,9 +168,9 @@
      lane=["late","now","soon"].includes(verifiedWindow)?verifiedWindow:"planning";
     }
     // A reported refusal/confirmation from old records never closes a 2027 gig.
-    festival[lane].push(item);
+    chosen(item,lane,festival);
    }else{
-    venue[isOngoing?"ongoing":isFirst?"suggestions":"archive"].push(item);
+    chosen(item,isOngoing?"ongoing":isFirst?"suggestions":"archive",venue);
    }
   }
   for(const contact of contacts){
@@ -170,15 +180,19 @@
    if(contact.kind==="festival"){
     const window=windowFor(contact,year,today);
     const lane=["late","now","soon"].includes(window.status)?window.status:"planning";
-    festival[lane].push({type:"candidate",contact,record:null,artists:[],
+    chosen({type:"candidate",contact,record:null,artists:[],
+      source_key:"contact:"+contact.id+"|"+year+"|",
       locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),window,
-      reason:lane==="planning"?"Investigar janela e ano de contacto para "+year:""});
+      reason:lane==="planning"?"Investigar janela e ano de contacto para "+year:""},
+      lane,festival);
    }else if(contact.kind==="venue"){
     const c=low(contact.city),region=low(contact.region),country=low(contact.country);
     if(!c&&!region){
-      venue.suggestions.push({type:"candidate",contact,record:null,artists:[],
+      chosen({type:"candidate",contact,record:null,artists:[],
+        source_key:"contact:"+contact.id+"|"+year+"|",
         locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
-        reason:"Localização e encaixe artístico a confirmar",matchScore:4});
+        reason:"Localização e encaixe artístico a confirmar",matchScore:4},
+        "suggestions",venue);
       continue;
     }
     let best=null;
@@ -192,19 +206,48 @@
      if(!best||score<best.score)best={score,concert:gig.record,artists:gig.artists,
        reason:sameCity?"Concerto confirmado na mesma cidade":"Concerto confirmado na mesma região"};
     }
-    venue.suggestions.push({type:"candidate",record:null,contact,
+    chosen({type:"candidate",record:null,contact,
+      source_key:"contact:"+contact.id+"|"+year+"|",
       artists:best?.artists||[],locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
       reason:best?.reason||"Sala do arquivo · avaliar encaixe, condições e território",
-      nearbyGig:best?.concert||null,matchScore:best?.score??3});
+      nearbyGig:best?.concert||null,matchScore:best?.score??3},"suggestions",venue);
    }
   }
+  // Public agenda provides published dates, not evidence of booking fees or payments.
+  for(const row of published){
+   if(!d(row?.date)||+row.date.slice(0,4)!==year)continue;
+   const act=row.artist==="wild"?["WILDCHAINS"]:row.artist==="devil"?["Devil of a Woman"]:
+     row.artist==="both"?["WILDCHAINS","Devil of a Woman"]:[];
+   if(!act.length||!row.title)continue;
+   const same=sorted.some(b=>b.stage==="confirmed"&&b.event_date===row.date&&
+     act.some(a=>artists(b.artist).includes(a))&&
+     [row.title,row.venue].some(label=>nameKey(label)===nameKey(b.subject)||
+       nameKey(label)===nameKey(b.contact_name)));
+   if(same)continue;
+   const name=row.title,venueName=row.venue||"",
+     possible=contacts.find(c=>[nameKey(name),nameKey(venueName)].includes(nameKey(c.name)));
+   const item={type:"announcement",record:null,contact:possible||null,
+     artists:act,announcement:{...row,city:typeof row.city==="string"?row.city:
+       row.city?.pt||""},
+     locality:typeof row.city==="string"?row.city:row.city?.pt||"",
+     evidence:"Agenda pública do website da Caravela",notCommerciallyConfirmed:true};
+   (/festival/i.test(name)?festival:venue).confirmed.push(item);
+  }
+  // Promoters are relationships, not concerts. Keep individual event histories intact.
+  for(const contact of contacts){
+   if(contact?.kind!=="promoter"||contact.duplicate_decision==="secondary"||
+      contact.canonical_id)continue;
+   promoter.push({type:"promoter",contact,locality:[contact.city,contact.region,contact.country]
+     .filter(Boolean).join(" · ")});
+  }
+  promoter.sort((a,b)=>nameKey(a.contact.name).localeCompare(nameKey(b.contact.name),"pt-PT"));
   const cmp=(a,b)=> (a.type==="booking"?0:a.type==="archive"?1:2)-
      (b.type==="booking"?0:b.type==="archive"?1:2)||
    (a.matchScore??0)-(b.matchScore??0)||
    (a.window?.from||"9999").localeCompare(b.window?.from||"9999")||
    low(a.contact?.name||a.record?.contact_name).localeCompare(low(b.contact?.name||b.record?.contact_name),"pt-PT");
   for(const section of [festival,venue])for(const lane of Object.values(section))lane.sort(cmp);
-  return {year,festival,venue,other,undated};
+  return {year,festival,venue,promoter,other,undated};
  }
  const api=Object.freeze({classify,windowFor,exactYear,kind,artists});
  if(root&&typeof root==="object")root.CaravelaBookingBoard=api;

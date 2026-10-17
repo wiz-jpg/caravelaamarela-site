@@ -30,7 +30,7 @@
  otherBox.append(mk("h2","Outros contactos"),mk("p","Promotores, parceiros e entidades fora das categorias Festival, Venue e Imprensa. As fichas são partilhadas com a base geral.","cc-lead"),
   otherSearch,otherDirectory);
  other.querySelector(".cc-panel-head")?.after(otherBox);
- let contacts=[],bookings=[],plans=[],loading=false;
+ let contacts=[],bookings=[],plans=[],announcements=[],loading=false;
  const same=(a,b)=>l(a)&&l(a)===l(b);
  const openContact=c=>window.dispatchEvent(new CustomEvent("caravela-board-open-contact",{detail:{id:c.id}}));
  function eligible(c){return c.kind==="press"&&c.contact_policy!=="blocked"&&
@@ -59,12 +59,33 @@
   const rows=contacts.filter(c=>kind==="press"?c.kind==="press":
    !["festival","venue","press"].includes(c.kind));
   const filtered=rows.filter(c=>!q||l([c.name,c.kind,c.city,c.region,c.country,(c.emails||[]).join(" ")].join(" ")).includes(q));
-  const head=mk("p",filtered.length+" fichas · sem criar duplicados","cc-lead");el.append(head);
-  const collection=mk("div",undefined,"cc-contact-results");
-  for(const c of filtered.slice(0,70))collection.append(candidateCard(c,
-   !eligible(c)&&c.kind==="press"?"Verificar política de contacto":""));
-  if(filtered.length>70)el.append(mk("p","Mostrados 70 resultados. Refina a pesquisa para ver os restantes.","cc-lead"));
-  el.append(collection);
+  el.append(mk("p",filtered.length+" fichas · sem criar duplicados","cc-lead"));
+  if(kind==="press"){
+   const groups=window.CaravelaPressGeography?.group(filtered)||[];
+   if(!groups.length)el.append(mk("p","Sem contactos de imprensa para este filtro.","cc-lead"));
+   for(const group of groups){
+    const block=mk("section",undefined,"cc-press-region");
+    const head=mk("div",undefined,"cc-press-region-head");
+    head.append(mk("h4",group.label),mk("span",group.rows.length+" contactos"));
+    const cards=mk("div",undefined,"cc-contact-results");
+    for(const c of group.rows.slice(0,35))cards.append(candidateCard(c,
+      !eligible(c)?"Verificar política de contacto":""));
+    block.append(head,cards);
+    if(group.rows.length>35){
+     const rest=mk("details"),caption=mk("summary","Ver mais "+(group.rows.length-35));
+     const more=mk("div",undefined,"cc-contact-results");
+     for(const c of group.rows.slice(35))more.append(candidateCard(c,
+       !eligible(c)?"Verificar política de contacto":""));
+     rest.append(caption,more);block.append(rest);
+    }
+    el.append(block);
+   }
+  }else{
+   const collection=mk("div",undefined,"cc-contact-results");
+   for(const c of filtered.slice(0,70))collection.append(candidateCard(c));
+   if(filtered.length>70)el.append(mk("p","Mostrados 70 resultados. Refina a pesquisa para ver os restantes.","cc-lead"));
+   el.append(collection);
+  }
  }
  function render(){
   directory(pressDirectory,"press",l(pressSearch.value));
@@ -86,6 +107,15 @@
    const c=contacts.find(x=>x.id===gig.contact_id);
    if(!c)continue;
    events.push({kind:"gig",title:gig.subject,artist:gig.artist,date:gig.event_date,city:c.city,region:c.region,country:c.country});
+  }
+  for(const e of announcements){
+   if(!e?.date||e.date<stamp||!["wild","devil","both"].includes(e.artist))continue;
+   const a=e.artist==="wild"?"WILDCHAINS":e.artist==="devil"?"Devil of a Woman":"WILDCHAINS + Devil of a Woman";
+   if(events.some(x=>x.date===e.date&&x.artist===a&&
+      (x.title===e.title||x.title===e.venue)))continue;
+   events.push({kind:"gig",title:e.title,artist:a,date:e.date,
+    city:typeof e.city==="string"?e.city:e.city?.pt||"",
+    country:"",region:"",announcement:true});
   }
   for(const p of active){if(p.event_date>=stamp||p.review_date>=stamp)
     events.push({kind:p.kind,title:p.title,artist:p.artist,date:p.event_date,city:p.city,region:p.region,country:p.country})}
@@ -154,14 +184,17 @@
  async function load(){
   const t=window.CaravelaNativeTransport;if(!t||loading)return;loading=true;
   try{
-   const [a,c,b,p]=await Promise.all([t.request("archive"),t.request("contacts"),
-    t.request("booking"),t.request("press_plans")]);
+   const [a,c,b,p,agenda]=await Promise.all([t.request("archive"),t.request("contacts"),
+    t.request("booking"),t.request("press_plans"),
+    fetch("/assets/data/agenda.json",{cache:"no-store"})]);
    if(!a.ok||!c.ok||!b.ok||!p.ok)throw Error("Não foi possível consultar todas as fontes");
    const [arc,contactsData,bookingsData,plansData]=await Promise.all([a.json(),c.json(),b.json(),p.json()]);
    const merged=new Map((arc.contacts||[]).map(x=>[x.id,{...x,contact_policy:"review",
      source_shared_email:!!x.shared_email}]));
    for(const row of contactsData.records||[])merged.set(row.id,{...merged.get(row.id),...row});
    contacts=[...merged.values()];bookings=bookingsData.records||[];plans=plansData.records||[];
+   if(agenda.ok){const list=await agenda.json();announcements=Array.isArray(list.events)?list.events:[]}
+   else announcements=[];
    render();
   }catch(e){campaigns.replaceChildren(mk("p","Dados de imprensa indisponíveis: "+e.message,"cc-lead"))}
   finally{loading=false}
@@ -176,6 +209,6 @@
   if(["press","other-contacts","dashboard"].includes(e.detail?.view))void load();
  });
  window.addEventListener("caravela-control-signed-out",()=>{
-  contacts=[];bookings=[];plans=[];render();
+  contacts=[];bookings=[];plans=[];announcements=[];render();
  });
 })();

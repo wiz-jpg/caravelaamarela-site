@@ -1658,7 +1658,8 @@ window.addEventListener("caravela-board-create-booking",event=>{
   booking_category:d.booking_category||"unknown",
   artist:d.artist||"",subject:d.subject||"",
   notes:d.notes||"",origin_label:d.origin_label||"Contacto do arquivo",
-  next_step:d.next_step||"Confirmar oportunidade, interlocutor e condições"});
+  next_step:d.next_step||"Confirmar oportunidade, interlocutor e condições",
+  stage:d.requested_stage||"research"});
 });
 window.addEventListener("caravela-auto-review-open",event=>{
  const item=event.detail?.item;

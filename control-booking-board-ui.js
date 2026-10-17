@@ -25,7 +25,8 @@
  controls.append(yearLabel,artistLabel,refresh,create);
  head.append(intro,controls);section.append(head,status,body);
  view.querySelector(".cc-panel-head")?.after(section);
- let allBookings=[],allContacts=[],allActions=[],loaded=false,busy=false,failed="";
+ let allBookings=[],allContacts=[],allActions=[],allReviews=[],published=[],loaded=false,busy=false,failed="";
+ let saving=false;
  const names={festival:{ongoing:"On going / Follow-up",late:"A contactar · em atraso",
   now:"A contactar agora",soon:"A contactar brevemente",planning:"Por calendarizar",
   archive:"Histórico a validar",declined:"Recusados",confirmed:"Fechados"},
@@ -46,12 +47,20 @@
  function rowCard(item,key){
   const r=item.record,c=item.contact;
   const card=el("article",undefined,"cc-board-item "+(r?"cc-board-real":"cc-board-candidate"));
-  const title=el("strong",(c?.name||r?.contact_name||"Entidade por confirmar"),"cc-board-item-title");
+  const title=el("strong",item.announcement?.title||c?.name||r?.contact_name||"Entidade por confirmar","cc-board-item-title");
   card.append(title,el("span",rowArtists(item),"cc-board-artist"));
   const event=r?.subject||"",location=item.locality||"Local por confirmar";
   if(event)card.append(el("small",event));
   card.append(el("small",location));
-  if(item.provisional)card.append(el("span","Classificação automática · por validar","cc-board-inferred"));
+  if(item.provisional||item.source_key&&!item.reviewed)
+   card.append(el("span","Por validar","cc-board-inferred"));
+  if(item.reviewed)card.append(el("span","Triagem validada pela equipa","cc-board-verified"));
+  if(item.announcement){
+   const e=item.announcement;
+   card.append(el("small","Data anunciada: "+e.date),el("small","Local: "+(e.venue||"a confirmar")));
+   card.append(el("small","Agenda pública · confirmação comercial e pagamentos não registados"));
+   return card;
+  }
   if(r){
    const date=r.event_date||"";
    if(date)card.append(el("small","Concerto: "+date));
@@ -97,9 +106,68 @@
     const w=el("button","Editar janela","cc-neutral");w.type="button";
     w.onclick=()=>emit("caravela-board-open-window",{contact_id:c.id});acts.append(w);
    }
+   if(item.source_key){
+    const row=el("div",undefined,"cc-board-validation-actions");
+    const confirm=el("button","✓ Confirmar triagem","cc-neutral");confirm.type="button";
+    confirm.onclick=()=>void reviewItem(item,key,"confirmed");
+    row.append(confirm);
+    const move=el("select");move.setAttribute("aria-label","Mudar coluna");
+    const allowed=c?.kind==="festival"?
+      [["ongoing","Follow-up"],["late","Em atraso"],["now","Agora"],["soon","Brevemente"],
+       ["planning","Por calendarizar"],["archive","Por validar"],
+       ["declined","Recusados"],["confirmed","Fechados"]]:
+      [["ongoing","Follow-up"],["suggestions","Sugestões"],["archive","Por validar"],
+       ["declined","Recusados"],["confirmed","Fechados"]];
+    for(const [v,label] of allowed){const o=el("option",label);o.value=v;move.append(o)}
+    move.value=key;
+    const moveButton=el("button","Mover","cc-neutral");moveButton.type="button";
+    moveButton.onclick=()=>void reviewItem(item,move.value,"moved");
+    row.append(move,moveButton);acts.append(row);
+   }
    card.append(acts);
   }
   return card;
+ }
+ async function reviewItem(item,lane,decision){
+  const c=item.contact;
+  if(!c||!item.source_key||saving)return;
+  if(["confirmed","declined"].includes(lane)){
+   // A public booking confirmation or rejection is a commercial decision.
+   // The existing editor requires explicit evidence for a confirmed concert.
+   emit("caravela-board-create-booking",{
+    contact_name:c.name,contact_id:c.id,booking_category:c.kind,
+    booking_year:"",season_hint:years.value,artist:item.artists?.length===1?item.artists[0]:"",
+    subject:"Rever proposta "+years.value+" · "+c.name,
+    next_step:"Validar decisão comercial e evidência antes de guardar",
+    requested_stage:lane==="confirmed"?"confirmed":"declined"
+   });return;
+  }
+  const source_type=item.archive?"action":"contact";
+  const source_id=String(item.archive?.id||c.id);
+  const year=years.value;
+  const artistName=item.archive?String(item.archive.artist||""):"";
+  const source_key=source_type+":"+source_id+"|"+year+"|"+artistName.toLowerCase();
+  const bytes=new TextEncoder().encode("caravela-booking-review-v1:"+source_key);
+  const digest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
+  digest[6]=(digest[6]&15)|64;digest[8]=(digest[8]&63)|128;
+  const raw=Array.from(digest.slice(0,16),v=>v.toString(16).padStart(2,"0")).join("");
+  const id=[raw.slice(0,8),raw.slice(8,12),raw.slice(12,16),raw.slice(16,20),raw.slice(20,32)].join("-");
+  const previous=allReviews.find(x=>x.source_key===source_key);
+  if(previous?.lane===lane&&previous?.decision===decision){return}
+  const record={id,source_key,source_type,source_id,contact_id:c.id,
+   artist:artistName,year,lane,decision,
+   notes:decision==="moved"?"Triagem alterada manualmente para "+lane:""};
+  if(previous){record.id=previous.id;record.revision=previous.revision}
+  saving=true;
+  status.textContent="A guardar triagem validada, sem alterar o estado comercial…";
+  try{
+   const res=await window.CaravelaNativeTransport.request("booking_reviews",
+    previous?"PATCH":"POST",record);
+   const data=await res.json();
+   if(!res.ok||!data.ok)throw Error(data.error||"Não foi possível guardar triagem");
+   await load();
+  }catch(e){status.textContent="Não foi possível guardar: "+e.message+" · recarrega e tenta novamente"}
+  finally{saving=false}
  }
  function render(){
   const api=window.CaravelaBookingBoard;
@@ -110,7 +178,8 @@
   const year=Number(years.value);intro.querySelector("h2").textContent="Booking "+year;
   if(!api){status.textContent="A organização anual ainda não foi carregada.";return}
   let result;
-  try{result=api.classify({bookings:allBookings,contacts:allContacts,actions:allActions,year,today:today()})}
+  try{result=api.classify({bookings:allBookings,contacts:allContacts,actions:allActions,
+     reviews:allReviews,published,year,today:today()})}
   catch(e){status.textContent="Não foi possível organizar as oportunidades: "+e.message;return}
   const festival=el("section",undefined,"cc-board-group");
   festival.append(el("h3","Festivais"),el("p","Colunas com ações sugeridas a partir do histórico e janelas comprovadas. As sugestões não confirmam a edição 2027 nem autorizam emails.","cc-lead"));
@@ -140,6 +209,30 @@
   lanes(festival,result.festival,names.festival);
   lanes(venues,result.venue,names.venue);
   body.append(festival,venues);
+  const promoters=el("section",undefined,"cc-board-group cc-board-promoters");
+  promoters.append(el("h3","Promotores"),
+    el("p","Contactos de promotores da base comum, independentemente dos eventos que organizam.","cc-lead"));
+  const promoterList=el("div",undefined,"cc-board-promoter-grid");
+  for(const item of result.promoter.slice(0,150)){
+   const c=item.contact,card=el("article",undefined,"cc-board-item cc-board-candidate");
+   card.append(el("strong",c.name),el("small",item.locality||"Local por confirmar"));
+   if(c.contact_policy==="blocked"||c.source_suppressed||c.source_shared_email)
+    card.append(el("small","Contacto condicionado · verificar restrições"));
+   const b=el("button","Abrir contacto","cc-neutral");b.type="button";
+   b.onclick=()=>emit("caravela-board-open-contact",{id:c.id});
+   card.append(b);promoterList.append(card);
+  }
+  if(result.promoter.length>150)promoterList.append(el("p","Mais promotores disponíveis na base completa.","cc-lead"));
+  if(!result.promoter.length)promoterList.append(el("p","Sem promotores classificados no arquivo.","cc-lead"));
+  promoters.append(promoterList);body.append(promoters);
+  if(!result.festival.confirmed.length&&!result.venue.confirmed.length&&published.length){
+   const years=[...new Set(published.map(x=>x.date?.slice(0,4)))].filter(Boolean).sort();
+   if(years.length){
+    const hint=el("p","A agenda pública contém concertos anunciados em "+years.join(", ")+
+       ". Seleciona o ano correspondente para os ver em Fechados.","cc-lead");
+    promoters.before(hint);
+   }
+  }
   const orphan=result.undated.filter(x=>!artist.value||artist.value==="all"||
     (artist.value==="wildchains"&&/wildchains/i.test(x.artist||""))||
     (artist.value==="devil"&&/devil/i.test(x.artist||"")));
@@ -165,8 +258,12 @@
   const t=window.CaravelaNativeTransport;if(!t){failed="Inicia sessão para consultar o Booking.";render();return}
   if(busy)return;busy=true;status.textContent="A sincronizar dados operacionais…";
   try{
-   const [b,c,a]=await Promise.all([t.request("booking","GET"),t.request("contacts","GET"),t.request("archive","GET")]);
-   if(!b.ok||!c.ok)throw Error("Sem acesso aos registos operacionais.");
+   const [b,c,a,v,agenda]=await Promise.all([
+    t.request("booking","GET"),t.request("contacts","GET"),t.request("archive","GET"),
+    t.request("booking_reviews","GET"),
+    fetch("/assets/data/agenda.json",{cache:"no-store"})
+   ]);
+   if(!b.ok||!c.ok||!v.ok)throw Error("Sem acesso aos registos operacionais.");
    const [bookings,contacts]=await Promise.all([b.json(),c.json()]);
    let archive=[],archiveActions=[];
    if(a.ok){const data=await a.json();archive=data.contacts||[];archiveActions=data.actions||[]}
@@ -174,6 +271,9 @@
     source_shared_email:!!(x.shared_email||x.review_required),contact_window_target:"unknown"}]));
    for(const row of contacts.records||[])byId.set(row.id,{...byId.get(row.id),...row});
    allBookings=bookings.records||[];allContacts=[...byId.values()];allActions=archiveActions;
+   const reviews=await v.json();allReviews=reviews.records||[];
+   if(agenda.ok){const data=await agenda.json();published=Array.isArray(data.events)?data.events:[]}
+   else published=[];
    loaded=true;failed="";render();
   }catch(e){failed="Não foi possível carregar. "+e.message;render()}
   finally{busy=false}
@@ -186,5 +286,5 @@
  window.addEventListener("caravela-control-booking-updated",()=>void load());
  window.addEventListener("caravela-control-contacts-updated",()=>void load());
  window.addEventListener("caravela-control-contact-action",()=>void load());
- window.addEventListener("caravela-control-signed-out",()=>{allBookings=[];allContacts=[];allActions=[];loaded=false;render()});
+ window.addEventListener("caravela-control-signed-out",()=>{allBookings=[];allContacts=[];allActions=[];allReviews=[];published=[];loaded=false;render()});
 })();

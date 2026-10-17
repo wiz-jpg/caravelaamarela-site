@@ -209,3 +209,49 @@ test("multiple archive revisions on same entity and artist choose latest stated 
  assert.equal(r.festival.now.length,1);
  assert.equal(r.festival.now[0].archive.id,"r2");
 });
+
+
+test("the public announced agenda appears in Fechados only for its real season",()=>{
+ const announcement={date:"2026-11-08",artist:"wild",title:"FNAC Cascais",
+  venue:"CascaiShopping",city:"Cascais"};
+ const r2026=classify({bookings:[],contacts:[],published:[announcement],
+  year:2026,today:"2026-10-17"});
+ assert.equal(r2026.venue.confirmed.length,1);
+ assert.equal(r2026.venue.confirmed[0].type,"announcement");
+ assert.equal(r2026.venue.confirmed[0].notCommerciallyConfirmed,true);
+ assert.equal(r2026.venue.confirmed[0].artists[0],"WILDCHAINS");
+ const r2027=classify({bookings:[],contacts:[],published:[announcement],
+  year:2027,today:"2026-10-17"});
+ assert.equal(r2027.venue.confirmed.length,0);
+});
+test("one public festival announcement can apply to both bands without creating native bookings",()=>{
+ const event={date:"2026-09-18",artist:"both",title:"Festival de roster",
+  venue:"Sala Cultural",city:"Famalicão"};
+ const r=classify({bookings:[],contacts:[],published:[event],year:2026,today:"2026-10-17"});
+ assert.equal(r.festival.confirmed[0].artists.length,2);
+ assert.equal(r.festival.confirmed[0].record,null);
+});
+test("manual triage overrides inferred lane without claiming a verified commercial deal",()=>{
+ const c=contact({emails:["venue@sample.com"]});
+ const a={id:"r4",name:"Festival Teste",email:"venue@sample.com",artist:"WILDCHAINS",
+   status:"Por contactar",next_action_iso:"2026-10-17"};
+ const source_key="action:r4|2027|wildchains";
+ const r=classify({bookings:[],contacts:[c],actions:[a],reviews:[{
+   source_key,year:"2027",lane:"ongoing",decision:"moved",notes:"Rever troca no Zoho"
+ }],year:2027,today:"2026-10-17"});
+ assert.equal(r.festival.now.length,0);
+ assert.equal(r.festival.ongoing.length,1);
+ assert.equal(r.festival.ongoing[0].reviewed,true);
+ assert.equal(r.festival.ongoing[0].record,null);
+ assert.equal(r.festival.confirmed.length,0);
+});
+test("promoters appear independently as shared contacts rather than being merged with festivals",()=>{
+ const contacts=[
+   contact({id:"p1",name:"Produtora Exemplo",kind:"promoter",region:"Porto"}),
+   contact({id:"f1",name:"Festival Exemplo",kind:"festival",linked_producer_ids:["p1"]})
+ ];
+ const r=classify({bookings:[],contacts,year:2027,today:"2026-10-17"});
+ assert.equal(r.promoter.length,1);
+ assert.equal(r.promoter[0].contact.name,"Produtora Exemplo");
+ assert.equal(r.festival.planning.length,1);
+});

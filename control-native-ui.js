@@ -7,6 +7,7 @@ const contactView=$("cc-view-contacts"),bookingView=$("cc-view-booking"),dashboa
 if(!contactView||!bookingView||!dashboard)return;
 const CONTACT_FIELDS=[
   ["name","Nome / entidade","text",true],["kind","Tipo","select",true],
+  ["contact_subtype","Tipo específico (se «Outro»)","select"],
   ["city","Localidade","text"],["region","Região / distrito","text"],["country","País","text"],["emails","Emails (separados por vírgulas)","text"],
   ["contact_policy","Política de contacto","select",true],
   ["relationship","Relação comercial","select"],
@@ -50,7 +51,10 @@ const BOOKING_FIELDS=[
   ["notes","Contexto interno","textarea"]
 ];
 const choices={
- kind:{festival:"Festival",venue:"Sala / espaço",promoter:"Promotor",press:"Imprensa",partnership:"Possível parceria",other:"Outro"},
+ kind:{festival:"Festival",venue:"Sala / espaço",promoter:"Promotor",press:"Imprensa",partnership:"Parceria",other:"Outra entidade"},
+ contact_subtype:{unknown:"Por identificar",artist:"Artista / equipa artística",
+  service:"Prestador de serviços / fornecedor",brand:"Marca / patrocinador",
+  institution:"Instituição / associação",other:"Outra entidade identificada"},
  press_status:{unknown:"Por avaliar",planned:"Divulgação planeada",completed:"Divulgação realizada (referenciada)",not_applicable:"Não aplicável"},
  advance_status:{unknown:"Por verificar",planned:"Em preparação",ready:"Pronto / validado pela equipa",not_applicable:"Não aplicável"},
  contact_policy:{review:"Rever antes de contactar",allowed:"Contacto autorizado",blocked:"Não contactar"},
@@ -104,6 +108,7 @@ function historicalContact(x){
    emails:Array.isArray(x.emails)?x.emails:[],contact_policy:historicPolicy(x),
    next_step:"",review_date:"",notes:"",relationship:"unknown",
    source_label:"Arquivo importado (original imutável)",historical:true,
+   contact_subtype:"unknown",
    source_review_required:!!x.review_required,source_shared_email:!!x.shared_email,
    source_suppressed:!!x.suppressed,source_duplicate_name_city:!!x.duplicate_name_city,
    source_priority:x.priority||"",source_recommendation:x.recommendation||"",
@@ -979,6 +984,16 @@ function edit(kind,entry={}){
  }:{};
  for(const def of fields)editorField(grid,kind,def,{...defaults,...entry});
  if(kind==="contacts"){
+  const contactType=grid.querySelector('[name="kind"]'),
+    subtype=grid.querySelector('[name="contact_subtype"]');
+  if(contactType&&subtype){
+   const update=()=>{
+    const wrapper=subtype.closest("label");
+    if(wrapper)wrapper.hidden=contactType.value!=="other";
+    if(contactType.value!=="other")subtype.value="unknown";
+   };
+   contactType.addEventListener("change",update);update();
+  }
   const basis=grid.querySelector('[name="contact_window_basis"]');
   if(basis&&!basis.value)basis.value="unknown";
   grid.append(make("p","Ex.: 01/03 a 14/03 é 1–14 de março, todos os anos. Uma hipótese não entra na lista de recomendações. Fonte oficial ou resposta direta exigem uma referência.","cc-lead"));

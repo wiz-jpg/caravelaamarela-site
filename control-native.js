@@ -6,6 +6,7 @@ const FINANCE_TYPES=new Set(["income","expense"]);
 const FINANCE_CATEGORIES=new Set(["agency_commission","creative_service","other_income","travel","production","marketing","other_expense"]);
 const FINANCE_STATUSES=new Set(["planned","due","settled","cancelled"]);
 const KINDS=new Set(["festival","venue","promoter","press","partnership","other"]);
+const CONTACT_SUBTYPES=new Set(["unknown","artist","service","brand","institution","other"]);
 const POLICIES=new Set(["review","allowed","blocked"]);
 const RELATIONS=new Set(["unknown","partner","target","in_discussion","former","not_applicable"]);
 const DUPLICATE_DECISIONS=new Set(["unreviewed","distinct","secondary"]);
@@ -76,6 +77,8 @@ function contact(input){
   const emails=input.emails.map(x=>field(x,254)?.toLowerCase());
   if(emails.some(x=>!x||!EMAIL.test(x))||new Set(emails).size!==emails.length)return null;
   row.kind=input.kind;row.emails=emails;row.contact_policy=input.contact_policy;
+  row.contact_subtype=input.kind==="other"?(input.contact_subtype??"unknown"):"unknown";
+  if(!CONTACT_SUBTYPES.has(row.contact_subtype))return null;
   row.relationship=input.relationship??"unknown";
   if(!RELATIONS.has(row.relationship))return null;
   const origin=input.origin_id??"";

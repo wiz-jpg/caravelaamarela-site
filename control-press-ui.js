@@ -25,13 +25,14 @@
   mk("h3","Sugestões para concertos e lançamentos"),suggestions,
   mk("h3","Contactos de imprensa"),pressSearch,pressDirectory);
  press.querySelector(".cc-panel-head")?.after(all);
- const otherSearch=mk("input");otherSearch.type="search";otherSearch.placeholder="Pesquisar produtoras, parcerias e outros contactos…";
+ const otherSearch=mk("input");otherSearch.type="search";otherSearch.placeholder="Pesquisar artista, serviço, marca, instituição, parceria…";
  const otherDirectory=mk("div",undefined,"cc-contact-directory");
- otherBox.append(mk("h2","Outros contactos"),mk("p","Promotores, parceiros e entidades fora das categorias Festival, Venue e Imprensa. As fichas são partilhadas com a base geral.","cc-lead"),
+ otherBox.append(mk("h2","Outros contactos"),
+  mk("p","Parcerias, artistas, serviços, marcas e instituições, agrupados pelo tipo registado. Promotores pertencem exclusivamente ao Booking; fichas sem classificação aparecem em «Tipo por identificar».","cc-lead"),
   otherSearch,otherDirectory);
  other.querySelector(".cc-panel-head")?.after(otherBox);
  let contacts=[],bookings=[],plans=[],announcements=[],loading=false;
- const openedRegions=new Set();
+ const openedRegions=new Set(),openedOtherGroups=new Set();
  function exportRegion(group){
   const module=window.CaravelaPressCsv;
   if(!module)throw Error("Exportador CSV indisponível");
@@ -70,9 +71,10 @@
  function directory(el,kind,q){
   el.replaceChildren();
   const rows=contacts.filter(c=>kind==="press"?c.kind==="press":
-   !["festival","venue","press"].includes(c.kind));
-  const filtered=rows.filter(c=>!q||l([c.name,c.kind,c.city,c.region,c.country,(c.emails||[]).join(" ")].join(" ")).includes(q));
-  el.append(mk("p",filtered.length+" fichas · sem criar duplicados","cc-lead"));
+   !["festival","venue","press","promoter"].includes(c.kind));
+  const filtered=rows.filter(c=>!q||l([c.name,c.kind,c.city,c.region,c.country,
+    (c.emails||[]).join(" "),c.contact_subtype,c.relationship,c.source_label].join(" ")).includes(q));
+  if(kind==="press")el.append(mk("p",filtered.length+" fichas · originais preservados","cc-lead"));
   if(kind==="press"){
    const groups=window.CaravelaPressGeography?.group(filtered)||[];
    const searching=!!q;
@@ -136,10 +138,56 @@
    }
    for(const group of groups)el.append(makeLocation(group));
   }else{
-   const collection=mk("div",undefined,"cc-contact-results");
-   for(const c of filtered.slice(0,70))collection.append(candidateCard(c));
-   if(filtered.length>70)el.append(mk("p","Mostrados 70 resultados. Refina a pesquisa para ver os restantes.","cc-lead"));
-   el.append(collection);
+   const classifier=window.CaravelaOtherContacts;
+   const groups=classifier?.group(rows,{search:q})||[];
+   const total=groups.reduce((n,g)=>n+g.rows.length,0);
+   el.append(mk("p",total+" fichas em "+groups.length+
+    " categorias · promotores excluídos · histórico preservado","cc-lead"));
+   if(!groups.length)el.append(mk("p","Sem outros contactos para este filtro.","cc-lead"));
+   if(!classifier){
+    el.append(mk("p","Organização por tipo indisponível. Recarrega a página.","cc-lead"));
+    return;
+   }
+   for(const group of groups){
+    const block=mk("details",undefined,"cc-other-category");
+    const heading=mk("summary",undefined,"cc-other-category-head");
+    heading.append(mk("strong",group.label),
+      mk("span",group.rows.length+" contactos","cc-other-category-count"));
+    block.append(heading);
+    const content=mk("div",undefined,"cc-other-category-body");
+    content.append(mk("p",group.basis+
+      ". As fichas só são reclassificadas quando guardas o tipo correto.","cc-lead"));
+    const cards=mk("div",undefined,"cc-contact-results");
+    content.append(cards);block.append(content);
+    let populated=false;
+    const populate=()=>{
+     if(populated)return;
+     populated=true;
+     for(const c of group.rows){
+      const category=classifier.category(c),card=mk("article",undefined,"cc-contact-result");
+      card.append(mk("strong",c.name||"Entidade sem designação"));
+      card.append(mk("small",[c.city,c.region,c.country].filter(Boolean).join(" · ")||"Localização por confirmar"));
+      card.append(mk("small",category.basis));
+      if(c.source_label)card.append(mk("small","Origem: "+c.source_label));
+      if(c.source_contact_person)card.append(mk("small","Interlocutor: "+c.source_contact_person));
+      if(c.owner)card.append(mk("small","Responsável: "+c.owner));
+      if(c.organizer)card.append(mk("small","Organizador indicado: "+c.organizer));
+      const button=mk("button",category.key==="type:unknown"?
+       "Identificar tipo na ficha":"Ver / alterar ficha","cc-neutral");
+      button.type="button";button.onclick=()=>openContact(c);card.append(button);
+      cards.append(card);
+     }
+    };
+    block.open=!!q||openedOtherGroups.has(group.key);
+    if(block.open)populate();
+    block.addEventListener("toggle",()=>{
+     if(block.open)populate();
+     if(q)return;
+     if(block.open)openedOtherGroups.add(group.key);
+     else openedOtherGroups.delete(group.key);
+    });
+    el.append(block);
+   }
   }
  }
  function render(){

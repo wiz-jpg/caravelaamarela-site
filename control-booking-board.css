@@ -251,3 +251,26 @@
  #control-app .cc-press-district>.cc-press-location-summary{padding:11px 9px}
  #control-app .cc-press-district .cc-press-location-body{padding:9px}
 }
+
+
+/* Other contacts — sem promotores, organizados por papel realmente registado. */
+#control-app .cc-other-category{background:#27392f;border:1px solid #65816e;border-radius:11px;overflow:hidden}
+#control-app .cc-other-category[open]{background:#304739;border-color:#94ad95}
+#control-app .cc-other-category-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ cursor:pointer;list-style:none;background:#334b3b;padding:14px 15px}
+#control-app .cc-other-category-head::-webkit-details-marker{display:none}
+#control-app .cc-other-category-head::before{content:"▸";font-size:17px;color:#f4e2aa}
+#control-app .cc-other-category[open] .cc-other-category-head::before{content:"▾"}
+#control-app .cc-other-category-head>strong{font-size:13px;flex:1}
+#control-app .cc-other-category-count{flex:none;font-size:11px;border-radius:25px;
+ background:#526b56;padding:5px 9px;color:#fff}
+#control-app .cc-other-category-body{padding:12px 13px}
+#control-app .cc-other-category-body>p{font-size:12px;line-height:1.45;margin:0 0 10px}
+#control-app .cc-other-category .cc-contact-results{grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+#control-app .cc-other-category .cc-contact-result{background:#354f40}
+#control-app .cc-other-category-head:focus-visible{outline:2px solid #f1d98b;outline-offset:-3px}
+@media(max-width:650px){
+ #control-app .cc-other-category-head{padding:12px 10px}
+ #control-app .cc-other-category-body{padding:10px}
+ #control-app .cc-other-category .cc-contact-results{grid-template-columns:1fr}
+}

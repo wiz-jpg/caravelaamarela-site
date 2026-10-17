@@ -448,3 +448,29 @@ test("a booking review source key cannot be rewritten onto another action",async
   source_key:"contact:festival_123456789abcdef1234568|2027|"};
  assert.equal((await req("booking_reviews","PATCH",changed)).status,409);
 });
+
+
+test("specific type can be classified and revised without changing the canonical contact kind",async()=>{
+ const original=contact({name:"Graphic supplier example",kind:"other",
+  contact_subtype:"service",relationship:"unknown"});
+ const created=await req("contacts","POST",original);
+ assert.equal(created.status,201);
+ const first=(await created.json()).record;
+ assert.equal(first.kind,"other");
+ assert.equal(first.contact_subtype,"service");
+ const amended=await req("contacts","PATCH",{...original,id:first.id,revision:first.revision,
+  contact_subtype:"institution"});
+ assert.equal(amended.status,200);
+ const current=(await (await req("contacts")).json()).records[0];
+ assert.equal(current.contact_subtype,"institution");
+ assert.equal(current.kind,"other");
+ assert.equal(current.relationship,"unknown");
+ assert.equal((await req("contacts","PATCH",{...original,id:first.id,revision:first.revision})).status,409);
+});
+test("unknown other entities remain unclassified, promoters are never converted to other",()=>{
+ assert.equal(validateNative("contacts",contact({kind:"other"})).contact_subtype,"unknown");
+ const promoter=validateNative("contacts",contact({name:"Booking promoter",kind:"promoter",contact_subtype:"artist"}));
+ assert.equal(promoter.kind,"promoter");
+ assert.equal(promoter.contact_subtype,"unknown");
+ assert.equal(validateNative("contacts",contact({kind:"other",contact_subtype:"guess"})),null);
+});

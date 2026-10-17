@@ -31,6 +31,19 @@
   otherSearch,otherDirectory);
  other.querySelector(".cc-panel-head")?.after(otherBox);
  let contacts=[],bookings=[],plans=[],announcements=[],loading=false;
+ const openedRegions=new Set();
+ function exportRegion(group){
+  const module=window.CaravelaPressCsv;
+  if(!module)throw Error("Exportador CSV indisponível");
+  const file=module.create(group);
+  if(!file.count)throw Error("Não existem contactos para exportar");
+  const url=URL.createObjectURL(new Blob([file.content],{type:"text/csv;charset=utf-8"}));
+  try{
+   const link=document.createElement("a");
+   link.href=url;link.download=file.filename;link.hidden=true;
+   document.body.append(link);link.click();link.remove();
+  }finally{setTimeout(()=>URL.revokeObjectURL(url),1000)}
+ }
  const same=(a,b)=>l(a)&&l(a)===l(b);
  const openContact=c=>window.dispatchEvent(new CustomEvent("caravela-board-open-contact",{detail:{id:c.id}}));
  function eligible(c){return c.kind==="press"&&c.contact_policy!=="blocked"&&
@@ -62,24 +75,66 @@
   el.append(mk("p",filtered.length+" fichas · sem criar duplicados","cc-lead"));
   if(kind==="press"){
    const groups=window.CaravelaPressGeography?.group(filtered)||[];
-   if(!groups.length)el.append(mk("p","Sem contactos de imprensa para este filtro.","cc-lead"));
-   for(const group of groups){
-    const block=mk("section",undefined,"cc-press-region");
-    const head=mk("div",undefined,"cc-press-region-head");
-    head.append(mk("h4",group.label),mk("span",group.rows.length+" contactos"));
-    const cards=mk("div",undefined,"cc-contact-results");
-    for(const c of group.rows.slice(0,35))cards.append(candidateCard(c,
-      !eligible(c)?"Verificar política de contacto":""));
-    block.append(head,cards);
-    if(group.rows.length>35){
-     const rest=mk("details"),caption=mk("summary","Ver mais "+(group.rows.length-35));
-     const more=mk("div",undefined,"cc-contact-results");
-     for(const c of group.rows.slice(35))more.append(candidateCard(c,
-       !eligible(c)?"Verificar política de contacto":""));
-     rest.append(caption,more);block.append(rest);
-    }
-    el.append(block);
+   const searching=!!q;
+   if(!groups.length)el.append(mk("p","Nenhum meio de comunicação encontrado.","cc-lead"));
+   el.append(mk("p","Abre uma localização para consultar os meios. O CSV exporta todos os contactos apresentados nessa localização"+
+     (searching?" com a pesquisa atual.":"."),"cc-lead cc-press-directory-help"));
+   function makeLocation(group,nested=false){
+    const key=group.key;
+    const block=mk("details",undefined,nested?"cc-press-location cc-press-district":"cc-press-location");
+    const header=mk("summary",undefined,"cc-press-location-summary");
+    const name=mk("span",group.label,"cc-press-location-name");
+    const count=mk("span",group.rows.length+" contactos","cc-press-location-count");
+    header.append(name,count);block.append(header);
+    const interior=mk("div",undefined,"cc-press-location-body");
+    const endBar=mk("div",undefined,"cc-press-location-footer");
+    const isPortugal=key==="portugal";
+    const caption=mk("small",isPortugal?
+      "Exporta todos os contactos de Resto de Portugal ou escolhe um distrito acima.":
+      "Exporta todos os contactos desta localização, incluindo os que não cabem no ecrã e os que exigem validação.");
+    const action=mk("button","Exportar CSV · "+group.rows.length+" contactos","cc-primary");
+    action.type="button";
+    const feedback=mk("small","","cc-press-export-feedback");
+    feedback.setAttribute("role","status");
+    action.onclick=()=>{
+     try{
+      exportRegion(group);
+      feedback.textContent="CSV preparado com "+group.rows.length+" contactos.";
+     }catch(error){
+      feedback.textContent="Não foi possível exportar: "+String(error.message||error);
+     }
+    };
+    endBar.append(caption,action,feedback);
+    interior.append(endBar);
+    block.append(interior);
+    let populated=false;
+    const populate=()=>{
+     if(populated)return;
+     populated=true;
+     if(isPortugal){
+      const districtGroups=window.CaravelaPressGeography?.districtsWithin(group.rows)||[];
+      const note=mk("p","Seleciona o distrito. Cada um tem a sua lista e CSV próprios.","cc-lead");
+      interior.insertBefore(note,endBar);
+      for(const district of districtGroups)
+       interior.insertBefore(makeLocation(district,true),endBar);
+     }else{
+      const cards=mk("div",undefined,"cc-contact-results");
+      for(const c of group.rows)
+       cards.append(candidateCard(c,!eligible(c)?"Verificar política de contacto":""));
+      interior.insertBefore(cards,endBar);
+     }
+    };
+    block.open=searching||openedRegions.has(key);
+    if(block.open)populate();
+    block.addEventListener("toggle",()=>{
+     if(block.open)populate();
+     if(searching)return;
+     if(block.open)openedRegions.add(key);
+     else openedRegions.delete(key);
+    });
+    return block;
    }
+   for(const group of groups)el.append(makeLocation(group));
   }else{
    const collection=mk("div",undefined,"cc-contact-results");
    for(const c of filtered.slice(0,70))collection.append(candidateCard(c));

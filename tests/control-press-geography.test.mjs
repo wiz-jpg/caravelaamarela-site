@@ -28,3 +28,32 @@ test("a foreign country never enters Braga or Porto just because its city has a 
  assert.equal(region({city:"Porto",country:"Brasil"}).key,"country:brasil");
  assert.equal(region({city:"Braga",country:"Espanha"}).key,"country:espanha");
 });
+
+
+test("Resto de Portugal is further divided by exact districts and known municipalities",()=>{
+ assert.equal(region({city:"Coimbra",country:"Portugal"}).key,"portugal");
+ assert.equal(region({city:"Lisboa",country:"Portugal"}).key,"portugal");
+ assert.equal(region({city:"Faro",country:"Portugal"}).key,"portugal");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Coimbra",country:"Portugal"}),"Coimbra");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Cascais",country:"Portugal"}),"Lisboa");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Portimão",country:"Portugal"}),"Faro");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Leiria",country:"Portugal"}),"Leiria");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Viseu",country:"Portugal"}),"Viseu");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Tomar",country:"Portugal"}),"Santarém");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Almada",country:"Portugal"}),"Setúbal");
+});
+test("explicit districts take precedence and unidentified district remains unclassified",()=>{
+ assert.equal(ctx.CaravelaPressGeography.district({city:"",region:"Viana do Castelo",country:"Portugal"}),"Viana do Castelo");
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Algarve",region:"Sul",country:"Portugal"}),null);
+ assert.equal(ctx.CaravelaPressGeography.district({city:"Lisboa",country:"Espanha"}),null);
+ const g=ctx.CaravelaPressGeography.districtsWithin([
+  {id:"1",name:"Meio de Leiria",city:"Leiria",country:"Portugal"},
+  {id:"2",name:"Meio de Lisboa",city:"Oeiras",country:"Portugal"},
+  {id:"3",name:"Meio sem distrito",city:"Algarve",region:"Sul",country:"Portugal"},
+  {id:"4",name:"Meio de Coimbra",region:"Coimbra",city:"",country:"Portugal"},
+  {id:"5",name:"Segundo meio de Leiria",region:"Leiria",city:"",country:"Portugal"}
+ ]);
+ assert.deepEqual(Array.from(g.map(x=>x.key)),["district:coimbra","district:leiria","district:lisboa","unknown"]);
+ assert.equal(g.find(x=>x.key==="district:leiria").rows.length,2);
+ assert.equal(g.find(x=>x.key==="unknown").rows[0].id,"3");
+});

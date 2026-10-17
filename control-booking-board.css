@@ -228,3 +228,26 @@
 }
 #control-app .cc-booking-public-source .cc-lead{font-size:11px;margin:5px 0 8px;line-height:1.5}
 #control-app .cc-booking-public-source button{margin:4px 9px 3px 0;padding:8px 12px;font-size:11px}
+
+
+/* Nested district accordions inside Resto de Portugal. */
+#control-app .cc-press-district{
+ margin:0;background:#1e3027;border-color:#607a67;border-radius:10px
+}
+#control-app .cc-press-district>.cc-press-location-summary{
+ background:#2c4236;color:#e9f2e6;padding:12px 14px;font-size:12px
+}
+#control-app .cc-press-district[open]>.cc-press-location-summary{
+ background:#405b49
+}
+#control-app .cc-press-district .cc-press-location-body{
+ padding:12px;background:#24372b
+}
+#control-app .cc-press-district .cc-press-location-count{
+ background:#425b4a
+}
+#control-app .cc-press-location-body>.cc-lead{margin:2px 0 4px;font-size:12px}
+@media(max-width:650px){
+ #control-app .cc-press-district>.cc-press-location-summary{padding:11px 9px}
+ #control-app .cc-press-district .cc-press-location-body{padding:9px}
+}

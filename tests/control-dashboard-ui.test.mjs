@@ -136,7 +136,7 @@ test("historical actions may enter proposed operational lanes without mutating d
  assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
- assert.match(html,/control-booking-board\.css\?v=20261017agenda2/);
+ assert.match(html,/control-booking-board\.css\?v=20261017pressdistrict1/);
  assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });
 
@@ -161,4 +161,22 @@ test("Booking reports the public agenda years and one-click access to actual Fec
  assert.match(ui,/Não foi possível ler a agenda pública/);
  assert.match(ui,/Outros registos/);
  assert.match(html,/control-booking-board-ui\.js\?v=20261017agenda2/);
+});
+
+
+test("press directory is collapsible by location and, for Portugal, by district; each has CSV",()=>{
+ const html=get("crm-control.html"),ui=get("control-press-ui.js"),
+  geo=get("control-press-geography.js"),csv=get("control-press-csv.js");
+ assert.match(html,/control-press-geography\.js\?v=20261017pressdistrict1/);
+ assert.match(html,/control-press-csv\.js\?v=20261017pressdistrict1/);
+ assert.match(html,/control-press-ui\.js\?v=20261017pressdistrict1/);
+ assert.match(ui,/mk\("details",undefined,nested\?/);
+ assert.match(ui,/const isPortugal=key==="portugal"/);
+ assert.match(ui,/CaravelaPressGeography\?\.districtsWithin\(group\.rows\)/);
+ assert.match(ui,/action\.onclick=\(\)=>\{/);
+ assert.match(ui,/exportRegion\(group\)/);
+ assert.match(ui,/for\(const c of group\.rows\)/);
+ assert.match(csv,/CaravelaPressCsv/);
+ assert.match(geo,/districtsWithin/);
+ for(const asset of [ui,geo,csv])assert.doesNotThrow(()=>new Function(asset));
 });

@@ -171,7 +171,7 @@ test("press directory is collapsible by location and, for Portugal, by district;
  assert.match(html,/control-press-csv\.js\?v=20261017pressdistrict1/);
  assert.match(html,/control-press-ui\.js\?v=20261017district-radar1/);
  assert.match(ui,/mk\("details",undefined,nested\?/);
- assert.match(ui,/const isPortugal=key==="portugal"/);
+ assert.doesNotMatch(ui,/const isPortugal=key==="portugal"/);
  assert.doesNotMatch(ui,/if\(isPortugal\)/);
  assert.match(ui,/action\.onclick=\(\)=>\{/);
  assert.match(ui,/exportRegion\(group\)/);

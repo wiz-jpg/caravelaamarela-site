@@ -216,3 +216,15 @@
 #control-app .cc-press-region-head span{border-radius:999px;padding:4px 8px;font-size:11px;background:#4c6d59;color:#fff}
 #control-app .cc-press-region details{margin-top:9px}
 #control-app .cc-press-region details>summary{cursor:pointer;font-size:12px;font-weight:700;margin-bottom:8px}
+
+
+/* Public agenda source transparency: prevent misleading empty 'Fechados'. */
+#control-app .cc-booking-public-source{
+ margin:12px 0 7px;padding:12px 14px;border-radius:11px;
+ border:1px solid #70928a;background:#294139;color:#f3f6ed
+}
+#control-app .cc-booking-public-source>strong{
+ display:block;font-size:13px;line-height:1.4;color:#f5e7b8;margin-bottom:5px
+}
+#control-app .cc-booking-public-source .cc-lead{font-size:11px;margin:5px 0 8px;line-height:1.5}
+#control-app .cc-booking-public-source button{margin:4px 9px 3px 0;padding:8px 12px;font-size:11px}

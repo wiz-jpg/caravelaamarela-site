@@ -21,11 +21,13 @@
  const refresh=el("button","Atualizar","cc-neutral");refresh.type="button";
  const create=el("button","+ Oportunidade","cc-primary");create.type="button";
  const body=el("div",undefined,"cc-booking-board-body"),status=el("p","","cc-lead");
+ const publishedInfo=el("div",undefined,"cc-booking-public-source");
  status.setAttribute("role","status");status.setAttribute("aria-live","polite");
  controls.append(yearLabel,artistLabel,refresh,create);
- head.append(intro,controls);section.append(head,status,body);
+ head.append(intro,controls);section.append(head,status,publishedInfo,body);
  view.querySelector(".cc-panel-head")?.after(section);
  let allBookings=[],allContacts=[],allActions=[],allReviews=[],published=[],loaded=false,busy=false,failed="";
+ let publicAgendaStatus="A confirmar leitura da agenda pública…";
  let saving=false;
  const names={festival:{ongoing:"On going / Follow-up",late:"A contactar · em atraso",
   now:"A contactar agora",soon:"A contactar brevemente",planning:"Por calendarizar",
@@ -171,11 +173,29 @@
  }
  function render(){
   const api=window.CaravelaBookingBoard;
-  body.replaceChildren();
+  body.replaceChildren();publishedInfo.replaceChildren();
   if(!loaded){
    status.textContent=failed||"A carregar o Booking e as fichas de contacto…";return
   }
   const year=Number(years.value);intro.querySelector("h2").textContent="Booking "+year;
+  const totals=new Map();
+  for(const e of published)if(/^20\d{2}-\d{2}-\d{2}$/.test(e?.date||"")){
+   const target=Number(e.date.slice(0,4));totals.set(target,(totals.get(target)||0)+1);
+  }
+  const shown=totals.get(year)||0, total=published.length;
+  publishedInfo.append(el("strong","Agenda pública · "+shown+" concerto(s) anunciado(s) em "+year));
+  publishedInfo.append(el("p",publicAgendaStatus,"cc-lead"));
+  if(!shown&&total){
+   const otherYears=[...totals.keys()].filter(y=>y!==year).sort((a,b)=>b-a);
+   publishedInfo.append(el("p","Os concertos de "+otherYears.map(y=>y+" ("+totals.get(y)+")").join(", ")+
+    " não pertencem à época "+year+". A agenda não é um registo completo de todos os contratos.","cc-lead"));
+   for(const targetYear of otherYears){
+    if(![2026,2027,2028,2029,2030,2031].includes(targetYear))continue;
+    const b=el("button","Ver Fechados "+targetYear+" · "+totals.get(targetYear),"cc-neutral");
+    b.type="button";b.onclick=()=>{years.value=String(targetYear);render()};
+    publishedInfo.append(b);
+   }
+  }
   if(!api){status.textContent="A organização anual ainda não foi carregada.";return}
   let result;
   try{result=api.classify({bookings:allBookings,contacts:allContacts,actions:allActions,
@@ -209,6 +229,16 @@
   lanes(festival,result.festival,names.festival);
   lanes(venues,result.venue,names.venue);
   body.append(festival,venues);
+  const otherConfirmed=result.other.filter(x=>x.record?.stage==="confirmed");
+  const otherCompleted=result.other.filter(x=>x.record?.stage==="closed");
+  if(otherConfirmed.length||otherCompleted.length){
+   const special=el("details",undefined,"cc-board-unclassified");
+   special.append(el("summary","Outros registos: "+otherConfirmed.length+
+     " confirmados sem categoria · "+otherCompleted.length+" concluídos"));
+   special.append(el("p","Não atribuímos estes registos a Festivais ou Venues sem confirmar o tipo de evento. «Concluído» não é prova de concerto confirmado.","cc-lead"));
+   for(const item of [...otherConfirmed,...otherCompleted])special.append(rowCard(item,"other"));
+   body.append(special);
+  }
   const promoters=el("section",undefined,"cc-board-group cc-board-promoters");
   promoters.append(el("h3","Promotores"),
     el("p","Contactos de promotores da base comum, independentemente dos eventos que organizam.","cc-lead"));
@@ -261,7 +291,7 @@
    const [b,c,a,v,agenda]=await Promise.all([
     t.request("booking","GET"),t.request("contacts","GET"),t.request("archive","GET"),
     t.request("booking_reviews","GET"),
-    fetch("/assets/data/agenda.json",{cache:"no-store"})
+    fetch("/assets/data/agenda.json",{cache:"no-store"}).catch(()=>null)
    ]);
    if(!b.ok||!c.ok||!v.ok)throw Error("Sem acesso aos registos operacionais.");
    const [bookings,contacts]=await Promise.all([b.json(),c.json()]);
@@ -272,8 +302,21 @@
    for(const row of contacts.records||[])byId.set(row.id,{...byId.get(row.id),...row});
    allBookings=bookings.records||[];allContacts=[...byId.values()];allActions=archiveActions;
    const reviews=await v.json();allReviews=reviews.records||[];
-   if(agenda.ok){const data=await agenda.json();published=Array.isArray(data.events)?data.events:[]}
-   else published=[];
+   if(agenda?.ok){
+    const data=await agenda.json();
+    if(!Array.isArray(data.events))throw Error("agenda_publica_invalida");
+    published=data.events;
+    const yearsFound=[...new Set(published.map(x=>x.date?.slice(0,4)).filter(Boolean))].sort();
+    publicAgendaStatus="Foram lidos "+published.length+" anúncios do website Caravela"+
+      (data.updated?" (agenda atualizada em "+data.updated+")":"")+
+      ". Anos disponíveis: "+(yearsFound.join(", ")||"nenhum")+
+      ". Isto não confirma o cachet, a faturação ou a existência de outros concertos.";
+   }else{
+    published=[];
+    publicAgendaStatus="Não foi possível ler a agenda pública"+
+      (agenda?" (HTTP "+agenda.status+")":" (erro de rede)")+
+      ". Os concertos já registados no Booking continuam visíveis.";
+   }
    loaded=true;failed="";render();
   }catch(e){failed="Não foi possível carregar. "+e.message;render()}
   finally{busy=false}

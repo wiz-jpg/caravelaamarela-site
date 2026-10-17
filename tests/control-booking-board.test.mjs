@@ -1,6 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {readFileSync} from "node:fs";
 import vm from "node:vm";
 import {validateNative} from "../control-native.js";
 
@@ -254,4 +255,30 @@ test("promoters appear independently as shared contacts rather than being merged
  assert.equal(r.promoter.length,1);
  assert.equal(r.promoter[0].contact.name,"Produtora Exemplo");
  assert.equal(r.festival.now.length,1);
+});
+
+
+test("real public Caravela agenda events populate Fechados in 2026 but not in 2027",()=>{
+ const data=JSON.parse(readFileSync(new URL("../assets/data/agenda.json",import.meta.url),"utf8"));
+ assert.ok(data.events.length>=10,"expected published concerts from the website");
+ assert.ok(data.events.some(x=>x.artist==="wild"));
+ assert.ok(data.events.some(x=>x.artist==="devil"));
+ const current=classify({bookings:[],contacts:[],published:data.events,
+   year:2026,today:"2026-10-17"});
+ const total=current.festival.confirmed.length+current.venue.confirmed.length;
+ assert.equal(total,data.events.filter(e=>e.date?.startsWith("2026-")).length);
+ assert.ok(current.venue.confirmed.some(x=>x.announcement?.title==="FNAC Braga"));
+ assert.ok(current.festival.confirmed.some(x=>x.announcement?.title==="Tomate Blues Festival"));
+ const later=classify({bookings:[],contacts:[],published:data.events,
+   year:2027,today:"2026-10-17"});
+ assert.equal(later.festival.confirmed.length+later.venue.confirmed.length,0);
+});
+test("confirmed non-festival venue booking remains visible as uncategorized; closed does not imply a paid gig",()=>{
+ const result=classify({bookings:[
+   booking({id:"confirmed-other",booking_category:"other",stage:"confirmed"}),
+   booking({id:"closed-other",booking_category:"other",stage:"closed"})
+  ],contacts:[],year:2027,today:"2026-10-17"});
+ assert.equal(result.other.filter(x=>x.record?.stage==="confirmed").length,1);
+ assert.equal(result.other.filter(x=>x.record?.stage==="closed").length,1);
+ assert.equal(result.festival.confirmed.length,0);
 });

@@ -85,7 +85,7 @@ test("one-window Zoho workflow uses a single human-approved operation",()=>{
 test("year-based booking and opportunities dashboard assets are loaded",()=>{
  const html=get("crm-control.html"),app=get("control-app.js");
  assert.match(html,/control-booking-board\.js\?v=20261017verify2/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017verify2/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017agenda2/);
  assert.match(html,/control-opportunities-ui\.js\?v=20261017focus2/);
  assert.match(app,/data-view="opportunities"/);
  assert.match(app,/\["opportunities", "Oportunidades"/);
@@ -136,7 +136,7 @@ test("historical actions may enter proposed operational lanes without mutating d
  assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
- assert.match(html,/control-booking-board\.css\?v=20261017verify2/);
+ assert.match(html,/control-booking-board\.css\?v=20261017agenda2/);
  assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });
 
@@ -150,4 +150,15 @@ test("press grouping, published agenda and one-click triage exist in the Booking
  assert.match(ui,/assets\/data\/agenda\.json/);
  assert.match(ui,/Promotores/);
  assert.match(get("control-press-ui.js"),/CaravelaPressGeography/);
+});
+
+
+test("Booking reports the public agenda years and one-click access to actual Fechados",()=>{
+ const ui=get("control-booking-board-ui.js"),html=get("crm-control.html");
+ assert.match(ui,/publicAgendaStatus/);
+ assert.match(ui,/Agenda pública/);
+ assert.match(ui,/Ver Fechados/);
+ assert.match(ui,/Não foi possível ler a agenda pública/);
+ assert.match(ui,/Outros registos/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017agenda2/);
 });

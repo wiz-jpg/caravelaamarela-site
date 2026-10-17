@@ -11,16 +11,11 @@
   "lousada","amarante","marco de canaveses","baiao"]);
  const portugal=new Set(["portugal","pt","portuguesa","portuguese"]);
  function region(row){
-  const city=norm(row.city),area=norm(row.region),country=norm(row.country);
-  const localPT=portugal.has(country);
-  const br=braga.has(city)||area==="braga";
-  const po=porto.has(city)||area==="porto";
-  if(country&&!localPT)return {key:"country:"+country,label:String(row.country).trim()};
-  if(br)return {key:"braga",label:"Braga (e arredores)"};
-  if(po)return {key:"porto",label:"Porto (e arredores)"};
-  if(localPT)return {key:"portugal",label:"Resto de Portugal"};
-  if(!country&&city)return {key:"unknown",label:"País por confirmar"};
-  return {key:"unknown",label:"Localização por confirmar"};
+  const country=norm(row?.country);
+  if(country&&!portugal.has(country))return {key:"country:"+country,label:String(row.country).trim()};
+  const place=district(row);
+  if(place)return {key:"district:"+norm(place),label:place};
+  return {key:"unknown",label:country&&portugal.has(country)?"Distrito por confirmar":"Localização por confirmar"};
  }
  function group(rows){
   const by=new Map();
@@ -28,15 +23,12 @@
    if(!by.has(g.key))by.set(g.key,{...g,rows:[]});
    by.get(g.key).rows.push(row);
   }
-  const order=x=>x.key==="braga"?0:x.key==="porto"?1:x.key==="portugal"?2:
-    x.key.startsWith("country:")?3:4;
+  const order=x=>x.key.startsWith("district:")?0:x.key.startsWith("country:")?1:2;
   return [...by.values()].sort((a,b)=>order(a)-order(b)||
     a.label.localeCompare(b.label,"pt-PT")).map(g=>({...g,
     rows:g.rows.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-PT"))}));
  }
 
- // District inference is conservative: trust a named district, then known
- // Portuguese municipalities. No district guessed from broad "Norte/Centro/Sul".
  const districtOrder=["Aveiro","Beja","Bragança","Castelo Branco","Coimbra",
   "Évora","Faro","Guarda","Leiria","Lisboa","Portalegre","Santarém",
   "Setúbal","Viana do Castelo","Vila Real","Viseu","Açores","Madeira"];
@@ -120,6 +112,8 @@
   if(country&&!portugal.has(country))return null;
   if(["acores","açores","regiao autonoma dos acores"].includes(r))return "Açores";
   if(["madeira","regiao autonoma da madeira"].includes(r))return "Madeira";
+  if(braga.has(city)||r==="braga")return "Braga";
+  if(porto.has(city)||r==="porto")return "Porto";
   if(districts.has(r))return districts.get(r);
   return cityDistrict.get(city)||null;
  }

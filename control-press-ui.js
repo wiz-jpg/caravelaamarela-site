@@ -93,15 +93,21 @@
   !c.suppressed&&!c.control_blocked&&!c.control_blocked_possible&&
   !c.shared_email&&!c.source_shared_email&&!c.canonical_id&&c.duplicate_decision!=="secondary"}
  function pressFor({kind,city="",region="",country=""}){
-  const list=contacts.filter(eligible);
-  if(kind==="release")return list.slice().sort((a,b)=>
-   (Number(!!b.media_type)-Number(!!a.media_type))||l(a.name).localeCompare(l(b.name),"pt-PT")).slice(0,8);
-  return list.filter(c=>{
-   const local=same(c.city,city);
-   const regional=region&&same(c.region,region)&&(!c.country||!country||same(c.country,country));
-   return local||regional||(!c.city&&!c.region&&(!c.country||!country||same(c.country,country)));
-  }).sort((a,b)=>Number(same(b.city,city))-Number(same(a.city,city))||
-   Number(same(b.region,region))-Number(same(a.region,region))||l(a.name).localeCompare(l(b.name),"pt-PT")).slice(0,8);
+  const geography=window.CaravelaPressGeography;
+  if(!geography)return [];
+  const district=geography.district({city,region,country});
+  const national=c=>["national","nacional"].includes(l(c.coverage_scope||c.press_scope||""));
+  const list=contacts.filter(eligible).filter(c=>{
+   if(kind==="release"&&!district)return national(c);
+   if(district)return geography.district(c)===district||national(c);
+   if(country&&l(country)!=="portugal")return l(c.country)===l(country);
+   return false;
+  });
+  return list.sort((a,b)=>{
+   const pa=Number(district&&geography.district(a)===district);
+   const pb=Number(district&&geography.district(b)===district);
+   return pb-pa||l(a.name).localeCompare(l(b.name),"pt-PT");
+  }).slice(0,10);
  }
  function candidateCard(c,desc=""){
   const card=mk("article",undefined,"cc-contact-result");
@@ -121,7 +127,7 @@
    const groups=window.CaravelaPressGeography?.group(filtered)||[];
    const searching=!!q;
    if(!groups.length)el.append(mk("p","Nenhum meio de comunicação encontrado.","cc-lead"));
-   el.append(mk("p","Abre uma localização para consultar os meios. O CSV exporta todos os contactos apresentados nessa localização"+
+   el.append(mk("p","Portugal: diretamente por distrito. Estrangeiro: por país. O CSV exporta os contactos desta localização"+
      (searching?" com a pesquisa atual.":"."),"cc-lead cc-press-directory-help"));
    function makeLocation(group,nested=false){
     const key=group.key;
@@ -132,10 +138,7 @@
     header.append(name,count);block.append(header);
     const interior=mk("div",undefined,"cc-press-location-body");
     const endBar=mk("div",undefined,"cc-press-location-footer");
-    const isPortugal=key==="portugal";
-    const caption=mk("small",isPortugal?
-      "Exporta todos os contactos de Resto de Portugal ou escolhe um distrito acima.":
-      "Exporta todos os contactos desta localização, incluindo os que não cabem no ecrã e os que exigem validação.");
+    const caption=mk("small","CSV com todos os contactos deste distrito ou país, incluindo fichas que exigem validação.");
     const action=mk("button","Exportar CSV · "+group.rows.length+" contactos","cc-primary");
     action.type="button";
     const feedback=mk("small","","cc-press-export-feedback");
@@ -155,18 +158,10 @@
     const populate=()=>{
      if(populated)return;
      populated=true;
-     if(isPortugal){
-      const districtGroups=window.CaravelaPressGeography?.districtsWithin(group.rows)||[];
-      const note=mk("p","Seleciona o distrito. Cada um tem a sua lista e CSV próprios.","cc-lead");
-      interior.insertBefore(note,endBar);
-      for(const district of districtGroups)
-       interior.insertBefore(makeLocation(district,true),endBar);
-     }else{
-      const cards=mk("div",undefined,"cc-contact-results");
-      for(const c of group.rows)
-       cards.append(candidateCard(c,!eligible(c)?"Verificar política de contacto":""));
-      interior.insertBefore(cards,endBar);
-     }
+     const cards=mk("div",undefined,"cc-contact-results");
+     for(const c of group.rows)
+      cards.append(candidateCard(c,!eligible(c)?"Verificar política de contacto":""));
+     interior.insertBefore(cards,endBar);
     };
     block.open=searching||openedRegions.has(key);
     if(block.open)populate();
@@ -274,11 +269,13 @@
     events.push({kind:p.kind,title:p.title,artist:p.artist,date:p.event_date,city:p.city,region:p.region,country:p.country})}
   for(const event of events.slice(0,10)){
    const block=mk("section",undefined,"cc-press-suggestion-group");
+   const eventDistrict=window.CaravelaPressGeography?.district(event)||"";
    block.append(mk("strong",event.title+" · "+event.artist),
     mk("small",pressKinds[event.kind]+" · "+event.date+
-      (event.city?" · "+event.city:"")));
+      (event.city?" · "+event.city:"")+
+      (eventDistrict?" · Distrito de "+eventDistrict:"")));
    const candidates=pressFor(event);
-   if(!candidates.length)block.append(mk("p","Sem imprensa compatível com a localização registada. Podes pesquisar na base completa.","cc-lead"));
+   if(!candidates.length)block.append(mk("p","Sem imprensa regional comprovada. Revê o distrito do concerto ou os meios de âmbito nacional.","cc-lead"));
    const cards=mk("div",undefined,"cc-press-candidate-grid");
    for(const c of candidates)cards.append(candidateCard(c,"Sugestão · verificar cobertura, interlocutor e consentimento"));
    block.append(cards);suggestions.append(block);

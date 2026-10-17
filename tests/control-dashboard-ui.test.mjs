@@ -85,7 +85,7 @@ test("one-window Zoho workflow uses a single human-approved operation",()=>{
 test("year-based booking and opportunities dashboard assets are loaded",()=>{
  const html=get("crm-control.html"),app=get("control-app.js");
  assert.match(html,/control-booking-board\.js\?v=20261017verify2/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017agenda2/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017district-radar1/);
  assert.match(html,/control-opportunities-ui\.js\?v=20261017focus2/);
  assert.match(app,/data-view="opportunities"/);
  assert.match(app,/\["opportunities", "Oportunidades"/);
@@ -143,7 +143,7 @@ test("historical actions may enter proposed operational lanes without mutating d
 
 test("press grouping, published agenda and one-click triage exist in the Booking UI",()=>{
  const html=get("crm-control.html"),ui=get("control-booking-board-ui.js");
- assert.match(html,/control-press-geography\.js\?v=20261017pressdistrict1/);
+ assert.match(html,/control-press-geography\.js\?v=20261017district-radar1/);
  assert.match(ui,/booking_reviews/);
  assert.match(ui,/reviewItem\(item,key,"confirmed"\)/);
  assert.match(ui,/reviewItem\(item,move\.value,"moved"\)/);
@@ -160,19 +160,19 @@ test("Booking reports the public agenda years and one-click access to actual Fec
  assert.match(ui,/Ver Fechados/);
  assert.match(ui,/Não foi possível ler a agenda pública/);
  assert.match(ui,/Outros registos/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017agenda2/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017district-radar1/);
 });
 
 
 test("press directory is collapsible by location and, for Portugal, by district; each has CSV",()=>{
  const html=get("crm-control.html"),ui=get("control-press-ui.js"),
   geo=get("control-press-geography.js"),csv=get("control-press-csv.js");
- assert.match(html,/control-press-geography\.js\?v=20261017pressdistrict1/);
- assert.match(html,/control-press-csv\.js\?v=20261017pressdistrict1/);
+ assert.match(html,/control-press-geography\.js\?v=20261017district-radar1/);
+ assert.match(html,/control-press-csv\.js\?v=20261017district-radar1/);
  assert.match(html,/control-press-ui\.js\?v=20261017deletefix1/);
  assert.match(ui,/mk\("details",undefined,nested\?/);
  assert.match(ui,/const isPortugal=key==="portugal"/);
- assert.match(ui,/CaravelaPressGeography\?\.districtsWithin\(group\.rows\)/);
+ assert.doesNotMatch(ui,/if\(isPortugal\)/);
  assert.match(ui,/action\.onclick=\(\)=>\{/);
  assert.match(ui,/exportRegion\(group\)/);
  assert.match(ui,/for\(const c of group\.rows\)/);
@@ -212,4 +212,23 @@ test("removing a native Other contact requires confirmation, verified server tom
  assert.match(native,/window\.addEventListener\("caravela-control-contacts-updated"/);
  assert.doesNotMatch(app,/Promotores, parceiros e entidades sem duplicar fichas/);
  for(const code of [ui,native])assert.doesNotThrow(()=>new Function(code));
+});
+
+
+test("2026 FNAC and Devil public shows remain visible above booking-year lanes",()=>{
+ const ui=get("control-booking-board-ui.js"),html=get("crm-control.html");
+ assert.match(ui,/Concertos já anunciados · WILDCHAINS e Devil/);
+ assert.match(ui,/Ver em Fechados/);
+ assert.match(ui,/const eligiblePublished=published\.filter/);
+ assert.match(ui,/scrollIntoView/);
+ assert.match(html,/control-booking-radar\.js\?v=20261017district-radar1/);
+ assert.match(ui,/Radar de festivais e venues/);
+ assert.doesNotThrow(()=>new Function(get("control-booking-radar.js")));
+});
+test("press navigation is district-first for all Portuguese contacts",()=>{
+ const source=get("control-press-ui.js"),geo=get("control-press-geography.js");
+ assert.match(source,/Portugal: diretamente por distrito/);
+ assert.doesNotMatch(source,/if\(isPortugal\)/);
+ assert.match(source,/CaravelaPressGeography\?\.district\(event\)/);
+ assert.match(geo,/district:\+norm\(place\)/);
 });

@@ -282,3 +282,34 @@
 #control-app .cc-other-delete{border-color:#b47779!important;color:#ffe0db!important;background:#563b3c!important}
 #control-app .cc-other-delete:hover{background:#724749!important}
 #control-app .cc-other-delete:disabled{opacity:.5;cursor:wait}
+
+
+/* Visible roster announcements / conservative festival & venue radar. */
+#control-app .cc-published-roster{margin:15px 0;padding:14px 16px;border-radius:13px;background:#243d32;border:1px solid #7da081}
+#control-app .cc-published-roster>h3,#control-app .cc-booking-fit-radar>h3{
+ font-size:19px;color:#f2dba0;margin:0 0 6px
+}
+#control-app .cc-published-roster>.cc-lead,#control-app .cc-booking-fit-radar>.cc-lead{font-size:12px;line-height:1.55}
+#control-app .cc-announced-dates{margin-top:12px}
+#control-app .cc-announced-dates>summary{cursor:pointer;font-weight:750;font-size:12px;color:#e9f1df;margin-bottom:10px}
+#control-app .cc-announced-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+#control-app .cc-announced-gig{background:#375541;border:1px solid #7a9c79;border-radius:10px;padding:11px;display:grid;gap:7px;align-content:start}
+#control-app .cc-announced-gig strong{font-size:12px;line-height:1.4}
+#control-app .cc-announced-gig small{font-size:11px;color:#e1ebdc}
+#control-app .cc-announced-gig button{font-size:11px;padding:8px;margin-top:auto}
+#control-app .cc-booking-fit-radar{padding:15px;border-radius:13px;background:#1d2e30;border:1px solid #63868b;margin:16px 0}
+#control-app .cc-booking-radar-tools{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:15px 0}
+#control-app .cc-booking-radar-tools label{font-size:12px}
+#control-app .cc-booking-radar-tools select{padding:10px;border:1px solid #7b9792;background:#122827;color:#fff;border-radius:8px;font-size:12px}
+#control-app .cc-booking-radar-results{display:grid;gap:9px}
+#control-app .cc-booking-radar-section{padding:12px;background:#2a4141;border-radius:11px;border:1px solid #66868b}
+#control-app .cc-booking-radar-section>summary{cursor:pointer;font-size:13px;font-weight:800;color:#f2edd9}
+#control-app .cc-booking-radar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px;margin-top:11px}
+#control-app .cc-booking-radar-card{background:#375554;border:1px solid #7b9893;border-radius:9px;padding:11px;display:grid;gap:6px;align-content:start}
+#control-app .cc-booking-radar-card strong{font-size:13px}
+#control-app .cc-booking-radar-card small{font-size:11px;color:#dfe9df}
+#control-app .cc-booking-radar-card p{font-size:11px;line-height:1.45;color:#f0e6cb}
+#control-app .cc-booking-radar-card-actions{display:flex;flex-wrap:wrap;gap:8px;align-self:end}
+#control-app .cc-booking-radar-card-actions>*{font-size:11px;padding:8px;border-radius:8px;border:1px solid #7b9686;color:#fff;background:#1f3535;text-decoration:none}
+@media(max-width:600px){#control-app .cc-published-roster,#control-app .cc-booking-fit-radar{padding:11px}
+ #control-app .cc-announced-grid,#control-app .cc-booking-radar-grid{grid-template-columns:1fr}}

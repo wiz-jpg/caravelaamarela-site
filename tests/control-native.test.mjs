@@ -377,3 +377,37 @@ test("radar opportunities use append-only D1 and remain in native export",async(
  assert.equal(backup.count,2);
  assert.equal(backup.events[0].operation,"crm_opportunity_v1");
 });
+
+
+test("verified-open radar requires dated human confirmation and a deadline",async()=>{
+ const source={title:"Official grant",provider:"Arts body",kind:"grant",status:"research",
+  source_url:"https://example.org/call",artist:"WILDCHAINS",country:"Portugal",
+  deadline:"2027-03-31",review_date:"2026-10-20",
+  verified_on:"2026-10-17",open_verified_on:"2026-10-17",
+  availability:"open_verified",next_step:"Check eligibility"};
+ assert.equal(validateNative("opportunities",source).availability,"open_verified");
+ assert.equal(validateNative("opportunities",{...source,deadline:""}),null);
+ assert.equal(validateNative("opportunities",{...source,open_verified_on:""}),null);
+ const result=await req("opportunities","POST",source);
+ assert.equal(result.status,201);
+ assert.equal((await result.json()).record.open_verified_on,"2026-10-17");
+});
+test("press campaign reminders are append-only and not inferred mail sends",async()=>{
+ const source={title:"New single",artist:"WILDCHAINS",kind:"release",
+  event_date:"2027-01-12",city:"",region:"",country:"Portugal",
+  review_date:"2026-12-20",status:"planned",
+  next_step:"Prepare regional and national media outreach",notes:""};
+ assert.equal(validateNative("press_plans",source).kind,"release");
+ assert.equal(validateNative("press_plans",{...source,event_date:""}),null);
+ const response=await req("press_plans","POST",source);
+ assert.equal(response.status,201);
+ const original=(await response.json()).record;
+ assert.equal((await (await req("press_plans")).json()).records.length,1);
+ const updated=await req("press_plans","PATCH",{...source,id:original.id,revision:original.revision,status:"in_progress"});
+ assert.equal(updated.status,200);
+ const duplicate=await req("press_plans","PATCH",{...source,id:original.id,revision:original.revision,status:"in_progress"});
+ assert.equal(duplicate.status,409);
+ const archive=await (await req("export")).json();
+ assert.equal(archive.count,2);
+ assert.ok(archive.events.every(x=>x.operation==="crm_press_plan_v1"));
+});

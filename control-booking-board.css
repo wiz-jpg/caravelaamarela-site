@@ -87,3 +87,81 @@
  #control-app .cc-radar-tools input{grid-column:1/-1}
  #control-app .cc-radar-form{grid-template-columns:1fr}
 }
+
+
+/* 17 Oct: high-contrast lane backgrounds and readable compact cards */
+#control-app .cc-board-lane{background:#25352e;border-color:#647e6c}
+#control-app .cc-board-lane-head{background:#3b5345;border-bottom-color:#829482}
+#control-app .cc-board-lane-late{background:#47322d;border-color:#996d5f}
+#control-app .cc-board-lane-late .cc-board-lane-head{background:#664238}
+#control-app .cc-board-lane-now{background:#46402a;border-color:#a4914e}
+#control-app .cc-board-lane-now .cc-board-lane-head{background:#625632}
+#control-app .cc-board-lane-soon{background:#2b4151;border-color:#6b91a8}
+#control-app .cc-board-lane-soon .cc-board-lane-head{background:#3d5a70}
+#control-app .cc-board-lane-confirmed{background:#294b3b;border-color:#71a080}
+#control-app .cc-board-lane-confirmed .cc-board-lane-head{background:#37644b}
+#control-app .cc-board-lane-declined{background:#493035;border-color:#a97782}
+#control-app .cc-board-lane-declined .cc-board-lane-head{background:#664148}
+#control-app .cc-board-lane-archive{background:#333a44;border-color:#82919e}
+#control-app .cc-board-lane-archive .cc-board-lane-head{background:#42505e}
+#control-app .cc-board-lane-planning{background:#343b43;border-color:#6d8395}
+#control-app .cc-board-lane-planning .cc-board-lane-head{background:#405061}
+#control-app .cc-board-lane-suggestions{background:#293f46;border-color:#6a8a94}
+#control-app .cc-board-lane-suggestions .cc-board-lane-head{background:#3a5862}
+#control-app .cc-board-item{background:#35443c;border-color:#7c9885;color:#fff}
+#control-app .cc-board-candidate{background:#324753;border-color:#7899ab}
+#control-app .cc-board-item>small{color:#e4ece8}
+#control-app .cc-board-lane-head strong{font-size:13px;color:#fff}
+#control-app .cc-board-lane-count{background:#ffffff25;color:#fff}
+#control-app .cc-board-artist{background:#57675a;border-color:#849987}
+#control-app .cc-board-lane-list{max-height:640px}
+#control-app .cc-board-rail{scrollbar-color:#abbbaa #29372f}
+/* Daily focus */
+#control-app .cc-essential-home{padding:18px 20px;border-radius:15px;background:#18251e;border:1px solid #657d69;margin:15px 0}
+#control-app .cc-essential-home h2{font-size:21px;margin:0 0 5px}
+#control-app .cc-essential-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:15px 0}
+#control-app .cc-essential-card{background:#25352d;border:1px solid #65816e;border-radius:12px;padding:14px;min-width:0}
+#control-app .cc-essential-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#control-app .cc-essential-card h3{font-size:15px;margin:0;color:#f8efc9}
+#control-app .cc-essential-card button{font-size:11px;padding:7px 9px}
+#control-app .cc-essential-count{color:#e4e8df;font-size:12px}
+#control-app .cc-essential-items{display:grid;gap:8px;margin-top:10px}
+#control-app .cc-essential-item{display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+ padding:10px 12px;border-radius:9px;background:#31483d;border:1px solid #7e9989}
+#control-app .cc-essential-item strong{font-size:13px}
+#control-app .cc-essential-item small{font-size:11px;color:#d9e3d9}
+#control-app .cc-home-everything{margin:15px 0;padding:11px 14px;border:1px solid #4e5f57;border-radius:11px;background:#19231f}
+#control-app .cc-home-everything>summary{font-size:13px;font-weight:750;cursor:pointer}
+/* Press / directory */
+#control-app .cc-press-workspace,#control-app .cc-other-contact-workspace{
+ padding:18px;border:1px solid #607e70;border-radius:14px;background:#1b2a24;margin:15px 0}
+#control-app .cc-press-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+#control-app .cc-press-head h2,#control-app .cc-other-contact-workspace h2{font-size:21px;margin:0 0 5px}
+#control-app .cc-press-head p{max-width:650px;font-size:12px}
+#control-app .cc-press-workspace h3{font-size:17px;color:#f5e9b8;margin:22px 0 12px}
+#control-app .cc-contact-directory{display:grid;gap:12px;margin:12px 0}
+#control-app .cc-contact-results,#control-app .cc-press-candidate-grid{
+ display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:9px}
+#control-app .cc-press-suggestion-group,#control-app .cc-press-campaign{
+ display:grid;gap:8px;background:#263a30;padding:12px;border:1px solid #668571;border-radius:11px;margin:10px 0}
+#control-app .cc-press-candidate-grid{margin-top:6px}
+#control-app .cc-press-campaign small,#control-app .cc-press-suggestion-group small{font-size:11px;color:#d7e6d9}
+#control-app .cc-contact-result{display:grid;align-content:start;gap:6px;background:#314d3e;border:1px solid #6d947d;
+ border-radius:10px;padding:11px}
+#control-app .cc-contact-result strong{font-size:13px;overflow-wrap:anywhere}
+#control-app .cc-contact-result small{font-size:11px;color:#e1e9df}
+#control-app .cc-contact-result button{font-size:11px;padding:7px}
+#control-app .cc-press-workspace input[type=search],#control-app .cc-other-contact-workspace input[type=search]{
+ width:100%;padding:10px;border-radius:8px;border:1px solid #7c987d;background:#102018;color:#fff}
+#control-app .cc-press-plan-editor{background:#26382e;border:1px solid #908151;padding:15px;border-radius:11px}
+#control-app .cc-press-plan-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#control-app .cc-press-plan-form>h3,#control-app .cc-press-form-actions,#control-app .cc-press-plan-form>p{grid-column:1/-1}
+#control-app .cc-press-plan-form label{display:grid;gap:6px;font-size:12px}
+#control-app .cc-press-plan-form label input,#control-app .cc-press-plan-form label select,#control-app .cc-press-plan-form label textarea{
+ width:100%;padding:10px;background:#102019;border:1px solid #7d987f;color:#fff;border-radius:8px}
+#control-app .cc-press-form-actions{display:flex;gap:10px}
+@media(max-width:750px){
+ #control-app .cc-essential-grid,#control-app .cc-press-plan-form{grid-template-columns:1fr}
+ #control-app .cc-press-head{flex-direction:column}
+ #control-app .cc-essential-card-head{flex-wrap:wrap}
+}

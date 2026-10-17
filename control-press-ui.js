@@ -1,0 +1,181 @@
+/* Press contacts and other relationships: views over one canonical contact dataset.
+ * Press pitches are suggested for confirmed gigs or explicitly planned releases.
+ * No send and no automatic claim of consent. */
+(()=>{"use strict";
+ const $=id=>document.getElementById(id);
+ const press=$("cc-view-press"),other=$("cc-view-other-contacts"),home=$("cc-view-dashboard");
+ if(!press||!other||!home)return;
+ const mk=(tag,value,cls)=>{const x=document.createElement(tag);if(value!==undefined)x.textContent=String(value);if(cls)x.className=cls;return x};
+ const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+ const l=s=>String(s||"").trim().toLocaleLowerCase("pt-PT");
+ const pressKinds={release:"Lançamento / single / álbum",gig:"Concerto",other:"Outra ação de imprensa"};
+ const planStatuses={planned:"A preparar",in_progress:"Em acompanhamento",completed:"Concluída",paused:"Em pausa"};
+ const all=mk("section",undefined,"cc-press-workspace");
+ const otherBox=mk("section",undefined,"cc-other-contact-workspace");
+ const headline=mk("div",undefined,"cc-press-head");
+ headline.append(mk("h2","Imprensa e campanhas"),
+  mk("p","Contactos de imprensa organizados por localização e planos ligados a concertos ou lançamentos. Sugestões exigem verificação editorial.","cc-lead"));
+ const newPlan=mk("button","+ Plano de imprensa","cc-primary");newPlan.type="button";headline.append(newPlan);
+ const campaigns=mk("div",undefined,"cc-press-plans"),suggestions=mk("div",undefined,"cc-press-suggestions");
+ const pressSearch=mk("input");pressSearch.type="search";pressSearch.placeholder="Pesquisar meios, localidade, região…";
+ pressSearch.setAttribute("aria-label","Pesquisar imprensa");
+ const pressDirectory=mk("div",undefined,"cc-contact-directory");
+ const planForm=mk("section",undefined,"cc-press-plan-editor");planForm.hidden=true;
+ all.append(headline,planForm,mk("h3","Campanhas e lembretes"),campaigns,
+  mk("h3","Sugestões para concertos e lançamentos"),suggestions,
+  mk("h3","Contactos de imprensa"),pressSearch,pressDirectory);
+ press.querySelector(".cc-panel-head")?.after(all);
+ const otherSearch=mk("input");otherSearch.type="search";otherSearch.placeholder="Pesquisar produtoras, parcerias e outros contactos…";
+ const otherDirectory=mk("div",undefined,"cc-contact-directory");
+ otherBox.append(mk("h2","Outros contactos"),mk("p","Promotores, parceiros e entidades fora das categorias Festival, Venue e Imprensa. As fichas são partilhadas com a base geral.","cc-lead"),
+  otherSearch,otherDirectory);
+ other.querySelector(".cc-panel-head")?.after(otherBox);
+ let contacts=[],bookings=[],plans=[],loading=false;
+ const same=(a,b)=>l(a)&&l(a)===l(b);
+ const openContact=c=>window.dispatchEvent(new CustomEvent("caravela-board-open-contact",{detail:{id:c.id}}));
+ function eligible(c){return c.kind==="press"&&c.contact_policy!=="blocked"&&
+  !c.suppressed&&!c.control_blocked&&!c.control_blocked_possible&&
+  !c.shared_email&&!c.source_shared_email&&!c.canonical_id&&c.duplicate_decision!=="secondary"}
+ function pressFor({kind,city="",region="",country=""}){
+  const list=contacts.filter(eligible);
+  if(kind==="release")return list.slice().sort((a,b)=>
+   (Number(!!b.media_type)-Number(!!a.media_type))||l(a.name).localeCompare(l(b.name),"pt-PT")).slice(0,8);
+  return list.filter(c=>{
+   const local=same(c.city,city);
+   const regional=region&&same(c.region,region)&&(!c.country||!country||same(c.country,country));
+   return local||regional||(!c.city&&!c.region&&(!c.country||!country||same(c.country,country)));
+  }).sort((a,b)=>Number(same(b.city,city))-Number(same(a.city,city))||
+   Number(same(b.region,region))-Number(same(a.region,region))||l(a.name).localeCompare(l(b.name),"pt-PT")).slice(0,8);
+ }
+ function candidateCard(c,desc=""){
+  const card=mk("article",undefined,"cc-contact-result");
+  card.append(mk("strong",c.name),mk("small",[c.city,c.region,c.country].filter(Boolean).join(" · ")||"Âmbito geográfico por confirmar"));
+  if(desc)card.append(mk("small",desc));
+  const b=mk("button","Abrir ficha","cc-neutral");b.type="button";b.onclick=()=>openContact(c);card.append(b);
+  return card;
+ }
+ function directory(el,kind,q){
+  el.replaceChildren();
+  const rows=contacts.filter(c=>kind==="press"?c.kind==="press":
+   !["festival","venue","press"].includes(c.kind));
+  const filtered=rows.filter(c=>!q||l([c.name,c.kind,c.city,c.region,c.country,(c.emails||[]).join(" ")].join(" ")).includes(q));
+  const head=mk("p",filtered.length+" fichas · sem criar duplicados","cc-lead");el.append(head);
+  const collection=mk("div",undefined,"cc-contact-results");
+  for(const c of filtered.slice(0,70))collection.append(candidateCard(c,
+   !eligible(c)&&c.kind==="press"?"Verificar política de contacto":""));
+  if(filtered.length>70)el.append(mk("p","Mostrados 70 resultados. Refina a pesquisa para ver os restantes.","cc-lead"));
+  el.append(collection);
+ }
+ function render(){
+  directory(pressDirectory,"press",l(pressSearch.value));
+  directory(otherDirectory,"other",l(otherSearch.value));
+  campaigns.replaceChildren();suggestions.replaceChildren();
+  const active=plans.filter(p=>p.status!=="completed"&&p.status!=="paused");
+  if(!active.length)campaigns.append(mk("p","Ainda não existem planos de imprensa registados. Podes criar um para o próximo single.","cc-lead"));
+  for(const p of active.slice(0,12)){
+   const card=mk("article",undefined,"cc-press-campaign");
+   card.append(mk("strong",p.title+" · "+p.artist),mk("small",pressKinds[p.kind]+" · "+p.event_date+" · "+planStatuses[p.status]),
+    mk("p",p.next_step,"cc-lead"));
+   if(p.review_date)card.append(mk("small","Rever: "+p.review_date));
+   const b=mk("button","Editar plano","cc-neutral");b.type="button";b.onclick=()=>edit(p);card.append(b);campaigns.append(card)
+  }
+  const events=[];
+  const stamp=today();
+  for(const gig of bookings){
+   if(gig.stage!=="confirmed"||!gig.event_date||gig.event_date<stamp)continue;
+   const c=contacts.find(x=>x.id===gig.contact_id);
+   if(!c)continue;
+   events.push({kind:"gig",title:gig.subject,artist:gig.artist,date:gig.event_date,city:c.city,region:c.region,country:c.country});
+  }
+  for(const p of active){if(p.event_date>=stamp||p.review_date>=stamp)
+    events.push({kind:p.kind,title:p.title,artist:p.artist,date:p.event_date,city:p.city,region:p.region,country:p.country})}
+  for(const event of events.slice(0,10)){
+   const block=mk("section",undefined,"cc-press-suggestion-group");
+   block.append(mk("strong",event.title+" · "+event.artist),
+    mk("small",pressKinds[event.kind]+" · "+event.date+
+      (event.city?" · "+event.city:"")));
+   const candidates=pressFor(event);
+   if(!candidates.length)block.append(mk("p","Sem imprensa compatível com a localização registada. Podes pesquisar na base completa.","cc-lead"));
+   const cards=mk("div",undefined,"cc-press-candidate-grid");
+   for(const c of candidates)cards.append(candidateCard(c,"Sugestão · verificar cobertura, interlocutor e consentimento"));
+   block.append(cards);suggestions.append(block);
+  }
+  if(!events.length)suggestions.append(mk("p","Regista um concerto confirmado no Booking ou um lançamento para obter sugestões contextualizadas.","cc-lead"));
+  window.dispatchEvent(new CustomEvent("caravela-control-press-context",{detail:{
+   campaigns:active.slice(0,10),suggestions:events.slice(0,8).map(e=>({...e,contacts:pressFor(e).map(x=>({id:x.id,name:x.name,city:x.city,region:x.region}))}))
+  }}));
+ }
+ function field(form,key,label,type,original,opts=null){
+  const wrap=mk("label",label),v=mk(type==="select"?"select":type==="textarea"?"textarea":"input");
+  v.name=key;if(!["select","textarea"].includes(type))v.type=type;
+  if(type==="select")for(const [value,name] of Object.entries(opts||{})){
+    const option=mk("option",name);option.value=value;v.append(option)
+  }
+  v.value=original??"";wrap.append(v);form.append(wrap);
+  return v;
+ }
+ function edit(p={}){
+  planForm.hidden=false;planForm.replaceChildren();
+  const form=mk("form",undefined,"cc-press-plan-form");
+  form.append(mk("h3",p.id?"Editar plano de imprensa":"Novo plano de imprensa"));
+  field(form,"title","Ação / lançamento","text",p.title).required=true;
+  field(form,"artist","Artista","select",p.artist||"WILDCHAINS",
+   {"WILDCHAINS":"WILDCHAINS","Devil of a Woman":"Devil of a Woman"});
+  field(form,"kind","Tipo","select",p.kind||"release",pressKinds);
+  field(form,"event_date","Data do evento / lançamento","date",p.event_date).required=true;
+  field(form,"city","Localidade (opcional)","text",p.city);
+  field(form,"region","Região (opcional)","text",p.region);
+  field(form,"country","País (opcional)","text",p.country);
+  field(form,"review_date","Próxima revisão","date",p.review_date);
+  field(form,"status","Estado","select",p.status||"planned",planStatuses);
+  field(form,"next_step","Próximo passo","textarea",p.next_step||"Definir meios relevantes e preparar abordagem").required=true;
+  field(form,"notes","Notas","textarea",p.notes);
+  const buttons=mk("div",undefined,"cc-press-form-actions");
+  const save=mk("button","Guardar plano","cc-primary");save.type="submit";
+  const cancel=mk("button","Cancelar","cc-neutral");cancel.type="button";
+  cancel.onclick=()=>{planForm.hidden=true;planForm.replaceChildren()};
+  const feedback=mk("p","","cc-lead");feedback.setAttribute("role","status");
+  buttons.append(save,cancel);form.append(buttons,feedback);
+  form.onsubmit=async event=>{
+   event.preventDefault();save.disabled=true;
+   try{
+    const record=Object.fromEntries(new FormData(form).entries());
+    if(p.id)record.id=p.id;if(p.revision)record.revision=p.revision;
+    const transport=window.CaravelaNativeTransport;
+    if(!transport)throw Error("Inicia sessão");
+    const resp=await transport.request("press_plans",p.revision?"PATCH":"POST",record);
+    const result=await resp.json();
+    if(!resp.ok||!result.ok)throw Error(result.error||"Falha ao guardar");
+    planForm.hidden=true;planForm.replaceChildren();await load();
+   }catch(e){feedback.textContent=e.message}finally{save.disabled=false}
+  };
+  planForm.append(form);planForm.scrollIntoView({behavior:"smooth",block:"start"});
+ }
+ async function load(){
+  const t=window.CaravelaNativeTransport;if(!t||loading)return;loading=true;
+  try{
+   const [a,c,b,p]=await Promise.all([t.request("archive"),t.request("contacts"),
+    t.request("booking"),t.request("press_plans")]);
+   if(!a.ok||!c.ok||!b.ok||!p.ok)throw Error("Não foi possível consultar todas as fontes");
+   const [arc,contactsData,bookingsData,plansData]=await Promise.all([a.json(),c.json(),b.json(),p.json()]);
+   const merged=new Map((arc.contacts||[]).map(x=>[x.id,{...x,contact_policy:"review",
+     source_shared_email:!!x.shared_email}]));
+   for(const row of contactsData.records||[])merged.set(row.id,{...merged.get(row.id),...row});
+   contacts=[...merged.values()];bookings=bookingsData.records||[];plans=plansData.records||[];
+   render();
+  }catch(e){campaigns.replaceChildren(mk("p","Dados de imprensa indisponíveis: "+e.message,"cc-lead"))}
+  finally{loading=false}
+ }
+ newPlan.onclick=()=>edit();
+ pressSearch.oninput=()=>directory(pressDirectory,"press",l(pressSearch.value));
+ otherSearch.oninput=()=>directory(otherDirectory,"other",l(otherSearch.value));
+ for(const event of ["caravela-control-token-ready","caravela-control-authenticated",
+   "caravela-control-booking-updated","caravela-control-contacts-updated"])
+  window.addEventListener(event,()=>void load());
+ window.addEventListener("caravela-control-view-opened",e=>{
+  if(["press","other-contacts","dashboard"].includes(e.detail?.view))void load();
+ });
+ window.addEventListener("caravela-control-signed-out",()=>{
+  contacts=[];bookings=[];plans=[];render();
+ });
+})();

@@ -19,8 +19,10 @@
     '<nav class="cc-nav" aria-label="Navegação principal"><div class="cc-nav-label">Trabalho diário</div>' +
     '<button type="button" data-view="dashboard"><span class="cc-nav-symbol">◫</span><span class="cc-nav-text">Início</span></button>' +
     '<button type="button" data-view="booking" data-min-role="manager"><span class="cc-nav-symbol">◇</span><span class="cc-nav-text">Booking</span></button><button type="button" data-view="opportunities" data-min-role="manager"><span class="cc-nav-symbol">⌕</span><span class="cc-nav-text">Oportunidades</span></button>' +
-    '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Contactos</span></button>' +
+    '<button type="button" data-view="press" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Imprensa</span></button>' +
+    '<button type="button" data-view="other-contacts" data-min-role="manager"><span class="cc-nav-symbol">▣</span><span class="cc-nav-text">Outros contactos</span></button>' +
     '<details class="cc-nav-more"><summary><span class="cc-nav-symbol">▦</span><span class="cc-nav-text">Outras áreas</span></summary>' +
+    '<button type="button" data-view="contacts" data-min-role="manager"><span class="cc-nav-symbol">▤</span><span class="cc-nav-text">Base completa de contactos</span></button>' +
     '<button type="button" data-view="finance" data-min-role="manager"><span class="cc-nav-symbol">€</span><span class="cc-nav-text">Finanças</span></button>' +
     '<button type="button" data-view="partnerships" data-min-role="manager"><span class="cc-nav-symbol">◎</span><span class="cc-nav-text">Parcerias</span></button>' +
     '<button type="button" data-view="artists" data-min-role="admin"><span class="cc-nav-symbol">♧</span><span class="cc-nav-text">Artistas</span></button>' +
@@ -54,7 +56,9 @@
   top.after(views);
   const viewInfo = [
     ["dashboard", "Início", "Prioridades do dia, follow-ups, oportunidades e estado dos artistas."],
-    ["contacts", "Contactos", "Entidades, interlocutores e restrições de contacto."],
+    ["press", "Imprensa", "Meios de comunicação, campanhas de lançamento e divulgação de concertos."],
+    ["other-contacts", "Outros contactos", "Promotores, parceiros e entidades sem duplicar fichas."],
+    ["contacts", "Base completa de contactos", "Todas as fichas, histórico, janelas e restrições."],
     ["booking", "Booking", "Programação por ano, festivais e venues."],
     ["opportunities", "Oportunidades", "Apoios à internacionalização, candidaturas e showcases."],
     ["artists", "Artistas", "Projetos, condições e histórico das fichas originais."],

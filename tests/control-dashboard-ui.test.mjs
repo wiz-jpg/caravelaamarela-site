@@ -40,7 +40,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261017board1/);
+ assert.match(html,/control-native-ui\.js\?v=20261017focus2/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
@@ -84,9 +84,9 @@ test("one-window Zoho workflow uses a single human-approved operation",()=>{
 
 test("year-based booking and opportunities dashboard assets are loaded",()=>{
  const html=get("crm-control.html"),app=get("control-app.js");
- assert.match(html,/control-booking-board\.js\?v=20261017board1/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017board1/);
- assert.match(html,/control-opportunities-ui\.js\?v=20261017radar1/);
+ assert.match(html,/control-booking-board\.js\?v=20261017focus2/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017focus2/);
+ assert.match(html,/control-opportunities-ui\.js\?v=20261017focus2/);
  assert.match(app,/data-view="opportunities"/);
  assert.match(app,/\["opportunities", "Oportunidades"/);
  assert.match(get("control-native-ui.js"),/cc-booking-advanced/);
@@ -98,4 +98,15 @@ test("editing an old booking does not automatically assign the selected year",()
  assert.match(ui,/booking_year:entry\.revision\?"":/);
  assert.match(ui,/contact_window_target:"unknown"/);
  assert.match(ui,/caravela-control-contacts-updated/);
+});
+
+
+test("essential dashboard, press and contact categories are loaded",()=>{
+ const html=get("crm-control.html"),app=get("control-app.js");
+ for(const token of ["control-home-focus-ui.js","control-press-ui.js",
+   "control-opportunity-availability.js"])assert.ok(html.includes(token));
+ for(const section of ["press","other-contacts"])assert.ok(app.includes('data-view="'+section+'"'));
+ for(const file of ["control-home-focus-ui.js","control-press-ui.js",
+   "control-opportunity-availability.js","control-opportunities-ui.js",
+   "control-booking-board-ui.js"])assert.doesNotThrow(()=>new Function(get(file)),file);
 });

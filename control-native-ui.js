@@ -1655,6 +1655,10 @@ window.addEventListener("caravela-board-create-booking",event=>{
   booking_year:String(boardYear),booking_category:d.booking_category||"unknown",
   artist:d.artist||"",subject:d.subject||"",next_step:"Confirmar oportunidade e contacto"});
 });
+window.addEventListener("caravela-board-open-contact",event=>{
+ const row=contactRows().find(x=>x.id===event.detail?.id);
+ if(row){window.CaravelaControlApp?.openView("contacts");edit("contacts",row)}
+});
 window.addEventListener("caravela-board-open-window",event=>{
  const id=event.detail?.contact_id;
  const row=contactRows().find(x=>x.id===id);

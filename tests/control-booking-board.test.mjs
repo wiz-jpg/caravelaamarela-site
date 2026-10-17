@@ -56,9 +56,9 @@ test("venue proximity means same city or region, never invented driving time",()
   contact({id:"v3",name:"Sala de Lisboa",kind:"venue",city:"Lisboa",region:"Lisboa",contact_window_target:"unknown"})];
  const result=classify({bookings:[booking({id:"gig-booking",contact_id:"gig",stage:"confirmed",
   artist:"WILDCHAINS",event_date:"2027-04-21"})],contacts,year:2027,today:"2026-10-15"});
- assert.equal(result.venue.suggestions.length,2);
+ assert.equal(result.venue.suggestions.length,3);
  assert.equal(result.venue.suggestions.find(x=>x.contact.id==="v1").reason,"Concerto confirmado na mesma cidade");
- assert.equal(result.venue.suggestions.some(x=>x.contact.id==="v3"),false);
+ assert.equal(result.venue.suggestions.find(x=>x.contact.id==="v3").matchScore,3); // General lead, not a route
 });
 test("native opportunity sources require real https reference, states and human next action",()=>{
  const row={
@@ -85,4 +85,28 @@ test("paused and closed records do not become overdue outreach automatically",()
  assert.equal(result.festival.late.length,1);
  assert.equal(result.festival.planning.length,1);
  assert.equal(result.other.length,1);
+});
+
+
+test("historical contacts populate planning without fabricating contact windows",()=>{
+ const rows=[contact({id:"f",contact_window_target:"unknown",contact_window_basis:"unknown",
+  contact_window_start:"",contact_window_end:"",contact_window_reason:""})];
+ const result=classify({bookings:[],contacts:rows,year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.planning.length,1);
+ assert.equal(result.festival.late.length,0);
+ assert.equal(result.festival.now.length,0);
+ assert.equal(result.festival.planning[0].type,"candidate");
+});
+test("historical claims appear only in a separate unverified archive lane",()=>{
+ const c=contact({id:"f",emails:["venue@sample.com"]});
+ const rows=[
+  {id:"h1",name:"Festival Teste",email:"venue@sample.com",artist:"WILDCHAINS",
+   status:"Enviado",next_step:"Follow-up sem prova"},
+  {id:"h2",name:"Festival Teste",email:"wrong@sample.com",artist:"Devil of a Woman",
+   status:"Em conversa"}
+ ];
+ const result=classify({bookings:[],contacts:[c],actions:rows,year:2027,today:"2026-10-17"});
+ assert.equal(result.festival.archive.length,1);
+ assert.equal(result.festival.archive[0].type,"archive");
+ assert.equal(result.festival.ongoing.length,0);
 });

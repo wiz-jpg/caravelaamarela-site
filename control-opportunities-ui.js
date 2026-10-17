@@ -42,11 +42,16 @@
  sources.append(mk("h3","Fontes para procurar"));
  const sourceList=mk("div",undefined,"cc-radar-grid");sources.append(sourceList);
  const tracked=mk("section",undefined,"cc-radar-tracked");
- tracked.append(mk("h3","Oportunidades guardadas"));
+ tracked.append(mk("h3","Atualmente abertas · com verificação recente"));
  const status=mk("p","","cc-lead");status.setAttribute("role","status");
  const trackedList=mk("div",undefined,"cc-radar-grid");tracked.append(status,trackedList);
+ const inactive=mk("section",undefined,"cc-radar-tracked");
+ inactive.append(mk("h3","Outras oportunidades · por confirmar ou encerradas"));
+ const inactiveStatus=mk("p","As fontes oficiais abaixo são para consulta, não candidaturas comprovadamente abertas.","cc-lead");
+ const inactiveList=mk("div",undefined,"cc-radar-grid");
+ inactive.append(inactiveStatus,inactiveList);
  const editShell=mk("div",undefined,"cc-radar-editor");editShell.hidden=true;
- box.append(sources,tracked,editShell);
+ box.append(tracked,inactive,sources,editShell);
  view.querySelector(".cc-panel-head")?.after(box);
  let rows=[],busy=false,ready=false;
  const search=()=>query.value.trim().toLocaleLowerCase("pt-PT");
@@ -56,7 +61,7 @@
   a.href=url;a.target="_blank";a.rel="noopener noreferrer";return a;
  }
  function render(){
-  const q=search();sourceList.replaceChildren();trackedList.replaceChildren();
+  const q=search();sourceList.replaceChildren();trackedList.replaceChildren();inactiveList.replaceChildren();
   const matches=official.filter(s=>includes([s.title,s.provider,s.note,s.tags].join(" "),q));
   for(const source of matches){
    const card=mk("article",undefined,"cc-radar-item");
@@ -77,22 +82,29 @@
    return live(a)-live(b)||(a.review_date||a.deadline||"9999").localeCompare(b.review_date||b.deadline||"9999")||
      a.title.localeCompare(b.title,"pt-PT")
   });
+  const openRecords=sorted.filter(x=>window.CaravelaOpportunityCheck?.open(x,
+    new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())));
   for(const row of sorted){
+   const isOpen=openRecords.includes(row);
    const card=mk("article",undefined,"cc-radar-item cc-radar-saved");
    card.append(mk("strong",row.title),mk("small",row.provider+" · "+(kindLabels[row.kind]||row.kind)));
    const flag=mk("span",states[row.status]||row.status,"cc-radar-state");card.append(flag);
    if(row.artist)card.append(mk("small","Artista: "+row.artist));
    if(row.deadline)card.append(mk("small","Prazo registado: "+row.deadline));
    if(row.review_date)card.append(mk("small","Rever: "+row.review_date));
-   if(row.verified_on)card.append(mk("small","Fonte confirmada pela equipa em: "+row.verified_on));
+   if(row.verified_on)card.append(mk("small","Fonte consultada em: "+row.verified_on));
+   if(isOpen)card.append(mk("small","Abertura verificada em: "+row.open_verified_on));
+   else card.append(mk("small","Abertura não comprovada, desatualizada ou encerrada"));
    card.append(mk("p",row.next_step,"cc-lead"));
    const acts=mk("div",undefined,"cc-radar-actions");
    acts.append(externalLink(row.source_url,"Consultar fonte"));
    const button=mk("button","Editar acompanhamento","cc-neutral");button.type="button";
-   button.onclick=()=>edit(row);acts.append(button);card.append(acts);trackedList.append(card);
+   button.onclick=()=>edit(row);acts.append(button);card.append(acts);
+   (isOpen?trackedList:inactiveList).append(card);
   }
-  if(!sorted.length)trackedList.append(mk("p","Ainda não há oportunidades guardadas neste filtro. Regista uma candidatura apenas depois de confirmar a fonte.","cc-lead"));
-  if(ready)status.textContent=rows.length+" oportunidades operacionais guardadas. Não existem candidaturas submetidas automaticamente.";
+  if(!openRecords.length)trackedList.append(mk("p","Nenhuma candidatura com abertura verificada nos últimos 30 dias e prazo ainda válido.","cc-lead"));
+  if(!inactiveList.children.length)inactiveList.append(mk("p","Sem outras oportunidades guardadas neste filtro.","cc-lead"));
+  if(ready)status.textContent=openRecords.length+" abertas e verificadas · "+(sorted.length-openRecords.length)+" outras. Nenhuma candidatura é submetida automaticamente.";
  }
  function field(form,name,title,type="text",opts=null,val=""){
   const label=mk("label",title),element=mk(type==="select"?"select":type==="textarea"?"textarea":"input");
@@ -115,7 +127,13 @@
   field(form,"status","Estado confirmado pela equipa","select",states,entry.status||"research");
   field(form,"deadline","Prazo do edital (se confirmado)","date",null,entry.deadline);
   field(form,"review_date","Próxima revisão","date",null,entry.review_date);
-  field(form,"verified_on","Data em que a equipa verificou a fonte","date",null,entry.verified_on);
+  field(form,"verified_on","Data em que a equipa consultou o edital","date",null,entry.verified_on);
+  field(form,"availability","Abertura da candidatura (verificação humana)","select",{
+   unverified:"Não verificada / por confirmar",
+   open_verified:"Aberta · confirmei na fonte oficial",
+   closed_verified:"Encerrada · confirmei na fonte oficial"
+  },entry.availability||"unverified");
+  field(form,"open_verified_on","Última confirmação da abertura","date",null,entry.open_verified_on);
   field(form,"owner","Responsável","text",null,entry.owner);
   field(form,"next_step","Próxima ação","textarea",null,entry.next_step||"Verificar elegibilidade e prazo no edital oficial").required=true;
   field(form,"eligibility_note","Requisitos / elegibilidade por confirmar","textarea",null,entry.eligibility_note);

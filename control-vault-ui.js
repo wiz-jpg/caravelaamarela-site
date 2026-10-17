@@ -104,7 +104,7 @@
   };
   window.CaravelaNativeTransport={
     request(kind,method="GET",entry=null){
-      if(!["contacts","booking","finance","opportunities","archive","export"].includes(kind)||!["GET","POST","PATCH","DELETE"].includes(method)||
+      if(!["contacts","booking","finance","opportunities","press_plans","archive","export"].includes(kind)||!["GET","POST","PATCH","DELETE"].includes(method)||
          (method==="DELETE"&&!["booking","contacts"].includes(kind))||
          ((kind==="archive"||kind==="export")&&method!=="GET"))
         throw Error("Operação CRM inválida.");

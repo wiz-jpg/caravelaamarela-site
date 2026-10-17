@@ -41,11 +41,33 @@
   return {status,from,to,daysUntil:diff,reason:contact.contact_window_reason||"",
     basis:contact.contact_window_basis};
  }
- function classify({bookings=[],contacts=[],year=2027,today="2026-10-17"}={}){
+ function classify({bookings=[],contacts=[],actions=[],year=2027,today="2026-10-17"}={}){
   if(!Number.isInteger(year)||year<2020||year>2099||!d(today))throw Error("invalid_board_date");
   const byId=new Map(contacts.map(x=>[x.id,x]));
-  const festival={ongoing:[],late:[],now:[],soon:[],planning:[],declined:[],confirmed:[]};
-  const venue={ongoing:[],suggestions:[],declined:[],confirmed:[]};
+  const festival={ongoing:[],late:[],now:[],soon:[],planning:[],archive:[],declined:[],confirmed:[]};
+  const venue={ongoing:[],suggestions:[],archive:[],declined:[],confirmed:[]};
+  const archivedKeys=new Set();
+  const nameKey=x=>low(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+  const lookup=new Map();
+  for(const c of contacts){const key=nameKey(c.name);if(!lookup.has(key))lookup.set(key,[]);lookup.get(key).push(c)}
+  // Imported actions are *unverified source claims*, never current deal states.
+  // Link only a unique exact normalized entity name and compatible known email.
+  for(const a of actions){
+    if(!a?.name||!a?.id||a.no_outreach||a.contact_policy==="blocked")continue;
+    const options=(lookup.get(nameKey(a.name))||[]).filter(c=>
+      (!a.email||!(c.emails||[]).length||
+       c.emails.some(e=>low(e)===low(a.email))));
+    if(options.length!==1)continue;
+    const contact=options[0];
+    if(!["festival","venue"].includes(contact.kind))continue;
+    const key=contact.id+"|"+(artists(a.artist).join("+")||"unassigned");
+    if(archivedKeys.has(key))continue;
+    archivedKeys.add(key);
+    const item={type:"archive",archive:a,record:null,contact,artists:artists(a.artist),
+      locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
+      reason:"Histórico importado: "+(a.status||"sem estado")+" · verificar contacto, banda e ano"};
+    (contact.kind==="festival"?festival:venue).archive.push(item);
+  }
   const other=[],undated=[];
   const linkedForYear=new Set();
   const confirmedGigs=[];
@@ -92,12 +114,18 @@
      contact.source_shared_email||contact.canonical_id||contact.duplicate_decision==="secondary")continue;
    if(contact.kind==="festival"){
     const window=windowFor(contact,year,today);
-    if(["late","now","soon"].includes(window.status))
-     festival[window.status].push({type:"candidate",contact,record:null,artists:[],
-       locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),window});
+    const lane=["late","now","soon"].includes(window.status)?window.status:"planning";
+    festival[lane].push({type:"candidate",contact,record:null,artists:[],
+      locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),window,
+      reason:lane==="planning"?"Investigar janela e ano de contacto para "+year:""});
    }else if(contact.kind==="venue"){
     const c=low(contact.city),region=low(contact.region),country=low(contact.country);
-    if(!c&&!region)continue;
+    if(!c&&!region){
+      venue.suggestions.push({type:"candidate",contact,record:null,artists:[],
+        locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
+        reason:"Localização e encaixe artístico a confirmar",matchScore:4});
+      continue;
+    }
     let best=null;
     for(const gig of confirmedGigs){
      const v=gig.contact,otherCity=low(v.city),otherRegion=low(v.region),otherCountry=low(v.country);
@@ -109,12 +137,14 @@
      if(!best||score<best.score)best={score,concert:gig.record,artists:gig.artists,
        reason:sameCity?"Concerto confirmado na mesma cidade":"Concerto confirmado na mesma região"};
     }
-    if(best)venue.suggestions.push({type:"candidate",record:null,contact,
-      artists:best.artists,locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
-      reason:best.reason,nearbyGig:best.concert,matchScore:best.score});
+    venue.suggestions.push({type:"candidate",record:null,contact,
+      artists:best?.artists||[],locality:[contact.city,contact.region,contact.country].filter(Boolean).join(" · "),
+      reason:best?.reason||"Sala do arquivo · avaliar encaixe, condições e território",
+      nearbyGig:best?.concert||null,matchScore:best?.score??3});
    }
   }
-  const cmp=(a,b)=> (a.type==="booking"?0:1)-(b.type==="booking"?0:1)||
+  const cmp=(a,b)=> (a.type==="booking"?0:a.type==="archive"?1:2)-
+     (b.type==="booking"?0:b.type==="archive"?1:2)||
    (a.matchScore??0)-(b.matchScore??0)||
    (a.window?.from||"9999").localeCompare(b.window?.from||"9999")||
    low(a.contact?.name||a.record?.contact_name).localeCompare(low(b.contact?.name||b.record?.contact_name),"pt-PT");

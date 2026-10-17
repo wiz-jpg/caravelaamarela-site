@@ -474,3 +474,23 @@ test("unknown other entities remain unclassified, promoters are never converted 
  assert.equal(promoter.contact_subtype,"unknown");
  assert.equal(validateNative("contacts",contact({kind:"other",contact_subtype:"guess"})),null);
 });
+
+
+test("deleted manual contact stays absent from all active native reads but is recoverable in append-only audit",async()=>{
+ const a=(await (await req("contacts","POST",contact({
+  name:"Teste",kind:"other",city:"Braga",contact_subtype:"unknown",emails:[]
+ }))).json()).record;
+ const first=await (await req("contacts")).json();
+ assert.ok(first.records.some(x=>x.id===a.id));
+ const response=await req("contacts","DELETE",{id:a.id,revision:a.revision});
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).removed,true);
+ for(let i=0;i<2;i++){
+  const read=await (await req("contacts")).json();
+  assert.equal(read.records.some(x=>x.id===a.id),false);
+  assert.equal(read.total,0);
+ }
+ const events=await (await req("export")).json();
+ assert.ok(events.events.some(e=>e.operation==="crm_contact_v1"&&
+  e.decision==="removed"&&e.entity_id==="crm-contact:"+a.id));
+});

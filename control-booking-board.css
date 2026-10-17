@@ -274,3 +274,11 @@
  #control-app .cc-other-category-body{padding:10px}
  #control-app .cc-other-category .cc-contact-results{grid-template-columns:1fr}
 }
+
+
+/* Explicit native-only removal from other contacts. Source snapshots remain immutable. */
+#control-app .cc-other-contact-status{min-height:1rem;font-size:12px;line-height:1.5;margin:4px 0;color:#f4dcb0}
+#control-app .cc-other-contact-status:empty{display:none}
+#control-app .cc-other-delete{border-color:#b47779!important;color:#ffe0db!important;background:#563b3c!important}
+#control-app .cc-other-delete:hover{background:#724749!important}
+#control-app .cc-other-delete:disabled{opacity:.5;cursor:wait}

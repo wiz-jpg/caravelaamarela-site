@@ -57,7 +57,7 @@
   const viewInfo = [
     ["dashboard", "Início", "Prioridades do dia, follow-ups, oportunidades e estado dos artistas."],
     ["press", "Imprensa", "Meios de comunicação, campanhas de lançamento e divulgação de concertos."],
-    ["other-contacts", "Outros contactos", "Promotores, parceiros e entidades sem duplicar fichas."],
+    ["other-contacts", "Outros contactos", "Parcerias e outras entidades, por tipo. Os promotores ficam no Booking."],
     ["contacts", "Base completa de contactos", "Todas as fichas, histórico, janelas e restrições."],
     ["booking", "Booking", "Programação por ano, festivais e venues."],
     ["opportunities", "Oportunidades", "Apoios à internacionalização, candidaturas e showcases."],

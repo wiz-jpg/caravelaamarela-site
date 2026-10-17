@@ -40,7 +40,7 @@ test("action choices are named and decisions continue to be manual",()=>{
 
 test("Preview loads cache-busted current assets and never modifies main",()=>{
  const html=get("crm-control.html");
- assert.match(html,/control-native-ui\.js\?v=20261017other1/);
+ assert.match(html,/control-native-ui\.js\?v=20261017deletefix1/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
  assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
@@ -136,7 +136,7 @@ test("historical actions may enter proposed operational lanes without mutating d
  assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
- assert.match(html,/control-booking-board\.css\?v=20261017other1/);
+ assert.match(html,/control-booking-board\.css\?v=20261017deletefix1/);
  assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });
 
@@ -169,7 +169,7 @@ test("press directory is collapsible by location and, for Portugal, by district;
   geo=get("control-press-geography.js"),csv=get("control-press-csv.js");
  assert.match(html,/control-press-geography\.js\?v=20261017pressdistrict1/);
  assert.match(html,/control-press-csv\.js\?v=20261017pressdistrict1/);
- assert.match(html,/control-press-ui\.js\?v=20261017other1/);
+ assert.match(html,/control-press-ui\.js\?v=20261017deletefix1/);
  assert.match(ui,/mk\("details",undefined,nested\?/);
  assert.match(ui,/const isPortugal=key==="portugal"/);
  assert.match(ui,/CaravelaPressGeography\?\.districtsWithin\(group\.rows\)/);
@@ -192,4 +192,24 @@ test("other contacts exclude promoters and show evidence-based specific types",(
  assert.match(ui,/Identificar tipo na ficha/);
  assert.match(editor,/contact_subtype/);
  for(const code of [ui,classifier])assert.doesNotThrow(()=>new Function(code));
+});
+
+
+test("removing a native Other contact requires confirmation, verified server tombstone, and cross-view refresh",()=>{
+ const html=get("crm-control.html"),ui=get("control-press-ui.js"),
+  native=get("control-native-ui.js"),app=get("control-app.js");
+ assert.match(html,/control-press-ui\.js\?v=20261017deletefix1/);
+ assert.match(html,/control-app\.js\?v=20261017deletefix1/);
+ assert.match(ui,/async function removeNativeContact\(c\)/);
+ assert.match(ui,/!c\?\.revision\|\|c\.origin_id\|\|c\.historical/);
+ assert.match(ui,/window\.confirm\(/);
+ assert.match(ui,/t\.request\("contacts","DELETE",\{id:c\.id,revision:c\.revision\}\)/);
+ assert.match(ui,/t\.request\("contacts","GET"\)/);
+ assert.match(ui,/current\.records\.some\(x=>x\.id===c\.id\)/);
+ assert.match(ui,/caravela-control-contacts-updated/);
+ assert.match(ui,/pendingReload/);
+ assert.match(native,/removed_id:r\.id/);
+ assert.match(native,/window\.addEventListener\("caravela-control-contacts-updated"/);
+ assert.doesNotMatch(app,/Promotores, parceiros e entidades sem duplicar fichas/);
+ for(const code of [ui,native])assert.doesNotThrow(()=>new Function(code));
 });

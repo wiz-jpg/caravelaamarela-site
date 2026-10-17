@@ -27,11 +27,15 @@
  press.querySelector(".cc-panel-head")?.after(all);
  const otherSearch=mk("input");otherSearch.type="search";otherSearch.placeholder="Pesquisar artista, serviço, marca, instituição, parceria…";
  const otherDirectory=mk("div",undefined,"cc-contact-directory");
- otherBox.append(mk("h2","Outros contactos"),
-  mk("p","Parcerias, artistas, serviços, marcas e instituições, agrupados pelo tipo registado. Promotores pertencem exclusivamente ao Booking; fichas sem classificação aparecem em «Tipo por identificar».","cc-lead"),
+ otherBox.append(
+  mk("p","Parcerias, artistas, serviços, marcas e instituições por categoria. Os promotores estão no Booking. Fichas sem identificação suficiente aparecem em «Tipo por identificar».","cc-lead"),
   otherSearch,otherDirectory);
  other.querySelector(".cc-panel-head")?.after(otherBox);
- let contacts=[],bookings=[],plans=[],announcements=[],loading=false;
+ let contacts=[],bookings=[],plans=[],announcements=[],loading=false,pendingReload=false;
+ const otherStatus=mk("p","","cc-other-contact-status");
+ otherStatus.setAttribute("role","status");
+ otherSearch.after(otherStatus);
+ let deletingContactId="";
  const openedRegions=new Set(),openedOtherGroups=new Set();
  function exportRegion(group){
   const module=window.CaravelaPressCsv;
@@ -47,6 +51,44 @@
  }
  const same=(a,b)=>l(a)&&l(a)===l(b);
  const openContact=c=>window.dispatchEvent(new CustomEvent("caravela-board-open-contact",{detail:{id:c.id}}));
+ async function removeNativeContact(c){
+  // A source-backed contact is never deletable here. Only a real editable native
+  // record with a current revision can be tombstoned.
+  if(!c?.revision||c.origin_id||c.historical||deletingContactId)return;
+  if(!window.confirm("Remover a ficha «"+c.name+"» de todos os separadores operacionais? "+
+    "O histórico de auditoria será preservado. Esta ação exige confirmação."))return;
+  deletingContactId=c.id;
+  otherStatus.textContent="A verificar a remoção no cofre…";
+  try{
+   const t=window.CaravelaNativeTransport;
+   if(!t)throw Error("Sessão indisponível. Entra novamente.");
+   const removed=await t.request("contacts","DELETE",{id:c.id,revision:c.revision});
+   const data=await removed.json().catch(()=>({}));
+   if(!removed.ok||!data.ok||data.removed!==true){
+    const errors={
+     contact_has_dependencies:"Esta ficha tem propostas ou entidades associadas. Retira as ligações antes de remover.",
+     historical_contact_cannot_remove:"O arquivo original não pode ser apagado.",
+     revision_conflict:"A ficha mudou desde que foi carregada. Atualiza e tenta novamente.",
+     record_not_found:"Esta ficha já não consta dos contactos ativos. Atualiza a vista."
+    };
+    throw Error(errors[data.error]||data.error||"A remoção não foi concluída");
+   }
+   // A successful DELETE alone is not the same as a verified active-list update.
+   const verified=await t.request("contacts","GET");
+   const current=await verified.json();
+   if(!verified.ok||!current.ok||!Array.isArray(current.records))
+    throw Error("Remoção registada; não foi possível confirmar a lista ativa. Recarrega a vista.");
+   if(current.records.some(x=>x.id===c.id))
+    throw Error("A ficha ainda aparece na lista ativa do servidor. É necessária revisão.");
+   contacts=contacts.filter(x=>x.id!==c.id);
+   render();
+   otherStatus.textContent="Ficha «"+c.name+"» removida dos contactos ativos. Histórico preservado.";
+   window.dispatchEvent(new CustomEvent("caravela-control-contacts-updated",
+    {detail:{removed_id:c.id}}));
+  }catch(error){
+   otherStatus.textContent="Não foi possível confirmar a remoção: "+String(error.message||error);
+  }finally{deletingContactId="";}
+ }
  function eligible(c){return c.kind==="press"&&c.contact_policy!=="blocked"&&
   !c.suppressed&&!c.control_blocked&&!c.control_blocked_possible&&
   !c.shared_email&&!c.source_shared_email&&!c.canonical_id&&c.duplicate_decision!=="secondary"}
@@ -141,8 +183,9 @@
    const classifier=window.CaravelaOtherContacts;
    const groups=classifier?.group(rows,{search:q})||[];
    const total=groups.reduce((n,g)=>n+g.rows.length,0);
-   el.append(mk("p",total+" fichas em "+groups.length+
-    " categorias · promotores excluídos · histórico preservado","cc-lead"));
+   el.append(mk("p",total+" "+(total===1?"ficha":"fichas")+
+    " em "+groups.length+" "+(groups.length===1?"categoria":"categorias")+
+    " · promotores excluídos · histórico preservado","cc-lead"));
    if(!groups.length)el.append(mk("p","Sem outros contactos para este filtro.","cc-lead"));
    if(!classifier){
     el.append(mk("p","Organização por tipo indisponível. Recarrega a página.","cc-lead"));
@@ -175,6 +218,13 @@
       const button=mk("button",category.key==="type:unknown"?
        "Identificar tipo na ficha":"Ver / alterar ficha","cc-neutral");
       button.type="button";button.onclick=()=>openContact(c);card.append(button);
+      if(c.revision&&!c.origin_id&&!c.historical){
+       const remove=mk("button","Remover ficha","cc-neutral cc-other-delete");
+       remove.type="button";
+       remove.disabled=!!deletingContactId;
+       remove.onclick=()=>void removeNativeContact(c);
+       card.append(remove);
+      }
       cards.append(card);
      }
     };
@@ -285,7 +335,10 @@
   planForm.append(form);planForm.scrollIntoView({behavior:"smooth",block:"start"});
  }
  async function load(){
-  const t=window.CaravelaNativeTransport;if(!t||loading)return;loading=true;
+  const t=window.CaravelaNativeTransport;
+  if(!t)return;
+  if(loading){pendingReload=true;return}
+  loading=true;
   try{
    const [a,c,b,p,agenda]=await Promise.all([t.request("archive"),t.request("contacts"),
     t.request("booking"),t.request("press_plans"),
@@ -300,7 +353,10 @@
    else announcements=[];
    render();
   }catch(e){campaigns.replaceChildren(mk("p","Dados de imprensa indisponíveis: "+e.message,"cc-lead"))}
-  finally{loading=false}
+  finally{
+   loading=false;
+   if(pendingReload){pendingReload=false;void load()}
+  }
  }
  newPlan.onclick=()=>edit();
  pressSearch.oninput=()=>directory(pressDirectory,"press",l(pressSearch.value));
@@ -312,6 +368,7 @@
   if(["press","other-contacts","dashboard"].includes(e.detail?.view))void load();
  });
  window.addEventListener("caravela-control-signed-out",()=>{
-  contacts=[];bookings=[];plans=[];announcements=[];render();
+  contacts=[];bookings=[];plans=[];announcements=[];pendingReload=false;
+  otherStatus.textContent="";render();
  });
 })();

@@ -627,7 +627,11 @@ function render(kind){
        historical_contact_cannot_remove:"Os contactos históricos não podem ser removidos.",
        revision_conflict:"Ficha alterada noutra sessão. Atualiza a página."})[data.error]||data.error||"Falha a remover ficha");
      await load("contacts");
-     $("cc-native-contacts-status").textContent="Ficha retirada; revisões preservadas.";
+     // Every other workspace must re-read the active native rows after a
+     // tombstone; a previous local list is no longer authoritative.
+     window.dispatchEvent(new CustomEvent("caravela-control-contacts-updated",
+      {detail:{removed_id:r.id}}));
+     $("cc-native-contacts-status").textContent="Ficha removida dos contactos ativos; histórico preservado.";
     }catch(error){$("cc-native-contacts-status").textContent=error.message}
     finally{state.busy=false;remove.disabled=false}
    };
@@ -1716,6 +1720,9 @@ window.addEventListener("caravela-control-token-ready",()=>{
  loadArchive();load("contacts");load("booking");void loadPartnerTasks();void loadFinanceTasks();
 });
 window.addEventListener("caravela-control-booking-updated",()=>{void load("booking")});
+window.addEventListener("caravela-control-contacts-updated",()=>{
+ void load("contacts");
+});
 window.addEventListener("caravela-crm-imported",event=>{
  archiveLoaded=true;
  state.historical=event.detail?.manifest?.entities||[];

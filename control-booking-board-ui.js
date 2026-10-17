@@ -30,7 +30,8 @@
  let allBookings=[],allContacts=[],allActions=[],allReviews=[],published=[],loaded=false,busy=false,failed="";
  let publicAgendaStatus="A confirmar leitura da agenda pública…";
  let externalResults=[],remoteSearchStatus="Pesquisa externa ainda não executada.",searching=false;
- let radarArtist="WILDCHAINS",externalKey="";
+ let radarArtist="WILDCHAINS",radarTerritory="PT",externalKey="";
+ let remoteEnabled=null,remoteStatusChecked=false;
  let saving=false;
  const names={festival:{ongoing:"On going / Follow-up",late:"A contactar · em atraso",
   now:"A contactar agora",soon:"A contactar brevemente",planning:"Por calendarizar",
@@ -132,6 +133,16 @@
     row.append(move,moveButton);acts.append(row);
    }
    card.append(acts);
+   // High-density cards: expose name, locality, status and human action.
+   // Source details and explanatory paragraphs remain one click away.
+   const meta=[...card.children].filter(x=>x.tagName==="SMALL"||
+    x.classList?.contains("cc-board-action-label"));
+   if(meta.length>2){
+    const detail=el("details",undefined,"cc-board-card-meta");
+    detail.append(el("summary","Ver contexto e origem"));
+    for(const node of meta.slice(2))detail.append(node);
+    card.insertBefore(detail,acts);
+   }
   }
   return card;
  }
@@ -195,34 +206,54 @@
   const venues=el("section",undefined,"cc-board-group");
   venues.append(el("h3","Venues"),el("p","Inclui ações importadas para rever, salas de interesse e proximidades a concertos confirmados; sem tempos de deslocação inventados.","cc-lead"));
   let visibleTotal=0;
-  function lanes(holder,group,labels){
-   const rail=el("div",undefined,"cc-board-rail");
-   for(const [key,label] of Object.entries(labels)){
-    const items=(group[key]||[]).filter(visible);visibleTotal+=items.length;
-    const lane=el("section",undefined,"cc-board-lane cc-board-lane-"+key);
-    const h=el("div",undefined,"cc-board-lane-head");
-    h.append(el("strong",label),el("span",String(items.length),"cc-board-lane-count"));
-    lane.append(h);
-    const list=el("div",undefined,"cc-board-lane-list");
-    if(!items.length)list.append(el("p","Sem oportunidades classificadas.","cc-board-empty"));
-    let pastHeading=false;
-    for(const item of items.slice(0,30)){
-     if(key==="confirmed"&&item.past&&!pastHeading){
-      list.append(el("p","Concertos já realizados","cc-board-past-heading"));pastHeading=true;
+  function lanes(holder,group,labels,primary){
+   const makeRail=(entries)=>{
+    const rail=el("div",undefined,"cc-board-rail cc-board-focus-rail");
+    for(const [key,label] of entries){
+     const items=(group[key]||[]).filter(visible);visibleTotal+=items.length;
+     const lane=el("section",undefined,"cc-board-lane cc-board-lane-"+key);
+     const h=el("div",undefined,"cc-board-lane-head");
+     h.append(el("strong",label),el("span",String(items.length),"cc-board-lane-count"));
+     lane.append(h);
+     const list=el("div",undefined,"cc-board-lane-list");
+     if(!items.length)list.append(el("p","Sem contactos nesta fase.","cc-board-empty"));
+     let pastHeading=false;
+     const cap=key==="confirmed"?12:6;
+     for(const item of items.slice(0,cap)){
+      if(key==="confirmed"&&item.past&&!pastHeading){
+       list.append(el("p","Concertos já realizados","cc-board-past-heading"));pastHeading=true;
+      }
+      list.append(rowCard(item,key));
      }
-     list.append(rowCard(item,key));
+     if(items.length>cap){
+      const extra=el("details",undefined,"cc-board-more-records");
+      extra.append(el("summary","Ver mais "+(items.length-cap)+" nesta coluna"));
+      for(const item of items.slice(cap)){
+       if(key==="confirmed"&&item.past&&!pastHeading){
+        extra.append(el("p","Concertos já realizados","cc-board-past-heading"));pastHeading=true;
+       }
+       extra.append(rowCard(item,key));
+      }
+      list.append(extra);
+     }
+     lane.append(list);rail.append(lane);
     }
-    if(items.length>30){
-     const rest=el("details"),summary=el("summary","Mostrar mais "+(items.length-30));
-     rest.append(summary);for(const item of items.slice(30))rest.append(rowCard(item,key));
-     list.append(rest);
-    }
-    lane.append(list);rail.append(lane);
+    return rail;
+   };
+   const essential=primary.map(x=>[x,labels[x]]).filter(x=>x[1]);
+   holder.append(makeRail(essential));
+   const remaining=Object.entries(labels).filter(([key])=>!primary.includes(key));
+   if(remaining.length){
+    const panel=el("details",undefined,"cc-board-secondary");
+    const n=remaining.reduce((sum,[key])=>sum+(group[key]||[]).filter(visible).length,0);
+    panel.append(el("summary","Planeamento e arquivo · "+n+
+     " registos (abrir apenas quando necessário)"));
+    panel.append(makeRail(remaining));
+    holder.append(panel);
    }
-   holder.append(rail);
   }
-  lanes(festival,result.festival,names.festival);
-  lanes(venues,result.venue,names.venue);
+  lanes(festival,result.festival,names.festival,["ongoing","now","late","soon","confirmed"]);
+  lanes(venues,result.venue,names.venue,["ongoing","suggestions","confirmed"]);
   body.append(festival,venues);
   const otherConfirmed=result.other.filter(x=>x.record?.stage==="confirmed");
   const otherCompleted=result.other.filter(x=>x.record?.stage==="closed");
@@ -234,22 +265,34 @@
    for(const item of [...otherConfirmed,...otherCompleted])special.append(rowCard(item,"other"));
    body.append(special);
   }
-  const promoters=el("section",undefined,"cc-board-group cc-board-promoters");
-  promoters.append(el("h3","Promotores"),
-    el("p","Contactos de promotores da base comum, independentemente dos eventos que organizam.","cc-lead"));
-  const promoterList=el("div",undefined,"cc-board-promoter-grid");
-  for(const item of result.promoter.slice(0,150)){
-   const c=item.contact,card=el("article",undefined,"cc-board-item cc-board-candidate");
-   card.append(el("strong",c.name),el("small",item.locality||"Local por confirmar"));
-   if(c.contact_policy==="blocked"||c.source_suppressed||c.source_shared_email)
-    card.append(el("small","Contacto condicionado · verificar restrições"));
-   const b=el("button","Abrir contacto","cc-neutral");b.type="button";
-   b.onclick=()=>emit("caravela-board-open-contact",{id:c.id});
-   card.append(b);promoterList.append(card);
-  }
-  if(result.promoter.length>150)promoterList.append(el("p","Mais promotores disponíveis na base completa.","cc-lead"));
-  if(!result.promoter.length)promoterList.append(el("p","Sem promotores classificados no arquivo.","cc-lead"));
-  promoters.append(promoterList);body.append(promoters);
+  const promoters=el("details",undefined,"cc-board-promoters cc-board-secondary");
+  promoters.append(el("summary","Promotores · "+result.promoter.length+
+    " fichas (pesquisa na base comum)"));
+  const promoterSearch=el("input");promoterSearch.type="search";
+  promoterSearch.placeholder="Pesquisar promotores…";promoterSearch.setAttribute("aria-label","Pesquisar promotores");
+  const promoterCount=el("p","","cc-lead"),promoterList=el("div",undefined,"cc-board-promoter-grid");
+  const drawPromoters=()=>{
+   const query=promoterSearch.value.trim().toLowerCase();
+   const matches=result.promoter.filter(x=>!query||[
+    x.contact.name,x.contact.city,x.contact.region,x.contact.country
+   ].join(" ").toLowerCase().includes(query));
+   promoterCount.textContent=matches.length+" contactos de promotores"+
+    (matches.length>40?" · primeiros 40 apresentados; refina a pesquisa":"");
+   promoterList.replaceChildren();
+   for(const item of matches.slice(0,40)){
+    const c=item.contact,card=el("article",undefined,"cc-board-item cc-board-candidate");
+    card.append(el("strong",c.name),el("small",item.locality||"Local por confirmar"));
+    if(c.contact_policy==="blocked"||c.source_suppressed||c.source_shared_email)
+     card.append(el("small","Contacto condicionado · verificar restrições"));
+    const open=el("button","Abrir ficha","cc-neutral");open.type="button";
+    open.onclick=()=>emit("caravela-board-open-contact",{id:c.id});
+    card.append(open);promoterList.append(card);
+   }
+   if(!matches.length)promoterList.append(el("p","Sem promotores neste filtro.","cc-lead"));
+  };
+  promoterSearch.oninput=drawPromoters;
+  promoters.addEventListener("toggle",()=>{if(promoters.open)drawPromoters()});
+  promoters.append(promoterSearch,promoterCount,promoterList);body.append(promoters);
   const orphan=result.undated.filter(x=>!artist.value||artist.value==="all"||
     (artist.value==="wildchains"&&/wildchains/i.test(x.artist||""))||
     (artist.value==="devil"&&/devil/i.test(x.artist||"")));
@@ -284,6 +327,11 @@
    const option=el("option",n);option.value=v;choose.append(option);
   }
   choose.value=radarArtist;
+  const location=el("select");location.setAttribute("aria-label","Território da pesquisa");
+  for(const [v,n] of [["PT","Portugal"],["ES","Espanha"],["FR","França"]]){
+   const option=el("option",n);option.value=v;location.append(option);
+  }
+  location.value=radarTerritory;
   const run=el("button",searching?"A pesquisar…":"Pesquisar festivais novos","cc-primary");
   run.type="button";run.disabled=searching;
   const feedback=el("p",remoteSearchStatus,"cc-lead");
@@ -293,7 +341,7 @@
    if(!api){remoteSearchStatus="Pesquisa externa indisponível. Verificar serviço de pesquisa no Preview.";renderExternalRadar(year);return}
    searching=true;remoteSearchStatus="A pesquisar fontes externas…";renderExternalRadar(year);
    try{
-    const response=await api.search(year,radarArtist);
+    const response=await api.search(year,radarArtist,radarTerritory);
     const result=await response.json();
     if(!response.ok||!result.ok){
      const message=result.error==="search_provider_not_configured"?
@@ -302,7 +350,7 @@
      throw Error(message);
     }
     externalResults=result.items||[];
-    externalKey=year+"|"+radarArtist;
+    externalKey=year+"|"+radarArtist+"|"+radarTerritory;
     remoteSearchStatus=externalResults.length+" resultados externos, sujeitos a verificação. "+
      "Consulta sempre a fonte antes de guardar um festival.";
    }catch(e){
@@ -312,12 +360,17 @@
   };
   run.onclick=()=>void runSearch();
   choose.onchange=()=>{radarArtist=choose.value;remoteSearchStatus="Pesquisa deste artista ainda não executada.";renderExternalRadar(year)};
-  tools.append(el("label","Artista"),choose,run);
-  radar.append(tools,feedback);
+  location.onchange=()=>{radarTerritory=location.value;remoteSearchStatus="Pesquisa deste território ainda não executada.";renderExternalRadar(year)};
+  const config=el("p",remoteEnabled===false?
+   "Pesquisa ao vivo por ativar: configurar CONTROL_BRAVE_SEARCH_API_KEY como Secret no Cloudflare Preview. Sem chave, apenas as fontes já verificadas aparecem.":
+   remoteEnabled===true?"Pesquisa externa configurada · 3 consultas por pesquisa, com revisão humana.":
+   "A verificar a ligação de pesquisa externa…","cc-lead cc-radar-config");
+  tools.append(el("label","Artista"),choose,el("label","Território"),location,run);
+  radar.append(tools,config,feedback);
   const engine=window.CaravelaBookingRadar;
   if(!engine){radar.append(el("p","Radar indisponível.","cc-lead"));return}
   const discovery=engine.discover({contacts:allContacts,actions:allActions,bookings:allBookings,
-   external:externalKey===year+"|"+radarArtist?externalResults:[],year,artist:radarArtist});
+   external:externalKey===year+"|"+radarArtist+"|"+radarTerritory?externalResults:[],year,artist:radarArtist});
   const groups=el("div",undefined,"cc-booking-radar-results");
   for(const [label,items] of [
    ["Festivais externos com edição identificada",discovery.curated||[]],
@@ -345,6 +398,17 @@
    panel.append(cards);groups.append(panel);
   }
   radar.append(groups);
+ }
+ async function checkRadarConnection(){
+  if(remoteStatusChecked)return;
+  remoteStatusChecked=true;
+  try{
+   const transport=window.CaravelaFestivalSearch;
+   if(!transport)throw Error("provider_transport_missing");
+   const response=await transport.status(),body=await response.json();
+   remoteEnabled=response.ok&&body.ok?!!body.configured:false;
+  }catch(error){remoteEnabled=false}
+  if(loaded)renderExternalRadar(Number(years.value));
  }
  async function load(){
   const t=window.CaravelaNativeTransport;if(!t){failed="Inicia sessão para consultar o Booking.";render();return}
@@ -380,6 +444,7 @@
       ". Os concertos já registados no Booking continuam visíveis.";
    }
    loaded=true;failed="";render();
+   void checkRadarConnection();
   }catch(e){failed="Não foi possível carregar. "+e.message;render()}
   finally{busy=false}
  }

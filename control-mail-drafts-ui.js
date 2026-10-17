@@ -26,7 +26,10 @@
  const grid=mk("div",undefined,"cc-drafts-grid");
  const editor=mk("div",undefined,"cc-drafts-editor");editor.hidden=true;
  panel.append(header,status,controls,grid,editor);
- booking.querySelector(".cc-panel-head")?.after(panel);
+ const drawer=mk("details",undefined,"cc-drafts-drawer");
+ const summary=mk("summary","Preparar emails · abrir rascunhos");
+ drawer.append(summary,panel);
+ booking.querySelector(".cc-panel-head")?.after(drawer);
  let rows=[],editing=null,loading=false,editingDirty=false,sourceContext=null;
  const transport=()=>window.CaravelaDraftTransport;
  const action=(label,onClick,cls="cc-neutral")=>{
@@ -67,6 +70,8 @@
    const response=await transport().list(),data=await response.json();
    if(!response.ok||!data.ok)throw Error(data.error||"Lista indisponível");
    rows=data.drafts||[];
+   summary.textContent="Preparar emails · "+rows.filter(x=>x.status==="draft").length+
+     " rascunhos pendentes (nenhum envio automático)";
    status.textContent=rows.filter(x=>x.status==="draft").length+
      " rascunho(s) em preparação · cifrados, recuperáveis e ainda não enviados.";
    render();
@@ -92,6 +97,7 @@
   }catch{}
  }
  function openEditor(draft=null,prefill={}){
+  drawer.open=true;
   if(!abandon())return;
   editing=draft;editingDirty=false;
   const fresh=draft||{

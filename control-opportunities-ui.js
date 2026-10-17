@@ -38,8 +38,8 @@
  const create=mk("button","+ Guardar oportunidade","cc-primary");create.type="button";
  const reload=mk("button","Atualizar registos","cc-neutral");reload.type="button";
  tools.append(query,create,reload);box.append(tools);
- const sources=mk("section",undefined,"cc-radar-sources");
- sources.append(mk("h3","Fontes para procurar"));
+ const sources=mk("details",undefined,"cc-radar-sources cc-radar-source-drawer");
+ sources.append(mk("summary","Fontes oficiais para investigar · "+official.length+" referências"));
  const sourceList=mk("div",undefined,"cc-radar-grid");sources.append(sourceList);
  const tracked=mk("section",undefined,"cc-radar-tracked");
  tracked.append(mk("h3","Atualmente abertas · com verificação recente"));
@@ -62,6 +62,7 @@
  }
  function render(){
   const q=search();sourceList.replaceChildren();trackedList.replaceChildren();inactiveList.replaceChildren();
+  if(q)sources.open=true;
   const matches=official.filter(s=>includes([s.title,s.provider,s.note,s.tags].join(" "),q));
   for(const source of matches){
    const card=mk("article",undefined,"cc-radar-item");

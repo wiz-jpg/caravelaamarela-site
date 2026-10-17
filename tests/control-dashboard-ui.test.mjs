@@ -43,7 +43,7 @@ test("Preview loads cache-busted current assets and never modifies main",()=>{
  assert.match(html,/control-native-ui\.js\?v=20261017deletefix1/);
  assert.match(html,/control-review-tasks-ui\.js\?v=20261016atomic1/);
  assert.match(html,/control-native\.css\?v=20261016focus1/);
- assert.match(html,/control-mail-drafts-ui\.js\?v=20261016drafts1/);
+ assert.match(html,/control-mail-drafts-ui\.js\?v=20261017workflow3/);
  assert.match(html,/noindex,nofollow/);
 });
 
@@ -85,8 +85,8 @@ test("one-window Zoho workflow uses a single human-approved operation",()=>{
 test("year-based booking and opportunities dashboard assets are loaded",()=>{
  const html=get("crm-control.html"),app=get("control-app.js");
  assert.match(html,/control-booking-board\.js\?v=20261017closed3/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017closed3/);
- assert.match(html,/control-opportunities-ui\.js\?v=20261017focus2/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017workflow3/);
+ assert.match(html,/control-opportunities-ui\.js\?v=20261017workflow3/);
  assert.match(app,/data-view="opportunities"/);
  assert.match(app,/\["opportunities", "Oportunidades"/);
  assert.match(get("control-native-ui.js"),/cc-booking-advanced/);
@@ -116,7 +116,7 @@ test("automatic action review is visible on Inicio and only opens a manual propo
  const html=get("crm-control.html"),ui=get("control-auto-review-ui.js"),
    native=get("control-native-ui.js");
  assert.match(html,/control-auto-review\.js\?v=20261017autowork1/);
- assert.match(html,/control-auto-review-ui\.js\?v=20261017autowork1/);
+ assert.match(html,/control-auto-review-ui\.js\?v=20261017workflow3/);
  assert.match(ui,/t\.request\("archive","GET"\)/);
  assert.match(ui,/t\.request\("booking","GET"\)/);
  assert.match(ui,/caravela-auto-review-open/);
@@ -136,14 +136,14 @@ test("historical actions may enter proposed operational lanes without mutating d
  assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
- assert.match(html,/control-booking-board\.css\?v=20261017pressscope2/);
+ assert.match(html,/control-booking-board\.css\?v=20261017workflow3/);
  assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });
 
 
 test("press grouping, published agenda and one-click triage exist in the Booking UI",()=>{
  const html=get("crm-control.html"),ui=get("control-booking-board-ui.js");
- assert.match(html,/control-press-geography\.js\?v=20261017pressscope2/);
+ assert.match(html,/control-press-geography\.js\?v=20261017workflow3/);
  assert.match(ui,/booking_reviews/);
  assert.match(ui,/reviewItem\(item,key,"confirmed"\)/);
  assert.match(ui,/reviewItem\(item,move\.value,"moved"\)/);
@@ -160,14 +160,14 @@ test("Booking reports the public agenda years and one-click access to actual Fec
  assert.match(ui,/Concertos já realizados/);
  assert.match(ui,/Não foi possível ler a agenda pública/);
  assert.match(ui,/Outros registos/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017closed3/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017workflow3/);
 });
 
 
 test("press directory is collapsible by location and, for Portugal, by district; each has CSV",()=>{
  const html=get("crm-control.html"),ui=get("control-press-ui.js"),
   geo=get("control-press-geography.js"),csv=get("control-press-csv.js");
- assert.match(html,/control-press-geography\.js\?v=20261017pressscope2/);
+ assert.match(html,/control-press-geography\.js\?v=20261017workflow3/);
  assert.match(html,/control-press-csv\.js\?v=20261017pressscope2/);
  assert.match(html,/control-press-ui\.js\?v=20261017pressscope2/);
  assert.match(ui,/mk\("details",undefined,nested\?/);
@@ -254,7 +254,7 @@ test("closed concerts are in their native lanes, past styled grey, radar below b
 test("Culture editorial reach, verified districts and the rest of Portugal are separate sections",()=>{
  const geo=get("control-press-geography.js"),editorial=get("control-press-editorial.js"),
   ui=get("control-press-ui.js"),html=get("crm-control.html");
- assert.match(html,/control-press-editorial\.js\?v=20261017pressscope2/);
+ assert.match(html,/control-press-editorial\.js\?v=20261017workflow3/);
  assert.match(geo,/key:"culture",label:"Cultura portuguesa"/);
  assert.match(geo,/key:"pt-unspecified",label:"Portugal — sem distrito especificado"/);
  assert.match(editorial,/musicfest pt/);
@@ -269,5 +269,68 @@ test("home press summaries link to Culture and district sections instead of copy
  assert.match(home,/caravela-press-focus-region/);
  assert.match(ui,/function pressTargets\(event\)/);
  assert.match(ui,/caravela-press-focus-region/);
- assert.match(get("crm-control.html"),/control-home-focus-ui\.js\?v=20261017pressscope2/);
+ assert.match(get("crm-control.html"),/control-home-focus-ui\.js\?v=20261017workflow3/);
+});
+
+
+test("daily Zoho messages are visible, not buried under historical action reviews",()=>{
+ const home=get("control-home-focus-ui.js"),auto=get("control-auto-review-ui.js");
+ assert.match(home,/columns\.prepend\(zohoQueue\)/);
+ assert.match(home,/if\(zohoQueue\)/);
+ assert.match(auto,/cc-auto-review-drawer/);
+ assert.match(auto,/Arquivo histórico por validar/);
+ assert.match(auto,/não urgências confirmadas/);
+ assert.doesNotMatch(auto,/Revisões vencidas/);
+});
+test("booking foregrounds actionable lanes and Fechados, not hundreds of historic cards",()=>{
+ const board=get("control-booking-board-ui.js"),css=get("control-booking-board.css");
+ assert.match(board,/cc-board-focus-rail/);
+ assert.match(board,/cc-board-secondary/);
+ assert.match(board,/Planeamento e arquivo/);
+ assert.match(board,/const cap=key==="confirmed"\?12:6/);
+ assert.match(board,/Ver contexto e origem/);
+ assert.match(board,/Promotores · /);
+ assert.match(css,/\.cc-board-focus-rail/);
+ assert.match(css,/\.cc-board-card-meta/);
+});
+test("empty drafts and static opportunity source catalogs are collapsed by default",()=>{
+ const drafts=get("control-mail-drafts-ui.js"),radar=get("control-opportunities-ui.js");
+ assert.match(drafts,/cc-drafts-drawer/);
+ assert.match(drafts,/drawer\.open=true/);
+ assert.match(radar,/cc-radar-source-drawer/);
+ const html=get("crm-control.html");
+ for(const asset of [
+  "control-booking-board-ui.js","control-home-focus-ui.js",
+  "control-auto-review-ui.js","control-mail-drafts-ui.js",
+  "control-opportunities-ui.js","control-vault-ui.js"
+ ])assert.match(html,new RegExp(asset.replaceAll(".","\\.")+"\\?v=20261017workflow3"));
+});
+test("live festival radar displays provider readiness and supports PT, ES, FR",()=>{
+ const ui=get("control-booking-board-ui.js"),transport=get("control-vault-ui.js"),
+  backend=get("control-festival-search.js");
+ assert.match(ui,/checkRadarConnection/);
+ assert.match(ui,/radarTerritory="PT"/);
+ assert.match(ui,/CONTROL_BRAVE_SEARCH_API_KEY/);
+ assert.match(transport,/status\(\)\{return api\("radar\/festivals\?status=1"\)\}/);
+ assert.match(backend,/queries_succeeded/);
+ assert.match(backend,/territory/);
+ assert.doesNotMatch(backend,/site:pt/);
+});
+
+
+test("administrative AÇÕES table lives in Dados e backups, not daily Booking",()=>{
+ const app=get("control-app.js");
+ assert.match(app,/viewMap\.get\("sources"\)\.appendChild\(oldBooking\)/);
+ assert.doesNotMatch(app,/viewMap\.get\("booking"\)\.appendChild\(oldBooking\)/);
+ const css=get("control-booking-board.css");
+ assert.match(css,/#cc-view-booking>\.cc-panel-head/);
+});
+test("Portuguese-sheet press provenance never overwrites a contact source address",()=>{
+ const editorial=get("control-press-editorial.js"),geography=get("control-press-geography.js");
+ assert.match(editorial,/portugueseCatalogue/);
+ assert.match(editorial,/districtCatalogue/);
+ assert.match(editorial,/confirmedPortuguese/);
+ assert.match(geography,/country-unknown/);
+ assert.match(geography,/country-multi/);
+ assert.match(geography,/Portugal — sem distrito especificado/);
 });

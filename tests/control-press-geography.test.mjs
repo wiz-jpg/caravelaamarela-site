@@ -93,3 +93,18 @@ test("Portuguese media with uncertain district stay separate from regional and f
  assert.equal(result.some(g=>g.key==="district:braga"&&g.rows[0].name==="O Amarense"),true);
  assert.equal(result.some(g=>g.key==="country:franca"),true);
 });
+
+
+test("unknown countries never masquerade as foreign countries or as proven Portuguese press",()=>{
+ assert.equal(region({name:"Meio não identificado",kind:"press",country:"Por confirmar"}).key,"country-unknown");
+ assert.equal(region({name:"Meio não identificado",kind:"press",country:""}).key,"country-unknown");
+ assert.equal(region({name:"Meio sem país",kind:"press",country:"Estados Unidos / Reino Unido"}).key,"country-multi");
+ assert.equal(region({name:"Meio de Lisboa",kind:"press",city:"Lisboa",country:"Brasil"}).key,"country:brasil");
+});
+test("catalogue proves Portuguese origin for unique press names without fabricating a district",()=>{
+ const editor=ctx.CaravelaPressEditorial;
+ assert.equal(editor.confirmedPortuguese({name:"Ruído Sonoro",kind:"press",country:"Por confirmar"}),true);
+ assert.equal(region({name:"Ruído Sonoro",kind:"press",country:"Por confirmar"}).key,"pt-unspecified");
+ assert.equal(region({name:"O Amarense",kind:"press",country:"Por confirmar"}).key,"district:braga");
+ assert.equal(region({name:"Meio qualquer",kind:"press",country:"Por confirmar"}).key,"country-unknown");
+});

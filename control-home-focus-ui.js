@@ -28,11 +28,15 @@
   card.append(heading,count,list);columns.append(card);slots[id]={count,list};
  }
  view.querySelector(".cc-panel-head")?.after(panel);
+ // Incoming Zoho messages are genuine fresh signals and must not be hidden
+ // behind the archive. Preserve the existing queue component and callbacks.
+ const zohoQueue=view.querySelector(".cc-review-tasks-home");
+ if(zohoQueue)columns.prepend(zohoQueue);
  const archiveDrawer=mk("details",undefined,"cc-home-everything");
  archiveDrawer.append(mk("summary","Mais tarefas: respostas Zoho, arquivo e outras áreas"));
  // Existing modules are rearranged after scripts have initialised; their
  // asynchronous status updates continue to target the very same DOM nodes.
- for(const selector of [".cc-review-tasks-home",".cc-native-dashboard",".cc-dashboard-attention"]){
+ for(const selector of [".cc-native-dashboard",".cc-dashboard-attention"]){
   const node=view.querySelector(selector);if(node)archiveDrawer.append(node);
  }
  panel.after(archiveDrawer);
@@ -48,7 +52,13 @@
   return card;
  }
  function fill(id,values,empty){const slot=slots[id];slot.list.replaceChildren();slot.count.textContent=values.length?values.length+" itens":"";
-  for(const v of values.slice(0,5))slot.list.append(item(...v));
+  const max=id==="press"?2:3;
+  for(const v of values.slice(0,max))slot.list.append(item(...v));
+  if(values.length>max){
+   const more=linkTo(id==="follow"||id==="now"?"booking":id==="press"?"press":"opportunities",
+    "Ver todos ("+(values.length-max)+" restantes)");
+   more.classList.add("cc-essential-more");slot.list.append(more);
+  }
   if(!values.length)slot.list.append(mk("p",empty,"cc-lead"));
  }
  function pressSection(){
@@ -64,6 +74,7 @@
    if(campaign.kind==="release")items.push([campaign.title+" · "+campaign.artist,
     "Lançamento "+campaign.event_date+" · "+campaign.next_step,"press"]);
   }
+  // The first two are actionable upcoming gigs; the rest remain in Imprensa.
   fill("press",items,"Sem ações de imprensa registadas para já.");
  }
  async function load(){
@@ -84,10 +95,11 @@
    for(const c0 of c.records||[])merged.set(c0.id,{...merged.get(c0.id),...c0});
    const contactsAll=[...merged.values()],stamp=today();
    const follow=live.filter(x=>["sent_verified","contact_reported","reply_reported","negotiating"].includes(x.stage))
+     .filter(x=>x.due_date||["reply_reported","negotiating"].includes(x.stage))
      .sort((a,b)=>(a.due_date||"9999").localeCompare(b.due_date||"9999"))
      .map(x=>[x.contact_name+" · "+x.artist,
       (x.due_date?"Rever "+x.due_date:"Prazo por definir")+" · "+(x.next_step||"Verificar resposta"),"booking"]);
-   fill("follow",follow,"Sem follow-ups operacionais. As respostas Zoho por rever estão em «Mais tarefas».");
+   fill("follow",follow,"Sem follow-ups operacionais confirmados. As respostas Zoho por rever estão em «Mais tarefas».");
    const board=window.CaravelaBookingBoard?.classify({
     bookings:live,contacts:contactsAll,actions:arc.actions||[],year:2027,today:stamp
    });

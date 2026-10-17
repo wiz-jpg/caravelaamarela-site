@@ -105,11 +105,15 @@
   // Search external festival pages only on explicit operator action.
   // Credentials remain exclusively in the server's environment.
   window.CaravelaFestivalSearch={
-    search(year,artist){
+    status(){return api("radar/festivals?status=1")},
+    search(year,artist,territory="PT"){
       if(!Number.isInteger(year)||year<2026||year>2031||
-        !["WILDCHAINS","Devil of a Woman"].includes(artist))
+        !["WILDCHAINS","Devil of a Woman"].includes(artist)||
+        !["PT","ES","FR"].includes(territory))
        throw Error("Parâmetros de pesquisa inválidos.");
-      return api("radar/festivals?"+new URLSearchParams({year:String(year),artist}).toString());
+      return api("radar/festivals?"+new URLSearchParams({
+       year:String(year),artist,territory
+      }).toString());
     }
   };
   window.CaravelaNativeTransport={

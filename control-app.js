@@ -134,7 +134,7 @@
     oldBooking.className="cc-archive-toggle";
     oldBooking.innerHTML='<summary>Tabela original de AÇÕES <small>Apenas consulta; não são propostas nativas</small></summary>';
     oldBooking.appendChild(operational);
-    viewMap.get("booking").appendChild(oldBooking);
+    viewMap.get("sources").appendChild(oldBooking);
   }
   const artistsEmpty = document.createElement("div");
   artistsEmpty.id = "cc-artists-empty";

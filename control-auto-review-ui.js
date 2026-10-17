@@ -10,14 +10,18 @@
  const list=mk("div",undefined,"cc-auto-review-list");
  const expand=mk("button","Ver mais","cc-neutral");expand.type="button";
  panel.append(note,summary,list,expand);
- const other=home.querySelector(".cc-essential-home")||home.querySelector(".cc-panel-head");
- other?.after(panel);
+ const drawer=mk("details",undefined,"cc-auto-review-drawer");
+ const trigger=mk("summary","Arquivo histórico por validar · não é uma lista de urgências confirmadas");
+ drawer.append(trigger,panel);
+ const other=home.querySelector(".cc-home-everything")||home.querySelector(".cc-essential-home")||
+  home.querySelector(".cc-panel-head");
+ other?.after(drawer);
  let shown=6,items=[],revision=0,working=false;
  const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Lisbon",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
  function draw(){
   summary.replaceChildren();list.replaceChildren();
-  for(const [name,value] of [["Revisões vencidas",items.filter(x=>x.when==="overdue").length],
-    ["Para rever hoje",items.filter(x=>x.when==="today").length],
+  for(const [name,value] of [["Datas antigas por confirmar",items.filter(x=>x.when==="overdue"||x.when==="stale").length],
+    ["Data histórica de hoje · validar",items.filter(x=>x.when==="today").length],
     ["Sem data fiável",items.filter(x=>x.when==="date_missing").length]]){
     const b=mk("div",undefined,"cc-auto-review-metric");
     b.append(mk("strong",value),mk("small",name));summary.append(b);
@@ -57,6 +61,8 @@
    const resultData=engine.generate({actions:archive.actions||[],contacts:[...byId.values()],
     bookings:booking.records||[],today:today(),limit:150});
    items=resultData.review;draw();
+   trigger.textContent="Arquivo por validar · "+resultData.total+
+    " sugestões históricas (não urgências confirmadas)";
    note.textContent=resultData.total+" sugestões do histórico (não são envios autorizados). "+
      resultData.skipped.blocked+" bloqueadas pelas políticas de contacto; "+
      resultData.skipped.duplicate+" repetidas ou já operacionais. "+

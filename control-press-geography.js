@@ -12,12 +12,23 @@
  const portugal=new Set(["portugal","pt","portuguesa","portuguese"]);
  function region(row){
   const country=norm(row?.country);
-  if(country&&!portugal.has(country))return {key:"country:"+country,label:String(row.country).trim()};
-  if(root.CaravelaPressEditorial?.national(row))
-   return {key:"culture",label:"Cultura portuguesa"};
+  if(root.CaravelaPressEditorial?.national(row)&&
+    (!country||portugal.has(country)||["por confirmar","nao identificado",
+      "desconhecido","unknown","a confirmar"].includes(country)))
+    return {key:"culture",label:"Cultura portuguesa"};
   const place=district(row);
   if(place)return {key:"district:"+norm(place),label:place};
-  return {key:"pt-unspecified",label:"Portugal — sem distrito especificado"};
+  if(country&&portugal.has(country))
+   return {key:"pt-unspecified",label:"Portugal — sem distrito especificado"};
+  if(!country||["por confirmar","nao identificado","desconhecido","unknown","a confirmar",
+   "n a","na"].includes(country)){
+   if(root.CaravelaPressEditorial?.confirmedPortuguese(row))
+    return {key:"pt-unspecified",label:"Portugal — sem distrito especificado"};
+   return {key:"country-unknown",label:"País por confirmar"};
+  }
+  if(/[\\/;,]/.test(String(row?.country||"")))
+   return {key:"country-multi",label:"Cobertura em vários países"};
+  return {key:"country:"+country,label:String(row.country).trim()};
  }
  function group(rows){
   const by=new Map();
@@ -26,7 +37,8 @@
    by.get(g.key).rows.push(row);
   }
   const order=x=>x.key==="culture"?0:x.key.startsWith("district:")?1:
-   x.key==="pt-unspecified"?2:x.key.startsWith("country:")?3:4;
+   x.key==="pt-unspecified"?2:x.key.startsWith("country:")?3:
+   x.key==="country-multi"?4:5;
   return [...by.values()].sort((a,b)=>order(a)-order(b)||
     a.label.localeCompare(b.label,"pt-PT")).map(g=>({...g,
     rows:g.rows.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),"pt-PT"))}));
@@ -112,7 +124,9 @@
  }
  function district(row){
   const country=norm(row?.country),r=norm(row?.region),city=norm(row?.city);
-  if(country&&!portugal.has(country))return null;
+  if(country&&!portugal.has(country)&&
+    !(["por confirmar","nao identificado","desconhecido","unknown","a confirmar"].includes(country)&&
+      root.CaravelaPressEditorial?.confirmedPortuguese(row)))return null;
   if(["acores","açores","regiao autonoma dos acores"].includes(r))return "Açores";
   if(["madeira","regiao autonoma da madeira"].includes(r))return "Madeira";
   if(braga.has(city)||r==="braga")return "Braga";

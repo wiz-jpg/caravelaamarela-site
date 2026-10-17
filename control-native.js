@@ -403,8 +403,8 @@ export async function nativeExport(env){
   if((count?.n||0)>15000)return fail("export_event_limit",409);
   const result=await env.ZOHO_DB.prepare(
     "SELECT id,entity_id,artist_name,operation,decision,rationale,evidence_json,created_ms "+
-    "FROM control_decision_events WHERE operation IN (?,?,?,?,?) ORDER BY created_ms ASC,rowid ASC LIMIT 15001"
-  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP,OPPORTUNITY_OP,PRESS_OP).all();
+    "FROM control_decision_events WHERE operation IN (?,?,?,?,?,?) ORDER BY created_ms ASC,rowid ASC LIMIT 15001"
+  ).bind(CONTACT_OP,BOOKING_OP,FINANCE_OP,OPPORTUNITY_OP,PRESS_OP,REVIEW_OP).all();
   const events=result.results||[];
   if(events.length!==(count?.n||0))return fail("export_incomplete",503);
   return out({schema:"caravela.crm.native-backup.v1",exported_at:new Date().toISOString(),

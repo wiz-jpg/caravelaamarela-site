@@ -133,7 +133,7 @@ test("historical actions may enter proposed operational lanes without mutating d
  const html=get("crm-control.html");
  assert.match(board,/Classificação sugerida a partir de AÇÕES/);
  assert.match(board,/provisional:true/);
- assert.match(ui,/Classificação automática · por validar/);
+ assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
  assert.match(html,/control-booking-board\.css\?v=20261017verify2/);

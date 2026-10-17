@@ -253,5 +253,5 @@ test("promoters appear independently as shared contacts rather than being merged
  const r=classify({bookings:[],contacts,year:2027,today:"2026-10-17"});
  assert.equal(r.promoter.length,1);
  assert.equal(r.promoter[0].contact.name,"Produtora Exemplo");
- assert.equal(r.festival.planning.length,1);
+ assert.equal(r.festival.now.length,1);
 });

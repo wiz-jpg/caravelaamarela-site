@@ -313,3 +313,19 @@
 #control-app .cc-booking-radar-card-actions>*{font-size:11px;padding:8px;border-radius:8px;border:1px solid #7b9686;color:#fff;background:#1f3535;text-decoration:none}
 @media(max-width:600px){#control-app .cc-published-roster,#control-app .cc-booking-fit-radar{padding:11px}
  #control-app .cc-announced-grid,#control-app .cc-booking-radar-grid{grid-template-columns:1fr}}
+
+/* Closed gigs: planned first; played dates remain in Fechados, lower and grey. */
+#control-app .cc-board-lane-confirmed .cc-board-past{
+ background:#30383b!important;border-color:#626b70!important;color:#c0c8ca!important;
+ filter:saturate(.32);opacity:.88
+}
+#control-app .cc-board-lane-confirmed .cc-board-past *{color:#c0c8ca!important}
+#control-app .cc-board-past-heading{
+ color:#bac1c4;border-top:1px solid #667275;padding:11px 2px 5px;
+ font-size:11px;font-weight:800;letter-spacing:.02em
+}
+/* Source details collapsed in favor of the actual board; radar lives after. */
+#control-app details.cc-booking-public-source{background:transparent;border:1px solid #4b665b;padding:6px 11px;margin:8px 0}
+#control-app details.cc-booking-public-source>summary{cursor:pointer;font-size:11px;color:#b9d0bf}
+#control-app .cc-booking-fit-radar{margin:24px 0 12px;border-color:#88a197}
+#control-app .cc-booking-radar-tools button{font-size:12px;padding:10px 13px}

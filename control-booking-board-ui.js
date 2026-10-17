@@ -21,15 +21,16 @@
  const refresh=el("button","Atualizar","cc-neutral");refresh.type="button";
  const create=el("button","+ Oportunidade","cc-primary");create.type="button";
  const body=el("div",undefined,"cc-booking-board-body"),status=el("p","","cc-lead");
- const publishedInfo=el("div",undefined,"cc-booking-public-source");
- const confirmedIndex=el("section",undefined,"cc-published-roster");
+ const publishedInfo=el("details",undefined,"cc-booking-public-source");
  const radar=el("section",undefined,"cc-booking-fit-radar");
  status.setAttribute("role","status");status.setAttribute("aria-live","polite");
  controls.append(yearLabel,artistLabel,refresh,create);
- head.append(intro,controls);section.append(head,status,publishedInfo,confirmedIndex,radar,body);
+ head.append(intro,controls);section.append(head,status,publishedInfo,body,radar);
  view.querySelector(".cc-panel-head")?.after(section);
  let allBookings=[],allContacts=[],allActions=[],allReviews=[],published=[],loaded=false,busy=false,failed="";
  let publicAgendaStatus="A confirmar leitura da agenda pública…";
+ let externalResults=[],remoteSearchStatus="Pesquisa externa ainda não executada.",searching=false;
+ let radarArtist="WILDCHAINS",externalKey="";
  let saving=false;
  const names={festival:{ongoing:"On going / Follow-up",late:"A contactar · em atraso",
   now:"A contactar agora",soon:"A contactar brevemente",planning:"Por calendarizar",
@@ -50,7 +51,8 @@
  }
  function rowCard(item,key){
   const r=item.record,c=item.contact;
-  const card=el("article",undefined,"cc-board-item "+(r?"cc-board-real":"cc-board-candidate"));
+  const card=el("article",undefined,"cc-board-item "+(r?"cc-board-real":"cc-board-candidate")+
+   (item.past&&key==="confirmed"?" cc-board-past":""));
   const title=el("strong",item.announcement?.title||c?.name||r?.contact_name||"Entidade por confirmar","cc-board-item-title");
   card.append(title,el("span",rowArtists(item),"cc-board-artist"));
   const event=r?.subject||"",location=item.locality||"Local por confirmar";
@@ -61,13 +63,14 @@
   if(item.reviewed)card.append(el("span","Triagem validada pela equipa","cc-board-verified"));
   if(item.announcement){
    const e=item.announcement;
-   card.append(el("small","Data anunciada: "+e.date),el("small","Local: "+(e.venue||"a confirmar")));
+   card.append(el("small",(item.past?"Já realizado: ":"Data anunciada: ")+e.date),
+    el("small","Local: "+(e.venue||"a confirmar")));
    card.append(el("small","Agenda pública · confirmação comercial e pagamentos não registados"));
    return card;
   }
   if(r){
    const date=r.event_date||"";
-   if(date)card.append(el("small","Concerto: "+date));
+   if(date)card.append(el("small",(item.past&&key==="confirmed"?"Já realizado: ":"Concerto: ")+date));
    if(["ongoing","planning","suggestions"].includes(key)&&r.next_step)
     card.append(el("p",r.next_step,"cc-board-action-label"));
    if(r.due_date&&["ongoing","planning","suggestions"].includes(key))
@@ -175,122 +178,13 @@
  }
  function render(){
   const api=window.CaravelaBookingBoard;
-  body.replaceChildren();publishedInfo.replaceChildren();confirmedIndex.replaceChildren();radar.replaceChildren();
+  body.replaceChildren();publishedInfo.replaceChildren();radar.replaceChildren();
   if(!loaded){
    status.textContent=failed||"A carregar o Booking e as fichas de contacto…";return
   }
   const year=Number(years.value);intro.querySelector("h2").textContent="Booking "+year;
-  const totals=new Map();
-  for(const e of published)if(/^20\d{2}-\d{2}-\d{2}$/.test(e?.date||"")){
-   const target=Number(e.date.slice(0,4));totals.set(target,(totals.get(target)||0)+1);
-  }
-  const shown=totals.get(year)||0, total=published.length;
-  publishedInfo.append(el("strong","Agenda pública · "+shown+" concerto(s) anunciado(s) em "+year));
+  publishedInfo.append(el("summary","Fontes de concertos consultadas"));
   publishedInfo.append(el("p",publicAgendaStatus,"cc-lead"));
-  if(!shown&&total){
-   const otherYears=[...totals.keys()].filter(y=>y!==year).sort((a,b)=>b-a);
-   publishedInfo.append(el("p","Os concertos de "+otherYears.map(y=>y+" ("+totals.get(y)+")").join(", ")+
-    " não pertencem à época "+year+". A agenda não é um registo completo de todos os contratos.","cc-lead"));
-   for(const targetYear of otherYears){
-    if(![2026,2027,2028,2029,2030,2031].includes(targetYear))continue;
-    const b=el("button","Ver Fechados "+targetYear+" · "+totals.get(targetYear),"cc-neutral");
-    b.type="button";b.onclick=()=>{years.value=String(targetYear);render()};
-    publishedInfo.append(b);
-   }
-  }
-  // Pinned announced roster gigs independently of the year currently planned.
-  // The public calendar is evidence of a published date, not commercial settlement.
-  confirmedIndex.append(el("h3","Concertos já anunciados · WILDCHAINS e Devil"));
-  const eligiblePublished=published.filter(e=>e?.date&&["wild","devil","both"].includes(e.artist)&&
-    (artist.value==="all"||artist.value==="both"&&e.artist==="both"||
-     artist.value==="wildchains"&&["wild","both"].includes(e.artist)||
-     artist.value==="devil"&&["devil","both"].includes(e.artist)))
-   .sort((a,b)=>a.date.localeCompare(b.date));
-  const announcedYearCounts=new Map();
-  for(const e of eligiblePublished){
-   const y=e.date.slice(0,4);announcedYearCounts.set(y,(announcedYearCounts.get(y)||0)+1);
-  }
-  confirmedIndex.append(el("p",
-    (eligiblePublished.length?eligiblePublished.length+" datas públicas carregadas: "+
-     [...announcedYearCounts].map(([y,n])=>y+" · "+n).join(" / "):
-     "Ainda não há datas públicas carregadas para este filtro.")+
-    ". «Anunciado» não significa cachet ou contrato registado.","cc-lead"));
-  const announcementDetails=el("details",undefined,"cc-announced-dates");
-  announcementDetails.open=true;
-  announcementDetails.append(el("summary","Ver concertos anunciados ("+eligiblePublished.length+")"));
-  const announcedGrid=el("div",undefined,"cc-announced-grid");
-  for(const event of eligiblePublished){
-   const gig=el("article",undefined,"cc-announced-gig");
-   const city=typeof event.city==="string"?event.city:event.city?.pt||"";
-   gig.append(el("strong",event.title),el("small",event.date+" · "+city),
-    el("small",event.artist==="wild"?"WILDCHAINS":event.artist==="devil"?"Devil of a Woman":"WILDCHAINS + Devil"));
-   const action=el("button","Ver em Fechados "+event.date.slice(0,4),"cc-neutral");
-   action.type="button";action.onclick=()=>{
-    years.value=event.date.slice(0,4);render();
-    const target=body.querySelector(".cc-board-group .cc-board-lane-confirmed");
-    if(target){target.scrollIntoView({behavior:"smooth",block:"center"})}
-   };
-   gig.append(action);announcedGrid.append(gig);
-  }
-  announcementDetails.append(announcedGrid);confirmedIndex.append(announcementDetails);
-  const chooseBand=artist.value==="devil"?"Devil of a Woman":"WILDCHAINS";
-  const radarData=window.CaravelaBookingRadar?.discover({
-   contacts:allContacts,actions:allActions,bookings:allBookings,year,artist:chooseBand,max:12
-  });
-  radar.append(el("h3","Radar de festivais e venues · "+year),
-   el("p","Pesquisa de oportunidades fundamentada em contactos existentes e fontes públicas. "+
-    "Um festival ter edição anunciada não significa que aceite candidaturas. Prioridades sem comprovativo "+
-    "ficam por investigar.","cc-lead"));
-  const radarSelector=el("div",undefined,"cc-booking-radar-tools");
-  const radarArtist=el("select");
-  radarArtist.setAttribute("aria-label","Artista do radar");
-  for(const [key,label] of [["WILDCHAINS","WILDCHAINS"],["Devil of a Woman","Devil of a Woman"]]){
-   const opt=el("option",label);opt.value=key;radarArtist.append(opt);
-  }
-  radarArtist.value=radar.dataset.artist||chooseBand;
-  radarSelector.append(el("label","Adequação para o artista"),radarArtist);radar.append(radarSelector);
-  function showRadar(){
-   radar.querySelector(".cc-booking-radar-results")?.remove();
-   radar.dataset.artist=radarArtist.value;
-   const data=window.CaravelaBookingRadar?.discover({
-    contacts:allContacts,actions:allActions,bookings:allBookings,year,
-    artist:radarArtist.value,max:12
-   });
-   const groups=el("div",undefined,"cc-booking-radar-results");
-   for(const [label,list] of [
-    ["A avaliar prioritariamente",data?.priority||[]],
-    ["Para investigar · dados insuficientes",data?.research||[]],
-    ["Edições públicas verificadas · vagas não confirmadas",data?.editionChecks||[]]
-   ]){
-    const detail=el("details",undefined,"cc-booking-radar-section");detail.open=label==="A avaliar prioritariamente";
-    detail.append(el("summary",label+" · "+list.length));
-    const cards=el("div",undefined,"cc-booking-radar-grid");
-    for(const candidate of list){
-     const card=el("article",undefined,"cc-booking-radar-card");
-     card.append(el("strong",candidate.name),
-      el("small",(candidate.type==="festival"?"Festival":"Venue")+" · "+
-       [candidate.city,candidate.region,candidate.country].filter(Boolean).join(" / ")),
-      el("small",candidate.priority),el("p",candidate.basis),
-      el("small",candidate.next));
-     const actions=el("div",undefined,"cc-booking-radar-card-actions");
-     if(candidate.page&&/^https:\/\//.test(candidate.page)){
-      const a=el("a","Fonte pública","cc-neutral");a.href=candidate.page;
-      a.target="_blank";a.rel="noopener noreferrer";actions.append(a);
-     }
-     const btn=el("button",candidate.contact_id?"Abrir ficha":"Pesquisar contacto","cc-neutral");
-     btn.type="button";btn.onclick=()=>{
-      if(candidate.contact_id)emit("caravela-board-open-contact",{id:candidate.contact_id});
-      else{window.CaravelaControlApp?.openView("contacts");
-       emit("caravela-board-search-contact",{name:candidate.name})}
-     };actions.append(btn);card.append(actions);cards.append(card);
-    }
-    if(!list.length)cards.append(el("p","Sem candidatos com prova suficiente nesta categoria.","cc-lead"));
-    detail.append(cards);groups.append(detail);
-   }
-   radar.append(groups);
-  }
-  radarArtist.onchange=showRadar;showRadar();
-
   if(!api){status.textContent="A organização anual ainda não foi carregada.";return}
   let result;
   try{result=api.classify({bookings:allBookings,contacts:allContacts,actions:allActions,
@@ -311,7 +205,13 @@
     lane.append(h);
     const list=el("div",undefined,"cc-board-lane-list");
     if(!items.length)list.append(el("p","Sem oportunidades classificadas.","cc-board-empty"));
-    for(const item of items.slice(0,30))list.append(rowCard(item,key));
+    let pastHeading=false;
+    for(const item of items.slice(0,30)){
+     if(key==="confirmed"&&item.past&&!pastHeading){
+      list.append(el("p","Concertos já realizados","cc-board-past-heading"));pastHeading=true;
+     }
+     list.append(rowCard(item,key));
+    }
     if(items.length>30){
      const rest=el("details"),summary=el("summary","Mostrar mais "+(items.length-30));
      rest.append(summary);for(const item of items.slice(30))rest.append(rowCard(item,key));
@@ -350,14 +250,6 @@
   if(result.promoter.length>150)promoterList.append(el("p","Mais promotores disponíveis na base completa.","cc-lead"));
   if(!result.promoter.length)promoterList.append(el("p","Sem promotores classificados no arquivo.","cc-lead"));
   promoters.append(promoterList);body.append(promoters);
-  if(!result.festival.confirmed.length&&!result.venue.confirmed.length&&published.length){
-   const years=[...new Set(published.map(x=>x.date?.slice(0,4)))].filter(Boolean).sort();
-   if(years.length){
-    const hint=el("p","A agenda pública contém concertos anunciados em "+years.join(", ")+
-       ". Seleciona o ano correspondente para os ver em Fechados.","cc-lead");
-    promoters.before(hint);
-   }
-  }
   const orphan=result.undated.filter(x=>!artist.value||artist.value==="all"||
     (artist.value==="wildchains"&&/wildchains/i.test(x.artist||""))||
     (artist.value==="devil"&&/devil/i.test(x.artist||"")));
@@ -375,9 +267,84 @@
   }
   const provisional=[...Object.values(result.festival),...Object.values(result.venue)]
    .flat().filter(x=>x.provisional&&visible(x)).length;
+  renderExternalRadar(year);
   status.textContent=visibleTotal+" registos e candidatos · "+provisional+
    " classificados automaticamente para validação · "+orphan.length+
    " sem ano definido. Estados comerciais originais não alterados.";
+ }
+ function renderExternalRadar(year){
+  radar.replaceChildren();
+  const h=el("h3","Radar externo de festivais · "+year);
+  const subtitle=el("p","Pesquisa de festivais que não constam do arquivo nem dos contactos operacionais. "+
+   "A edição, as condições, a programação e a possibilidade de propor uma banda exigem confirmação.","cc-lead");
+  radar.append(h,subtitle);
+  const tools=el("div",undefined,"cc-booking-radar-tools");
+  const choose=el("select");choose.setAttribute("aria-label","Artista para descoberta externa");
+  for(const [v,n] of [["WILDCHAINS","WILDCHAINS"],["Devil of a Woman","Devil of a Woman"]]){
+   const option=el("option",n);option.value=v;choose.append(option);
+  }
+  choose.value=radarArtist;
+  const run=el("button",searching?"A pesquisar…":"Pesquisar festivais novos","cc-primary");
+  run.type="button";run.disabled=searching;
+  const feedback=el("p",remoteSearchStatus,"cc-lead");
+  const runSearch=async()=>{
+   if(searching)return;
+   const api=window.CaravelaFestivalSearch;
+   if(!api){remoteSearchStatus="Pesquisa externa indisponível. Verificar serviço de pesquisa no Preview.";renderExternalRadar(year);return}
+   searching=true;remoteSearchStatus="A pesquisar fontes externas…";renderExternalRadar(year);
+   try{
+    const response=await api.search(year,radarArtist);
+    const result=await response.json();
+    if(!response.ok||!result.ok){
+     const message=result.error==="search_provider_not_configured"?
+      "Pesquisa ao vivo ainda não configurada. É necessária uma chave de API de pesquisa no Cloudflare Preview.":
+      "A pesquisa externa falhou ("+(result.error||response.status)+").";
+     throw Error(message);
+    }
+    externalResults=result.items||[];
+    externalKey=year+"|"+radarArtist;
+    remoteSearchStatus=externalResults.length+" resultados externos, sujeitos a verificação. "+
+     "Consulta sempre a fonte antes de guardar um festival.";
+   }catch(e){
+    externalResults=[];externalKey="";
+    remoteSearchStatus=e.message||"Não foi possível pesquisar.";
+   }finally{searching=false;renderExternalRadar(year)}
+  };
+  run.onclick=()=>void runSearch();
+  choose.onchange=()=>{radarArtist=choose.value;remoteSearchStatus="Pesquisa deste artista ainda não executada.";renderExternalRadar(year)};
+  tools.append(el("label","Artista"),choose,run);
+  radar.append(tools,feedback);
+  const engine=window.CaravelaBookingRadar;
+  if(!engine){radar.append(el("p","Radar indisponível.","cc-lead"));return}
+  const discovery=engine.discover({contacts:allContacts,actions:allActions,bookings:allBookings,
+   external:externalKey===year+"|"+radarArtist?externalResults:[],year,artist:radarArtist});
+  const groups=el("div",undefined,"cc-booking-radar-results");
+  for(const [label,items] of [
+   ["Festivais externos com edição identificada",discovery.curated||[]],
+   ["Novas pistas de pesquisa · identificação por confirmar",discovery.leads||[]]
+  ]){
+   const panel=el("details",undefined,"cc-booking-radar-section");panel.open=true;
+   panel.append(el("summary",label+" · "+items.length));
+   const cards=el("div",undefined,"cc-booking-radar-grid");
+   for(const candidate of items){
+    const card=el("article",undefined,"cc-booking-radar-card");
+    card.append(el("strong",candidate.name),
+     el("small",candidate.city||candidate.source||"Festival por verificar"),
+     el("p",candidate.basis),el("small",candidate.status==="application_closed"?
+       "Candidaturas encerradas para esta edição":"Não há vaga nem proposta confirmada"));
+    const actions=el("div",undefined,"cc-booking-radar-card-actions");
+    if(/^https:\/\//.test(candidate.page||"")){
+     const link=el("a","Consultar fonte");link.href=candidate.page;
+     link.target="_blank";link.rel="noopener noreferrer";actions.append(link);
+    }
+    card.append(actions);cards.append(card);
+   }
+   if(!items.length)cards.append(el("p",label.startsWith("Novas")?
+     "Executa a pesquisa para procurar novas fontes; a pesquisa não está automaticamente ativa.":
+     "Nenhum festival externo pré-verificado ficou fora da base para esta banda e ano.","cc-lead"));
+   panel.append(cards);groups.append(panel);
+  }
+  radar.append(groups);
  }
  async function load(){
   const t=window.CaravelaNativeTransport;if(!t){failed="Inicia sessão para consultar o Booking.";render();return}

@@ -211,7 +211,7 @@ test("multiple archive revisions on same entity and artist choose latest stated 
 });
 
 
-test("the public announced agenda appears in Fechados only for its real season",()=>{
+test("the public announced agenda appears in Fechados of all booking seasons, dated accurately",()=>{
  const announcement={date:"2026-11-08",artist:"wild",title:"FNAC Cascais",
   venue:"CascaiShopping",city:"Cascais"};
  const r2026=classify({bookings:[],contacts:[],published:[announcement],
@@ -222,7 +222,8 @@ test("the public announced agenda appears in Fechados only for its real season",
  assert.equal(r2026.venue.confirmed[0].artists[0],"WILDCHAINS");
  const r2027=classify({bookings:[],contacts:[],published:[announcement],
   year:2027,today:"2026-10-17"});
- assert.equal(r2027.venue.confirmed.length,0);
+ assert.equal(r2027.venue.confirmed.length,1);
+ assert.equal(r2027.venue.confirmed[0].announcement.date,"2026-11-08");
 });
 test("one public festival announcement can apply to both bands without creating native bookings",()=>{
  const event={date:"2026-09-18",artist:"both",title:"Festival de roster",
@@ -257,7 +258,7 @@ test("promoters appear independently as shared contacts rather than being merged
 });
 
 
-test("real public Caravela agenda events populate Fechados in 2026 but not in 2027",()=>{
+test("real public Caravela agenda remains in Fechados 2026 and 2027 without fabricated dates",()=>{
  const data=JSON.parse(readFileSync(new URL("../assets/data/agenda.json",import.meta.url),"utf8"));
  assert.ok(data.events.length>=10,"expected published concerts from the website");
  assert.ok(data.events.some(x=>x.artist==="wild"));
@@ -270,7 +271,7 @@ test("real public Caravela agenda events populate Fechados in 2026 but not in 20
  assert.ok(current.festival.confirmed.some(x=>x.announcement?.title==="Tomate Blues Festival"));
  const later=classify({bookings:[],contacts:[],published:data.events,
    year:2027,today:"2026-10-17"});
- assert.equal(later.festival.confirmed.length+later.venue.confirmed.length,0);
+ assert.equal(later.festival.confirmed.length+later.venue.confirmed.length,total);
 });
 test("confirmed non-festival venue booking remains visible as uncategorized; closed does not imply a paid gig",()=>{
  const result=classify({bookings:[
@@ -280,4 +281,29 @@ test("confirmed non-festival venue booking remains visible as uncategorized; clo
  assert.equal(result.other.filter(x=>x.record?.stage==="confirmed").length,1);
  assert.equal(result.other.filter(x=>x.record?.stage==="closed").length,1);
  assert.equal(result.festival.confirmed.length,0);
+});
+
+
+test("already played concerts appear after future concerts, with unambiguous past flag",()=>{
+ const dates=[
+  {date:"2026-05-09",artist:"wild",title:"Buril Sarria",city:"Sarria"},
+  {date:"2026-11-21",artist:"wild",title:"FNAC Braga",city:"Braga"},
+  {date:"2026-03-01",artist:"wild",title:"FNAC Braga",city:"Braga"}
+ ];
+ const r=classify({published:dates,year:2027,today:"2026-10-17"});
+ const c=r.venue.confirmed;
+ assert.equal(c.length,3);
+ assert.deepEqual(Array.from(c.map(x=>x.announcement.date)),
+  ["2026-11-21","2026-05-09","2026-03-01"]);
+ assert.deepEqual(Array.from(c.map(x=>x.past)),[false,true,true]);
+ assert.ok(c.every(x=>x.notCommerciallyConfirmed));
+});
+test("native commercial confirmations from other years stay in Fechados but not in open-year worklists",()=>{
+ const r=classify({year:2027,today:"2026-10-17",contacts:[contact()],
+  bookings:[booking({booking_year:"2026",stage:"confirmed",event_date:"2026-09-18"}),
+   booking({id:"older-open",booking_year:"2026",stage:"research",event_date:"2026-03-13"})]});
+ assert.equal(r.festival.confirmed.length,1);
+ assert.equal(r.festival.confirmed[0].past,true);
+ assert.equal(r.festival.planning.length,1); // The archive contact stays eligible for new-year planning.
+ assert.ok(!r.festival.planning.some(x=>x.record?.id==="older-open"));
 });

@@ -5,6 +5,7 @@ import { handlePartnerships } from "./control-partnerships.js";
 import { operationalOverview } from "./control-operations.js";
 import { handleNative, nativeArchive, nativeExport } from "./control-native.js";
 import { contactReviewHandler } from "./control-contact-review.js";
+import { handleFestivalSearch } from "./control-festival-search.js";
 import { handleMailReviewTasks, handleResolveMailBooking } from "./control-review-tasks.js";
 import { handleMailDrafts } from "./control-mail-drafts.js";
 /* Caravela Control vault. Private Preview only; no destructive or outbound operations. */
@@ -143,6 +144,7 @@ export async function handleControl(request,env,url,zohoReader) {
   // Only aggregated operational data is visible to viewers.
   // Raw snapshots, Sheets, backups, audit and configuration require admin.
   const contactReviewRoute=route==="contacts/review";
+  const festivalRadarRoute=route==="radar/festivals";
   const mailTaskRoute=route==="mail/review-tasks";
   const mailResolveRoute=route==="mail/resolve-booking";
   const mailDraftRoute=route==="mail/drafts";
@@ -154,11 +156,12 @@ export async function handleControl(request,env,url,zohoReader) {
   const partnershipRoute=route==="partnerships"&&
     (request.method==="GET"||request.method==="POST"||request.method==="PATCH");
   if(!hasAdmin&&!cron&&!limitedReads.has(route)&&
-     !(hasManager&&(syncRoutes.has(route)||partnershipRoute||nativeRoute||nativeArchiveRoute||contactReviewRoute||mailTaskRoute||mailResolveRoute||mailDraftRoute)))
+     !(hasManager&&(syncRoutes.has(route)||partnershipRoute||nativeRoute||nativeArchiveRoute||contactReviewRoute||mailTaskRoute||mailResolveRoute||mailDraftRoute||festivalRadarRoute)))
     return reject("forbidden",403);
   if(route==="partnerships"&&!hasManager)return reject("forbidden",403);
   if(nativeRoute&&!hasManager)return reject("forbidden",403);
   if(contactReviewRoute&&!hasManager)return reject("forbidden",403);
+  if(festivalRadarRoute&&!hasManager)return reject("forbidden",403);
   if(mailTaskRoute&&!hasManager)return reject("forbidden",403);
   if(mailResolveRoute&&!hasManager)return reject("forbidden",403);
   if(mailDraftRoute&&!hasManager)return reject("forbidden",403);
@@ -167,6 +170,7 @@ export async function handleControl(request,env,url,zohoReader) {
   if((request.headers.get("Origin")&&request.headers.get("Origin")!==url.origin)||
      request.headers.get("Sec-Fetch-Site")==="cross-site")return reject("invalid_origin",403);
   if(contactReviewRoute)return contactReviewHandler(request,env,url);
+  if(festivalRadarRoute)return handleFestivalSearch(request,env,url);
   if(mailTaskRoute)return handleMailReviewTasks(request,env,url,{
     actor:user?.username||(admin?"legacy_admin":"")
   });

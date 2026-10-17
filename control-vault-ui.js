@@ -102,6 +102,16 @@
       });
     }
   };
+  // Search external festival pages only on explicit operator action.
+  // Credentials remain exclusively in the server's environment.
+  window.CaravelaFestivalSearch={
+    search(year,artist){
+      if(!Number.isInteger(year)||year<2026||year>2031||
+        !["WILDCHAINS","Devil of a Woman"].includes(artist))
+       throw Error("Parâmetros de pesquisa inválidos.");
+      return api("radar/festivals?"+new URLSearchParams({year:String(year),artist}).toString());
+    }
+  };
   window.CaravelaNativeTransport={
     request(kind,method="GET",entry=null){
       if(!["contacts","booking","finance","opportunities","press_plans","booking_reviews","archive","export"].includes(kind)||!["GET","POST","PATCH","DELETE"].includes(method)||

@@ -61,12 +61,15 @@
   for(const r of sorted){
    const actualYear=exactYear(r);
    if(actualYear===null){undated.push(r);continue;}
-   if(actualYear!==year)continue;
-   if(r.contact_id)linkedForYear.add(r.contact_id);
+   // A confirmed concert remains visible in Fechados across all booking seasons;
+   // plans and ongoing negotiations remain scoped to the selected booking year.
+   if(actualYear!==year&&r.stage!=="confirmed")continue;
+   if(r.contact_id&&actualYear===year)linkedForYear.add(r.contact_id);
    const contact=byId.get(r.contact_id);
    const type=kind(r,contact);
    const item={type:"booking",record:r,contact,artists:artists(r.artist),
     locality:[contact?.city,contact?.region,contact?.country].filter(Boolean).join(" · "),
+    past:!!r.event_date&&d(r.event_date)&&r.event_date<today,
     window:windowFor(contact,year,today)};
    if(r.stage==="closed"){other.push(item);continue}
    if(r.stage==="paused"){
@@ -215,7 +218,7 @@
   }
   // Public agenda provides published dates, not evidence of booking fees or payments.
   for(const row of published){
-   if(!d(row?.date)||+row.date.slice(0,4)!==year)continue;
+   if(!d(row?.date))continue;
    const act=row.artist==="wild"?["WILDCHAINS"]:row.artist==="devil"?["Devil of a Woman"]:
      row.artist==="both"?["WILDCHAINS","Devil of a Woman"]:[];
    if(!act.length||!row.title)continue;
@@ -229,6 +232,7 @@
    const item={type:"announcement",record:null,contact:possible||null,
      artists:act,announcement:{...row,city:typeof row.city==="string"?row.city:
        row.city?.pt||""},
+     past:row.date<today,
      locality:typeof row.city==="string"?row.city:row.city?.pt||"",
      evidence:"Agenda pública do website da Caravela",notCommerciallyConfirmed:true};
    (/festival/i.test(name)?festival:venue).confirmed.push(item);
@@ -247,6 +251,13 @@
    (a.window?.from||"9999").localeCompare(b.window?.from||"9999")||
    low(a.contact?.name||a.record?.contact_name).localeCompare(low(b.contact?.name||b.record?.contact_name),"pt-PT");
   for(const section of [festival,venue])for(const lane of Object.values(section))lane.sort(cmp);
+  // Upcoming concerts first, previous concerts afterwards in grey, in Fechados.
+  const sortConfirmed=(a,b)=>{
+   if(!!a.past!==!!b.past)return a.past?1:-1;
+   const date=x=>x.announcement?.date||x.record?.event_date||"";
+   return a.past?date(b).localeCompare(date(a)):date(a).localeCompare(date(b));
+  };
+  festival.confirmed.sort(sortConfirmed);venue.confirmed.sort(sortConfirmed);
   return {year,festival,venue,promoter,other,undated};
  }
  const api=Object.freeze({classify,windowFor,exactYear,kind,artists});

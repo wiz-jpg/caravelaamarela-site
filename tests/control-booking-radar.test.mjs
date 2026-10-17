@@ -4,38 +4,30 @@ import vm from "node:vm";
 import {readFileSync} from "node:fs";
 const ctx={};vm.runInNewContext(readFileSync(new URL("../control-booking-radar.js",import.meta.url),"utf8"),{globalThis:ctx});
 const radar=ctx.CaravelaBookingRadar;
-const entity=(id,kind,notes="",extra={})=>({
- id,name:"Festival "+id,kind,notes,city:"Braga",country:"Portugal",
- contact_policy:"review",emails:["x@example.pt"],...extra
+test("radar only proposes candidates NOT already present in native or archived CRM",()=>{
+ const found=radar.discover({year:2027,artist:"WILDCHAINS",contacts:[{id:"1",name:"Laurus Nobilis Music Fest"}],
+  actions:[{name:"Milagre Metaleiro Open Air"}],bookings:[]});
+ assert.equal(found.curated.length,1);
+ assert.equal(found.curated[0].name,"SQUARE");
 });
-test("radar prioritizes relevant rock festival with reply evidence; does not infer availability",()=>{
- const c=entity("s1","festival","Alternative rock and heavy rock");
- const r=radar.discover({contacts:[c],actions:[{id:"a1",name:c.name,artist:"WILDCHAINS",status:"Em conversa"}],
- year:2027,artist:"WILDCHAINS"});
- assert.equal(r.priority.length,1);
- assert.match(r.priority[0].basis,/histórico de conversa/);
- assert.doesNotMatch(JSON.stringify(r.priority),/candidatura aberta/i);
+test("radar does not treat news search articles as verified open festival opportunities",()=>{
+ const input={title:"Festival indie rock na região - Revista",url:"https://example.org/fest",
+  status:"lead_unverified",description:"Edição de 2027",source_host:"example.org"};
+ const found=radar.discover({year:2027,artist:"WILDCHAINS",external:[input]});
+ assert.equal(found.leads.length,1);
+ assert.equal(found.leads[0].status,"unverified_lead");
+ assert.equal(found.leads[0].unverifiedForBooking,true);
+ assert.match(found.leads[0].basis,/requerem verificação/);
 });
-test("radar excludes blocked, refused, previous confirmed and oversized targets",()=>{
- const rows=[entity("blocked","festival","rock",{contact_policy:"blocked"}),
- entity("refused","festival","rock"),entity("confirmed","festival","rock"),
- entity("huge","festival","rock",{name:"Rock in Rio"})];
- const r=radar.discover({contacts:rows,actions:[{name:"Festival refused",artist:"WILDCHAINS",status:"Recusado"}],
- bookings:[{contact_name:"Festival confirmed",artist:"WILDCHAINS",stage:"confirmed",booking_year:"2027"}],
- artist:"WILDCHAINS",year:2027});
- assert.equal(r.scanned,0);
+test("known festival headline is excluded even if it appears inside a longer search result",()=>{
+ const result=radar.discover({year:2027,artist:"WILDCHAINS",
+  contacts:[{name:"Festival indie rock na região"}],
+  external:[{title:"Festival indie rock na região",url:"https://example.org/fest",status:"lead_unverified"}]});
+ assert.equal(result.leads.length,0);
 });
-test("a venue appears as a candidate but unverified genre is not given high priority",()=>{
- const r=radar.discover({contacts:[entity("v1","venue","")],artist:"WILDCHAINS",year:2027});
- assert.equal(r.priority.length,0);
- assert.equal(r.research.length,1);
- assert.equal(r.research[0].type,"venue");
-});
-test("the seed list is presented as 2027 edition evidence only for a relevant artist",()=>{
- const a=radar.discover({year:2027,artist:"WILDCHAINS"});
- assert.equal(a.editionChecks.length,2);
- assert.ok(a.editionChecks.every(x=>x.page.startsWith("https://")));
- assert.ok(a.editionChecks.every(x=>/vagas não confirmadas|avaliar|Verificar/.test(x.basis+" "+x.next)));
- assert.equal(radar.discover({year:2027,artist:"Devil of a Woman"}).editionChecks.length,0);
- assert.equal(radar.discover({year:2026,artist:"WILDCHAINS"}).editionChecks.length,0);
+test("does not return megafestivals or unrelated 2026 edition as priority",()=>{
+ const result=radar.discover({year:2026,artist:"Devil of a Woman",
+ external:[{title:"Rock in Rio festival 2026",url:"https://example.org/test",status:"lead_unverified"}]});
+ assert.equal(result.curated.length,0);
+ assert.equal(result.leads.length,0);
 });

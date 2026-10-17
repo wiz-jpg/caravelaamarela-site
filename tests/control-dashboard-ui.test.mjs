@@ -84,8 +84,8 @@ test("one-window Zoho workflow uses a single human-approved operation",()=>{
 
 test("year-based booking and opportunities dashboard assets are loaded",()=>{
  const html=get("crm-control.html"),app=get("control-app.js");
- assert.match(html,/control-booking-board\.js\?v=20261017verify2/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017district-radar1/);
+ assert.match(html,/control-booking-board\.js\?v=20261017closed3/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017closed3/);
  assert.match(html,/control-opportunities-ui\.js\?v=20261017focus2/);
  assert.match(app,/data-view="opportunities"/);
  assert.match(app,/\["opportunities", "Oportunidades"/);
@@ -136,7 +136,7 @@ test("historical actions may enter proposed operational lanes without mutating d
  assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
- assert.match(html,/control-booking-board\.css\?v=20261017district-radar1/);
+ assert.match(html,/control-booking-board\.css\?v=20261017closed3/);
  assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });
 
@@ -157,10 +157,10 @@ test("Booking reports the public agenda years and one-click access to actual Fec
  const ui=get("control-booking-board-ui.js"),html=get("crm-control.html");
  assert.match(ui,/publicAgendaStatus/);
  assert.match(ui,/Agenda pública/);
- assert.match(ui,/Ver Fechados/);
+ assert.match(ui,/Concertos já realizados/);
  assert.match(ui,/Não foi possível ler a agenda pública/);
  assert.match(ui,/Outros registos/);
- assert.match(html,/control-booking-board-ui\.js\?v=20261017district-radar1/);
+ assert.match(html,/control-booking-board-ui\.js\?v=20261017closed3/);
 });
 
 
@@ -215,14 +215,14 @@ test("removing a native Other contact requires confirmation, verified server tom
 });
 
 
-test("2026 FNAC and Devil public shows remain visible above booking-year lanes",()=>{
+test("2026 FNAC and Devil published gigs live inside Fechados with past grey",()=>{
  const ui=get("control-booking-board-ui.js"),html=get("crm-control.html");
- assert.match(ui,/Concertos já anunciados · WILDCHAINS e Devil/);
- assert.match(ui,/Ver em Fechados/);
- assert.match(ui,/const eligiblePublished=published\.filter/);
+ assert.doesNotMatch(ui,/confirmedIndex/);
+ assert.match(ui,/cc-board-past/);
+ assert.match(ui,/renderExternalRadar\(year\)/);
  assert.match(ui,/scrollIntoView/);
- assert.match(html,/control-booking-radar\.js\?v=20261017district-radar1/);
- assert.match(ui,/Radar de festivais e venues/);
+ assert.match(html,/control-booking-radar\.js\?v=20261017closed3/);
+ assert.match(ui,/Radar externo de festivais/);
  assert.doesNotThrow(()=>new Function(get("control-booking-radar.js")));
 });
 test("press navigation is district-first for all Portuguese contacts",()=>{
@@ -231,4 +231,22 @@ test("press navigation is district-first for all Portuguese contacts",()=>{
  assert.doesNotMatch(source,/if\(isPortugal\)/);
  assert.match(source,/CaravelaPressGeography\?\.district\(event\)/);
  assert.match(geo,/key:"district:"\+norm\(place\)/);
+});
+
+
+test("external search uses authorized in-memory transport and does not alter CRM bookings",()=>{
+ const control=get("control-vault.js"),transport=get("control-vault-ui.js"),search=get("control-festival-search.js");
+ assert.match(control,/festivalRadarRoute=route==="radar\/festivals"/);
+ assert.match(transport,/CaravelaFestivalSearch/);
+ assert.match(search,/CONTROL_BRAVE_SEARCH_API_KEY/);
+ assert.doesNotMatch(search,/crm_booking|INSERT INTO|UPDATE control/);
+});
+test("closed concerts are in their native lanes, past styled grey, radar below booking body",()=>{
+ const ui=get("control-booking-board-ui.js"), board=get("control-booking-board.js");
+ assert.match(ui,/section\.append\(head,status,publishedInfo,body,radar\)/);
+ assert.match(ui,/cc-board-past/);
+ assert.match(ui,/Concertos já realizados/);
+ assert.match(board,/festival\.confirmed\.sort\(sortConfirmed\)/);
+ assert.match(board,/venue\.confirmed\.sort\(sortConfirmed\)/);
+ assert.match(get("control-booking-board.css"),/\.cc-board-past/);
 });

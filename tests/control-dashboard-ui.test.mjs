@@ -136,7 +136,7 @@ test("historical actions may enter proposed operational lanes without mutating d
  assert.match(ui,/Por validar/);
  assert.match(ui,/booking_year:item\.archive\?"":years\.value/);
  assert.match(native,/booking_year:d\.booking_year===undefined\?/);
- assert.match(html,/control-booking-board\.css\?v=20261017deletefix1/);
+ assert.match(html,/control-booking-board\.css\?v=20261017district-radar1/);
  assert.doesNotMatch(ui,/mail\/send|status="confirmed"/);
 });
 
@@ -168,8 +168,8 @@ test("press directory is collapsible by location and, for Portugal, by district;
  const html=get("crm-control.html"),ui=get("control-press-ui.js"),
   geo=get("control-press-geography.js"),csv=get("control-press-csv.js");
  assert.match(html,/control-press-geography\.js\?v=20261017district-radar1/);
- assert.match(html,/control-press-csv\.js\?v=20261017district-radar1/);
- assert.match(html,/control-press-ui\.js\?v=20261017deletefix1/);
+ assert.match(html,/control-press-csv\.js\?v=20261017pressdistrict1/);
+ assert.match(html,/control-press-ui\.js\?v=20261017district-radar1/);
  assert.match(ui,/mk\("details",undefined,nested\?/);
  assert.match(ui,/const isPortugal=key==="portugal"/);
  assert.doesNotMatch(ui,/if\(isPortugal\)/);
@@ -198,7 +198,7 @@ test("other contacts exclude promoters and show evidence-based specific types",(
 test("removing a native Other contact requires confirmation, verified server tombstone, and cross-view refresh",()=>{
  const html=get("crm-control.html"),ui=get("control-press-ui.js"),
   native=get("control-native-ui.js"),app=get("control-app.js");
- assert.match(html,/control-press-ui\.js\?v=20261017deletefix1/);
+ assert.match(html,/control-press-ui\.js\?v=20261017district-radar1/);
  assert.match(html,/control-app\.js\?v=20261017deletefix1/);
  assert.match(ui,/async function removeNativeContact\(c\)/);
  assert.match(ui,/!c\?\.revision\|\|c\.origin_id\|\|c\.historical/);
@@ -230,5 +230,5 @@ test("press navigation is district-first for all Portuguese contacts",()=>{
  assert.match(source,/Portugal: diretamente por distrito/);
  assert.doesNotMatch(source,/if\(isPortugal\)/);
  assert.match(source,/CaravelaPressGeography\?\.district\(event\)/);
- assert.match(geo,/district:\+norm\(place\)/);
+ assert.match(geo,/key:"district:"\+norm\(place\)/);
 });
